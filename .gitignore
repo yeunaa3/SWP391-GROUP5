@@ -1,0 +1,38 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.project
+.settings/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+.pnpm-store/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Backend
+backend/target/
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.local.properties
+
+# Runtime uploads and logs
+uploads/
+logs/
+*.log
+mysql-data/
+
+# OS files
+.DS_Store
+Thumbs.db
+

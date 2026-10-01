@@ -1,0 +1,3 @@
+-- Baseline for the Spring Boot + MySQL application.
+-- Add approved tables in a new migration (V2__...sql).
+-- Never edit a migration already applied to a shared or deployed database.
