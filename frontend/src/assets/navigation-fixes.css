@@ -1,0 +1,34 @@
+/* Keep news cards independent from the much taller advertising rail. */
+.public-content { min-height:0; }
+.public-preview-top { min-height:0; padding-bottom:8px; }
+.srs-lead-grid { align-items:start; }
+.srs-lead { justify-content:flex-start; align-self:start; min-height:0; }
+.news-lead-photo { display:block; aspect-ratio:16/9; height:auto; max-height:400px; flex:none; }
+.most-viewed li a.rail-news-link { display:grid; grid-template-columns:85px minmax(0,1fr); align-items:start; gap:12px; }
+.most-viewed li a.rail-news-link .editorial-photo { width:85px; aspect-ratio:4/3; }
+.discovery-featured { align-items:start; } .discovery-side { align-self:start; }
+/* Decorative scroll effects must never hide usable page content. */
+.motion-reveal { opacity:1; transform:none; }
+.motion-reveal.motion-visible { animation:content-reveal .4s ease both; }
+.sidebar { min-width:0; overflow:hidden; }
+.sidebar > .brand,.sidebar > .sidebar-rule,.sidebar > .workspace-name,.sidebar > .sidebar-user { flex-shrink:0; }
+.sidebar nav { display:block; flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; padding-right:5px; overscroll-behavior:contain; scrollbar-width:thin; scrollbar-color:#555 transparent; }
+.nav-group { margin:0 0 22px; }
+.nav-group h2 { color:#a6a6a6; font-size:10px; font-weight:650; letter-spacing:.1em; text-transform:uppercase; line-height:1.5; padding:0 12px; margin:0 0 7px; }
+.sidebar .nav-group a { min-height:40px; font-size:13px; padding:10px 12px; line-height:1.5; }
+.nav-dot { width:5px; height:5px; border-radius:50%; background:#777; flex:none; } .sidebar a.active .nav-dot { background:#fff; }
+.sidebar-user { margin-top:12px; padding-top:12px; }
+.workspace-main,.page-content,.workspace-topbar { min-width:0; }
+.workspace-tools { min-width:0; } .workspace-tools > input { width:clamp(100px,18vw,240px); }
+.data-table { max-width:100%; overflow:auto; }
+.screen-connections { padding:18px 20px; margin-bottom:24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; border:1px solid #ddd6cd; border-radius:12px; background:#fffdf8; }
+.screen-connections strong { display:block; font-size:14px; } .screen-connections small { display:block; color:#827b72; font-size:11px; margin-top:5px; }
+.connection-actions,.record-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.connection-actions a,.record-actions a { font-size:12px; padding:8px 12px; background:#f0ebe4; border:1px solid #e1d8cb; border-radius:7px; color:#5c4730; transition:background .2s; }
+.connection-actions a:hover,.record-actions a:hover { background:#e9ddca; }
+.connection-unavailable { padding:8px 10px; font-size:11px; color:#8b8073; border:1px dashed #ddd2c4; border-radius:7px; }
+.slot-book-link { display:block; color:#c51b32; font-size:12px; padding-top:8px; }
+.offer-card .outline-button { margin-top:16px; display:inline-block; }
+@keyframes content-reveal { from { transform:translateY(6px); } to { transform:translateY(0); } }
+@media(max-width:1000px) { .workspace-tools { flex-wrap:wrap; justify-content:flex-end; } .workspace-topbar { padding:12px 18px; gap:12px; } }
+@media(prefers-reduced-motion:reduce) { .motion-reveal.motion-visible { animation:none; } }

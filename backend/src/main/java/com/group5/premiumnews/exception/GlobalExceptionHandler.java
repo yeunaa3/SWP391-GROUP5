@@ -6,12 +6,34 @@ import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AccessDeniedException.class)
+    ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request.getRequestURI());
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException exception, HttpServletRequest request) {
+        return build(HttpStatus.UNAUTHORIZED, "Invalid username/email or password", request.getRequestURI());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<ApiError> handleConflict(ConflictException exception, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, exception.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(InvalidStateTransitionException.class)
+    ResponseEntity<ApiError> handleInvalidState(InvalidStateTransitionException exception, HttpServletRequest request) {
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, exception.getMessage(), request.getRequestURI());
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ApiError> handleValidation(

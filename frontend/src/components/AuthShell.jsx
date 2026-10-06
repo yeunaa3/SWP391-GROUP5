@@ -1,0 +1,5 @@
+import { Link } from "react-router-dom";
+
+export default function AuthShell({ code, eyebrow, title, description, children }) {
+  return <main className="auth-split"><section className="auth-brand-panel"><Link to="/">← Back to The Pulse</Link><strong className="auth-logo">THE PULSE</strong><div><h2>One account for trusted news, Premium reading and advertising partnerships.</h2><div className="auth-benefits"><article><strong>Reader access</strong><span>Bookmarks, Premium plans and receipts</span></article><article><strong>Business access</strong><span>Contracts, campaigns and performance</span></article></div><article className="security-card"><strong>Secure by design</strong><i /><i /><i /></article></div></section><section className="auth-form-panel"><div className="auth-links"><span>Help</span><span>·</span><span>Privacy</span><span>·</span><span>English</span></div><div className="auth-form-wrap"><p className="eyebrow">{eyebrow} · {code}</p><h1>{title}</h1><p className="auth-description">{description}</p>{children}</div><footer>© 2026 The Pulse &nbsp;·&nbsp; Terms &nbsp;·&nbsp; Cookie policy</footer></section></main>;
+}

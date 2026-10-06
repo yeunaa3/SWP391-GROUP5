@@ -1,0 +1,20 @@
+.ad-preview-switch { display:flex; align-items:center; justify-content:center; gap:18px; padding:9px 20px; color:#695744; background:#f1e9dd; font-size:12px; }
+.ad-preview-switch button { padding:5px 12px; background:#574531; font-size:11px; }
+.public-preview-top { padding-top:12px; } .public-preview-top .live-ad { margin-block:0 15px; } .public-preview-top .live-ad img { height:160px; max-height:160px; object-fit:contain; background:#16253a; }
+.ad-preview-on .live-ad > a { animation:ad-frame-in .45s ease; }
+.ad-skin { display:none; }
+.ad-preview-on .site-shell { overflow:visible; }
+@media(min-width:1580px) {
+  .ad-skin { display:block; }
+  .ad-skin > a { position:fixed; top:220px; width:110px; height:420px; z-index:4; border-radius:15px; padding:20px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px; text-align:center; overflow:hidden; box-shadow:0 12px 40px #0002; transition:transform .3s; }
+  .ad-skin > a::before { content:""; position:absolute; width:170px; height:170px; border:1px solid #fff3; border-radius:50%; top:-60px; right:-60px; }
+  .ad-skin > a:hover { transform:translateY(-5px); }
+  .skin-left { left:16px; color:#fff; background:linear-gradient(160deg,#223567,#6250d1); }
+  .skin-right { right:16px; color:#fff; background:linear-gradient(160deg,#164c3f,#4a966d); }
+  .ad-skin small { font-size:8px; letter-spacing:.1em; opacity:.7; } .ad-skin strong { font-size:21px; line-height:1.2; letter-spacing:-.03em; }
+  .ad-skin span { font-size:11px; line-height:1.8; opacity:.9; } .ad-skin b { font-size:10px; padding:9px 10px; border:1px solid #fff5; border-radius:30px; }
+}
+[data-theme="dark"] .ad-preview-switch { background:#302b26; color:#d8c4ad; }
+@media(max-width:600px) { .ad-preview-switch { gap:8px; font-size:10px; } .ad-preview-switch button { flex:none; } .public-preview-top .live-ad img { height:auto; max-height:none; } }
+@keyframes ad-frame-in { from { opacity:.45; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce) { .ad-preview-on .live-ad > a { animation:none; } .ad-skin > a { transition:none; } }

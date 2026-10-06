@@ -48,3 +48,9 @@ The repository follows the revised SDS architecture: React frontend, Spring Boot
 - Ad Manager review and monitoring
 - Administration and configuration
 
+## Authentication decision
+
+The browser uses a Spring Security server-side session. The session identifier is stored only in an HttpOnly cookie; state-changing requests also send the CSRF token issued by `GET /api/auth/csrf`. React does not store an access token in localStorage.
+
+Reader and Business account registration share the same endpoint. A Business account receives the BUSINESS role but does not create a Company automatically. Company identity and legal documents are created and reviewed later through BF-03/BF-04.
+

@@ -1,0 +1,3 @@
+app:
+  news-import:
+    enabled: ${NEWS_IMPORT_ENABLED:true}
