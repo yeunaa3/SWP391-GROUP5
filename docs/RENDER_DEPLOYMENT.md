@@ -40,6 +40,14 @@ Một Docker Web Service trên Render: React được build rồi phục vụ b�
 
 ## Lưu ý vận hành
 
+### Tài khoản kiểm thử The Pluse trên Render (tùy chọn)
+
+Code giống local nhưng profile `prod,render` không chạy initializer `@Profile("local")`; Aiven cũng không tự sao chép dữ liệu MySQL local.
+
+Sau khi push code mới, thêm `RENDER_DEMO_ENABLED=true` và `RENDER_DEMO_PASSWORD` là mật khẩu riêng ngẫu nhiên ít nhất 16 ký tự trong Environment của Render. Không ghi mật khẩu vào Git hoặc gửi ảnh có mật khẩu. Khởi động tạo `reader.demo`, `premium.demo`, `business.demo`, `manager.demo`, `admin.demo` nếu chưa tồn tại. Mỗi tài khoản dùng mật khẩu cấu hình đó. Tài khoản đã tồn tại không bị đổi mật khẩu hay tăng quyền.
+
+`premium.demo` nhận một subscription test miễn phí 30 ngày từ gói active có sẵn, không tạo giao dịch thanh toán thật. Bộ dữ liệu mở rộng có `business.new.demo` chưa có hồ sơ; `business.demo` có doanh nghiệp đã duyệt, hợp đồng/chiến dịch giả lập; thêm `business.pending.demo`, `business.revision.demo`, `business.rejected.demo` để kiểm tra từng trạng thái. Hợp đồng PAID trong bộ mẫu không phải thanh toán thật. Xem `docs/reviews/RENDER_DEMO_TEST_GUIDE.md` để biết đầy đủ fixture và giới hạn. Chỉ dùng với database demo của nhóm, không chứa dữ liệu thật. Sau lần khởi động thành công, đặt `RENDER_DEMO_ENABLED=false` và xóa biến mật khẩu; thao tác này không xóa các tài khoản test đã tạo. Trước khi dùng thật cần vô hiệu hóa tài khoản demo, nhất là quản trị viên. Biến mật khẩu không phải cơ chế reset tài khoản đã tồn tại.
+
 - Bản Free ngủ sau 15 phút không có truy cập; không phải máy chủ chạy liên tục 24/24. Mở lại có độ trễ khởi động và phiên đăng nhập trong bộ nhớ có thể mất.
 - RAM Free hạn chế; đã giới hạn heap theo RAM và pool DB 5 kết nối. Chưa đo tải/khởi động container thực tế.
 - Cookie đăng nhập ở prod dùng HTTPS. Local vẫn chạy bằng `scripts/run-backend.ps1` và Vite như trước; không dùng profile prod cho HTTP local.
