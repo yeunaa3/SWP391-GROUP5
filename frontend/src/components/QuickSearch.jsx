@@ -2,8 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getArticles } from "../services/contentService.js";
 import ModalShell from "./ModalShell.jsx";
+import { usePreferences } from "../store/PreferencesContext.jsx";
 
 export default function QuickSearch() {
+  const { t } = usePreferences();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -29,18 +31,18 @@ export default function QuickSearch() {
     return () => { current = false; clearTimeout(timer); };
   }, [open, query]);
   return <>
-    <button type="button" className="quick-search-trigger" aria-label="Tìm kiếm nhanh" onClick={() => setOpen(true)}>
+    <button type="button" className="quick-search-trigger" aria-label={t("Tìm kiếm nhanh", "Quick search")} title={t("Tìm kiếm · Ctrl K", "Search · Ctrl K")} onClick={() => setOpen(true)}>
       <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg><span>Tìm kiếm</span><kbd>Ctrl K</kbd>
     </button>
-    {open && <ModalShell title="Khám phá The Pulse" onClose={close} className="search-modal">
+    {open && <ModalShell title={t("Khám phá The Pulse", "Explore The Pulse")} onClose={close} className="search-modal">
       <form onSubmit={event => { event.preventDefault(); close(); navigate(`/search?q=${encodeURIComponent(query)}`); }}>
-        <label className="quick-search-label">Bạn muốn đọc về điều gì?<input aria-label="Từ khóa tìm nhanh" placeholder="Nhập chủ đề, tiêu đề hoặc từ khóa…" value={query} onChange={event => setQuery(event.target.value)} /></label>
-      </form><div className="quick-search-meta"><span>{query ? "KẾT QUẢ GỢI Ý" : "TIN MỚI ĐỂ KHÁM PHÁ"}</span><small>Enter để xem tất cả · Esc để đóng</small></div>
+        <label className="quick-search-label">{t("Bạn muốn đọc về điều gì?", "What would you like to read?")}<input aria-label={t("Từ khóa tìm nhanh", "Search keywords")} placeholder={t("Nhập chủ đề, tiêu đề hoặc từ khóa…", "Enter a topic, title or keyword…")} value={query} onChange={event => setQuery(event.target.value)} /></label>
+      </form><div className="quick-search-meta"><span>{query ? t("KẾT QUẢ GỢI Ý", "SUGGESTED RESULTS") : t("TIN MỚI ĐỂ KHÁM PHÁ", "LATEST STORIES")}</span><small>{t("Enter để xem tất cả · Esc để đóng", "Enter for all results · Esc to close")}</small></div>
       {loading ? <div className="search-skeleton"><i/><i/><i/></div> : <div className="quick-search-results">
         {results.map(article => <Link key={article.id} to={`/articles/${article.slug}`} onClick={close}>
           {article.thumbnailUrl && <img src={article.thumbnailUrl} alt="" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} />}
           <div><small>{article.sourceName || "The Pulse"} · {article.category}</small><strong>{article.title}</strong></div><span>↗</span>
-        </Link>)}{!results.length && <p>Chưa có kết quả. Thử từ khóa khác nhé.</p>}
+        </Link>)}{!results.length && <p>{t("Chưa có kết quả. Thử từ khóa khác nhé.", "No results yet. Try another keyword.")}</p>}
       </div>}
     </ModalShell>}
   </>;

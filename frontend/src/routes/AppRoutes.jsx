@@ -10,6 +10,7 @@ import ResetPasswordPage from "../pages/auth/ResetPasswordPage.jsx";
 import AdvertisingCatalogPage from "../pages/business/AdvertisingCatalogPage.jsx";
 import SlotCalendarPage from "../pages/business/SlotCalendarPage.jsx";
 import PerformancePage from "../pages/business/PerformancePage.jsx";
+import BusinessWorkspacePage from "../pages/business/BusinessWorkspacePage.jsx";
 import PackagesPage from "../pages/premium/PackagesPage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
@@ -36,7 +37,7 @@ const specialPages = {
 const publicAreas = new Set(["public"]);
 
 function screenElement(screen) {
-  const page = specialPages[screen.id] || <ScreenWorkspacePage screen={screen} />;
+  const page = specialPages[screen.id] || (screen.area === "business" ? <BusinessWorkspacePage screen={screen}/> : <ScreenWorkspacePage screen={screen} />);
   return screen.roles?.length ? <ProtectedRoute roles={screen.roles}>{page}</ProtectedRoute> : page;
 }
 

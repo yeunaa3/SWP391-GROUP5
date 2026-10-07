@@ -1,0 +1,14 @@
+# Used together with prod; local profile remains unchanged.
+server:
+  port: ${PORT:8080}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:${RENDER_EXTERNAL_URL:http://localhost:8080}}
+  upload-directory: ${APP_UPLOAD_DIRECTORY:/tmp/the-pulse-uploads}
+
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1

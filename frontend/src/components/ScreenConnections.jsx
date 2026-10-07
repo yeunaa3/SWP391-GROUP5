@@ -1,6 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { screenById } from "../routes/screenCatalog.js";
 
+import { usePreferences } from "../store/PreferencesContext.jsx";
+
 const routes = {
   "BUS-01": ["BUS-02","BUS-03","BUS-05","BUS-13"],
   "BUS-02": ["BUS-03","BUS-04"], "BUS-03": ["BUS-02","BUS-04"], "BUS-04": ["BUS-03","BUS-05"],
@@ -18,6 +20,7 @@ const routes = {
 
 export default function ScreenConnections({ screen }) {
   const params = useParams();
+  const { tr } = usePreferences();
   const targets = routes[screen.id];
   if (!targets) return null;
   return <section className="screen-connections" aria-label="Các màn hình liên quan"><div><strong>Thao tác liên quan</strong><small>Chuyển màn để tiếp tục xem; không tự duyệt hay thanh toán bản ghi.</small></div><div className="connection-actions">{targets.map(id => {
@@ -28,6 +31,6 @@ export default function ScreenConnections({ screen }) {
       if (optional) return "";
       missing = true; return "";
     });
-    return missing ? <span key={id} className="connection-unavailable" title="Chọn bản ghi trong danh sách trước">{target.name} · cần chọn bản ghi</span> : <Link key={id} to={path}>{target.name} →</Link>;
+    return missing ? <span key={id} className="connection-unavailable" title="Chọn bản ghi trong danh sách trước">{tr(target.name)} · cần chọn bản ghi</span> : <Link key={id} to={path}>{tr(target.name)} →</Link>;
   })}</div></section>;
 }

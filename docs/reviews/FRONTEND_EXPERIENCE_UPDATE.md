@@ -1,5 +1,15 @@
 # Cập nhật trải nghiệm frontend — 06/10/2026
 
+## Lịch đặt quảng cáo và Performance tương tác
+
+- Thay BUS-06 bằng lịch theo tháng thực: slot từ catalog, khoảng đã đặt từ hợp đồng ACTIVE/PAID trong MySQL. Không tiết lộ công ty/hợp đồng của doanh nghiệp khác. Chọn start/end chỉ trên ngày trống, chặn khoảng đi qua ngày bận, truyền slot/ngày sang BUS-07. Lịch chỉ tham khảo, chưa giữ chỗ; gửi booking thực và chống đặt trùng vẫn cần API transaction.
+- Thay BUS-18/BUS-19/ADM-10 bằng báo cáo dữ liệu theo ngày từ ad_metrics, giới hạn phía server theo company_id cho Business. Có bộ lọc chiến dịch/thời gian, tổng impressions/clicks/CTR/invalid clicks, line/bar chart, chọn ngày, donut phân bổ, bảng chi tiết, tải CSV và làm mới.
+- Hiệu ứng: KPI đếm mượt, vẽ đường/cột, donut xuất hiện, hover; hỗ trợ reduced-motion. Không sinh số liệu hoặc tăng trưởng giả; dữ liệu DB hiện vẫn là seed thử nghiệm.
+- Sửa CSRF client: lấy masked token từ endpoint trước mỗi yêu cầu ghi, thay vì raw cookie không khớp XOR handler Spring. Đã thử đăng nhập trên UI và thành công sau khi sửa lỗi 403.
+- Frontend build thành công, 7 backend tests pass. Backend local đã được khởi động lại, PID 18632; phiên đăng nhập cũ cần đăng nhập lại.
+- Kiểm tra API Business: 21 dòng performance, 3 khoảng giữ slot. Trên UI đã thử lọc NovaLearn, đổi clicks/cột, chuyển tháng, chọn 05–10/01/2027 (6 ngày), nút tiếp tục có đúng slotId/startDate/endDate. Hợp đồng seed hiện chiếm slot đến 04/01/2027, nên lịch tháng 10 trông đầy là đúng dữ liệu, không phải nút bị hỏng.
+- Chưa triển khai toàn bộ các form CRUD, duyệt hợp đồng, thanh toán/refund, creative upload, ghi nhận impressions/clicks thật trong lần này. Các phần này vẫn theo danh sách việc còn lại; không coi trang prototype là nghiệp vụ hoàn thành.
+
 ## Nối màn hình và sửa vùng trắng
 
 - Xác định khung banner `public-preview-top` dùng chung `.public-content` nên thừa min-height 680px. Bỏ min-height cho các khung này.

@@ -9,6 +9,10 @@ import "./assets/reading-experience.css";
 import "./assets/ad-preview.css";
 import "./assets/navigation-fixes.css";
 import "./assets/analytics.css";
+import "./assets/preferences.css";
+import "./assets/toolbars.css";
+import "./assets/business-live.css";
+import "./assets/visual-refresh.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

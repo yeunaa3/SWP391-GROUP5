@@ -1,6 +1,10 @@
 spring:
   application:
     name: premium-news-backend
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 9MB
   profiles:
     default: local
   datasource:

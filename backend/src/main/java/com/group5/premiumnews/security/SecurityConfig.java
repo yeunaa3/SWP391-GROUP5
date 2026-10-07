@@ -39,8 +39,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/articles/**",
-                                "/api/subscription-packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners").permitAll()
+                                "/api/subscription-packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/media/creative/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**").permitAll()
+                        // Public HTML shell/assets only. Data stays behind /api authorization above/below.
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
+                                "/favicon.ico", "/search", "/login", "/register", "/forgot-password", "/reset-password",
+                                "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
+                                "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())

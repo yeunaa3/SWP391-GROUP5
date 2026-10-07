@@ -1,0 +1,23 @@
+# Preparation only. Creating this file does not provision or publish anything.
+# MySQL must be provisioned separately. No paid resources are declared here.
+services:
+  - type: web
+    name: the-pulse-group5
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod,render
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: NEWS_IMPORT_ENABLED
+        value: "false"
+      - key: APP_UPLOAD_DIRECTORY
+        value: /tmp/the-pulse-uploads

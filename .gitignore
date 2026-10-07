@@ -28,6 +28,7 @@ backend/.env.*
 
 # Runtime uploads and logs
 uploads/
+backend/storage/
 logs/
 *.log
 mysql-data/

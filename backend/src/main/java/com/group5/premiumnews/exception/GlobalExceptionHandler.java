@@ -14,6 +14,23 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    ResponseEntity<ApiError> handleResponseStatus(org.springframework.web.server.ResponseStatusException exception,HttpServletRequest request) {
+        HttpStatus status=HttpStatus.valueOf(exception.getStatusCode().value());
+        return build(status,exception.getReason()==null?status.getReasonPhrase():exception.getReason(),request.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiError> handleUploadSize(Exception exception,HttpServletRequest request) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE,"Tệp vượt giới hạn tải lên 8 MB.",request.getRequestURI());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    ResponseEntity<ApiError> handleDataConflict(Exception exception,HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT,"Dữ liệu đã thay đổi hoặc trùng thông tin. Hãy tải lại và thử lại.",request.getRequestURI());
+    }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
@@ -48,6 +65,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
+        log.error("Unhandled API error at {}", request.getRequestURI(), exception);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request.getRequestURI());
     }
 

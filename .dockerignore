@@ -1,0 +1,16 @@
+.git
+.idea
+.vscode
+**/node_modules
+**/target
+**/dist
+**/.env
+**/.env.*
+**/*.log
+**/storage
+**/uploads
+outputs
+docs
+database
+mysql-data
+.pnpm-store

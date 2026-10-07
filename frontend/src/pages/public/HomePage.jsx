@@ -5,21 +5,23 @@ import AdBanner from "../../components/AdBanner.jsx";
 import NewsTicker from "../../components/NewsTicker.jsx";
 import NewsPhoto from "../../components/NewsPhoto.jsx";
 import { getArticles } from "../../services/contentService.js";
+import { useAdPreview } from "../../store/AdPreviewContext.jsx";
 
 export default function HomePage() {
+  const preview = useAdPreview();
   const [state, setState] = useState({ articles: [], demo: false, loading: true });
   const [source, setSource] = useState("");
   useEffect(() => { getArticles({ limit: 40 }).then(({ data, demo }) => setState({ articles: [...data].sort((a, b) => Number(Boolean(b.sourceUrl)) - Number(Boolean(a.sourceUrl))), demo, loading: false })); }, []);
   const [lead, ...more] = state.articles;
   return <main><DemoNotice show={state.demo} /><div className="public-content">
-    <AdBanner position="HOME_HERO" />
+    {!preview && <AdBanner position="HOME_HERO" />}
     {state.loading ? <div className="loading-card">Đang tải tin…</div> : lead ? <>
       <NewsTicker articles={state.articles}/><div className="edition-heading"><div><p className="eyebrow">GÓC NHÌN MỖI NGÀY</p><h2>Thế giới đang chuyển động.</h2></div><span>Đọc tin. Hiểu sâu. Kết nối.</span></div>
       <section className="srs-lead-grid"><article className="srs-lead">
-        {lead.thumbnailUrl && <img className="news-lead-photo" src={lead.thumbnailUrl} alt="" loading="eager" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} />}
-        <p className="eyebrow">TIN NỔI BẬT · {lead.category}</p><h1>{lead.title}</h1><p>{lead.summary}</p>
+        <Link className="lead-photo-link" to={`/articles/${lead.slug}`}><NewsPhoto article={lead} eager/></Link>
+        <div className="lead-story-copy"><p className="eyebrow">TIN NỔI BẬT · {lead.category}</p><h1><Link to={`/articles/${lead.slug}`}>{lead.title}</Link></h1><p>{lead.summary}</p>
         <p className="source-credit">{lead.sourceName ? `Theo ${lead.sourceName}` : "The Pulse · Nội dung mẫu"} · {new Date(lead.publishedAt).toLocaleDateString("vi-VN")}</p>
-        <Link className="button-link pulse-button" to={`/articles/${lead.slug}`}>Đọc tin</Link>
+        <Link className="lead-read-link" to={`/articles/${lead.slug}`}>Đọc câu chuyện <span>↗</span></Link></div>
       </article><aside className="most-viewed"><h2>TIN MỚI</h2><ol>{state.articles.slice(1, 6).map(article => <li key={article.id}><Link className="rail-news-link" to={`/articles/${article.slug}`}><NewsPhoto article={article}/><span>{article.title}<small className="source-credit">{article.sourceName || "The Pulse"}</small></span></Link></li>)}</ol><AdBanner position="ARTICLE_SIDEBAR" compact /></aside></section>
       <div className="editorial-tabs"><h2>Dòng tin hôm nay</h2><div>{["", "VnExpress", "Tuổi Trẻ"].map(name => <button key={name} className={source === name ? "selected" : ""} onClick={() => setSource(name)}>{name || "Tất cả"}</button>)}</div></div>
       <section className="headline-grid">{more.filter(article => !source || article.sourceName === source).slice(0, 6).map(article => <article key={article.id}>
