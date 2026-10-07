@@ -14,6 +14,15 @@ Một Docker Web Service trên Render: React được build rồi phục vụ b�
 
 ## Các bước Render
 
+### Aiven của nhóm
+
+- Database riêng: `premium_news_ad` (đã yêu cầu tạo trên Aiven; kiểm tra lại trước khi deploy).
+- Chứng chỉ công khai: `deploy/certs/aiven-ca.pem`. Dockerfile nhập CA này vào Java truststore; không thay thế các CA mặc định.
+- `DB_URL`: `jdbc:mysql://the-pulse-db-swp391-group5.b.aivencloud.com:27887/premium_news_ad?sslMode=VERIFY_IDENTITY&serverTimezone=UTC`
+- `DB_USERNAME`: `avnadmin`. Nhập `DB_PASSWORD` trực tiếp trên Render, không lưu vào Git.
+- Có thể chọn New → Web Service thay Blueprint: Docker, root directory để trống, Dockerfile `./Dockerfile`, plan Free, health check `/actuator/health`.
+- Khi tạo Web Service thủ công, thêm `SPRING_PROFILES_ACTIVE=prod,render`, `APP_UPLOAD_DIRECTORY=/tmp/the-pulse-uploads`, `NEWS_IMPORT_ENABLED=true` nếu muốn nhập tin RSS, cùng ba biến DB phía trên.
+
 1. Đăng nhập Render → New → Blueprint → kết nối repository `SWP391-GROUP5` → chọn đúng branch nhóm đã push.
 2. Render đọc `render.yaml`; kiểm tra dịch vụ `the-pulse-group5`, Docker, plan Free. Không tạo thêm DB PostgreSQL vì dự án dùng MySQL.
 3. Nhập ba biến bí mật trong Render (không gửi password vào chat):
