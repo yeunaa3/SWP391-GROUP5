@@ -13,6 +13,7 @@ import "./assets/preferences.css";
 import "./assets/toolbars.css";
 import "./assets/business-live.css";
 import "./assets/visual-refresh.css";
+import "./assets/auth-editorial.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

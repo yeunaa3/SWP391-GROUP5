@@ -24,14 +24,16 @@ export default function LoginPage() {
       await refresh();
       navigate(location.state?.returnTo || "/", { replace: true });
     } catch (requestError) {
-      setError(requestError.message);
+      setError(requestError.message === "Invalid username/email or password"
+        ? t("Tên đăng nhập hoặc mật khẩu chưa đúng. Vui lòng kiểm tra và thử lại.", "Incorrect username or password. Please check and try again.")
+        : requestError.message);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <AuthShell code="AUTH-01" eyebrow={t("TRUY CẬP TÀI KHOẢN","Secure account access")} title={t("Đăng nhập","Login")} description={t("Chào mừng bạn trở lại. Đăng nhập để tiếp tục trải nghiệm The Pulse.","Welcome back. Sign in to continue your The Pulse experience.")}>
+    <AuthShell code="AUTH-01" eyebrow={t("CHÀO MỪNG BẠN TRỞ LẠI","WELCOME BACK")} title={t("Đăng nhập","Sign in")} description={t("Tiếp tục những câu chuyện bạn đang quan tâm cùng The Pluse.","Pick up the stories that matter to you with The Pluse.")}>
       <form className="pulse-form" onSubmit={submit}>
         <label>{t("Tên đăng nhập hoặc email","Username or email")}<input autoComplete="username" required value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} /></label>
         <label>{t("Mật khẩu","Password")}<input type="password" autoComplete="current-password" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></label>

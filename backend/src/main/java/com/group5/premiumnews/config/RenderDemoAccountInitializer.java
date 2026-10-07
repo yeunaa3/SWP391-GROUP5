@@ -11,6 +11,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Explicitly enabled test accounts only; never use the public local demo password. */
@@ -19,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Profile("render")
 @ConditionalOnProperty(name = "app.render-demo.enabled", havingValue = "true")
 public class RenderDemoAccountInitializer implements CommandLineRunner {
+    private static final Logger log = LoggerFactory.getLogger(RenderDemoAccountInitializer.class);
     private final UserRepository users;
     private final RoleRepository roles;
     private final PasswordEncoder encoder;
@@ -50,11 +53,15 @@ public class RenderDemoAccountInitializer implements CommandLineRunner {
         create("business.rejected.demo", "BUSINESS");
         create("manager.demo", "AD_MANAGER");
         create("admin.demo", "ADMINISTRATOR");
+        log.info("The Pluse demo accounts ready. Existing accounts keep their original passwords; RENDER_DEMO_PASSWORD only applies to newly created accounts.");
     }
 
     private void create(String username, String role) {
         // Do not reset passwords, elevate existing users, or renew entitlements on restart.
-        if (users.existsByUsernameIgnoreCase(username)) return;
+        if (users.existsByUsernameIgnoreCase(username)) {
+            log.info("The Pluse demo: {} already exists; password unchanged", username);
+            return;
+        }
         User user = new User(username, username + "@thepluse.example",
                 encoder.encode(password), "The Pluse Test - " + role, null);
         user.addRole(roles.findByNameAndStatus(role, "ACTIVE").orElseThrow());
@@ -62,6 +69,7 @@ public class RenderDemoAccountInitializer implements CommandLineRunner {
             user.addRole(roles.findByNameAndStatus("READER", "ACTIVE").orElseThrow());
         }
         users.saveAndFlush(user);
+        log.info("The Pluse demo: created {}", username);
         if (role.equals("SUBSCRIBER")) {
             jdbc.update("""
                 INSERT INTO subscriptions(user_id,package_id,package_code_snapshot,

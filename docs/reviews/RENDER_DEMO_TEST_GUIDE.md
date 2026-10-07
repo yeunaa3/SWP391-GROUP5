@@ -8,6 +8,8 @@ Tat ca tai khoan duoc tao moi dung mat khau do; tai khoan da ton tai khong bi re
 
 ## Tai khoan va kich ban
 
+Neu dang nhap that bai: dung mat khau RENDER_DEMO_PASSWORD tai lan tai khoan DUOC TAO, khong phai Demo@12345 cua local. Doi bien mat khau sau do khong reset tai khoan cu. Trong Aiven/Workbench (ket noi Aiven) kiem tra bang cau lenh chi doc `SELECT username,status FROM premium_news_ad.users WHERE username LIKE '%.demo';`. Khong chia se cot hashed_password. Sau khi deploy ban co log chan doan, Render Logs hien `The Pluse demo: created ...` hoac `already exists; password unchanged`. Neu khong co log, kiem tra deploy commit moi, profile prod,render va RENDER_DEMO_ENABLED=true. Khong ket luan sai mat khau khi chua kiem tra account co trong Aiven.
+
 | Tai khoan | Kich ban |
 |---|---|
 | reader.demo | Doc bai free, xem paywall, luu bai |
