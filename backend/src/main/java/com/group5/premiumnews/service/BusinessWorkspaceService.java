@@ -84,6 +84,10 @@ public class BusinessWorkspaceService {
     }
     @Transactional
     public Map<String,Object> createBooking(AuthenticatedUserPrincipal user,BusinessRequests.Booking request) {
+        return saveBooking(user,null,request,true);
+    }
+    @Transactional
+    public Map<String,Object> saveBooking(AuthenticatedUserPrincipal user,Long bookingId,BusinessRequests.Booking request,boolean submit) {
         Long id=requireCompany(user);
         Map<String,Object> company=jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE",id);
         if(!"APPROVED".equals(company.get("application_status"))) throw new InvalidStateTransitionException("Doanh nghiệp cần được duyệt hợp tác trước khi đặt quảng cáo.");
@@ -96,15 +100,20 @@ public class BusinessWorkspaceService {
         LocalDateTime start=request.startDate().atStartOfDay(), end=request.endDate().plusDays(1).atStartOfDay();
         requireAvailable(request.slotId(),start,end);
         BigDecimal price=((BigDecimal)pack.get("price")).add(((BigDecimal)slot.get("base_price")).multiply(BigDecimal.valueOf(days)).divide(BigDecimal.valueOf(30),2,RoundingMode.HALF_UP));
-        Long contract=insert("""
+        if(bookingId!=null) requireDraftBooking(user,bookingId);
+        Long contract=bookingId;
+        if(contract==null) contract=insert("""
             INSERT INTO contracts(contract_code,contract_name,company_id,b2b_package_id,slot_id,
                 package_code_snapshot,package_name_snapshot,package_price_snapshot,duration_days_snapshot,
                 impressions_quota_snapshot,slot_name_snapshot,slot_position_snapshot,total_value,start_at,end_at)
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,code("BOOK"),request.name().trim(),id,request.packageId(),request.slotId(),pack.get("code"),pack.get("name"),pack.get("price"),
             pack.get("duration_days"),pack.get("impressions_quota"),slot.get("slot_name"),slot.get("position_code"),price,start,end);
-        submitBooking(user,contract);
-        return Map.of("id",contract,"amount",price,"status","PENDING_REVIEW");
+        else jdbc.update("UPDATE contracts SET contract_name=?,b2b_package_id=?,slot_id=?,package_code_snapshot=?,package_name_snapshot=?,package_price_snapshot=?,duration_days_snapshot=?,impressions_quota_snapshot=?,slot_name_snapshot=?,slot_position_snapshot=?,total_value=?,start_at=?,end_at=? WHERE contract_id=?",
+            request.name().trim(),request.packageId(),request.slotId(),pack.get("code"),pack.get("name"),pack.get("price"),pack.get("duration_days"),pack.get("impressions_quota"),slot.get("slot_name"),slot.get("position_code"),price,start,end,contract);
+        audit(user,"SAVE_BOOKING_DRAFT","CONTRACT",contract);
+        if(submit) submitBooking(user,contract);
+        return Map.of("id",contract,"amount",price,"status",submit?"PENDING_REVIEW":"DRAFT");
     }
     @Transactional
     public Map<String,Object> submitBooking(AuthenticatedUserPrincipal user,Long id) {
@@ -121,6 +130,20 @@ public class BusinessWorkspaceService {
         jdbc.update("UPDATE contracts SET status='PENDING_REVIEW' WHERE contract_id=?",id);
         audit(user,"SUBMIT_BOOKING_REQUEST","CONTRACT",id);
         return Map.of("id",id,"status","PENDING_REVIEW");
+    }
+    private Map<String,Object> requireDraftBooking(AuthenticatedUserPrincipal user,Long id) {
+        Map<String,Object> booking=one("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",id,requireCompany(user));
+        if(!"DRAFT".equals(booking.get("status"))) throw new InvalidStateTransitionException("Chỉ bản nháp mới được sửa hoặc xóa.");
+        Integer campaigns=jdbc.queryForObject("SELECT COUNT(*) FROM ad_campaigns WHERE contract_id=?",Integer.class,id);
+        if(campaigns!=null && campaigns>0) throw new InvalidStateTransitionException("Hợp đồng có chiến dịch liên kết không thể sửa hoặc xóa.");
+        return booking;
+    }
+    @Transactional
+    public Map<String,Object> deleteBooking(AuthenticatedUserPrincipal user,Long id) {
+        requireDraftBooking(user,id);
+        jdbc.update("DELETE FROM contracts WHERE contract_id=?",id);
+        audit(user,"DELETE_BOOKING_DRAFT","CONTRACT",id);
+        return Map.of("id",id);
     }
     @Transactional
     public Map<String,Object> saveCampaign(AuthenticatedUserPrincipal user,Long campaignId,BusinessRequests.Campaign request) {

@@ -37,3 +37,4 @@ mysql-data/
 .DS_Store
 Thumbs.db
 
+/frontend/nbproject/private/

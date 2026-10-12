@@ -11,6 +11,20 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class BusinessWorkspaceServiceTests {
+    @Test void ownedDraftCanBeDeleted() {
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject("SELECT company_id FROM users WHERE user_id=? AND status='ACTIVE'",Long.class,1L)).thenReturn(4L);
+        when(jdbc.queryForList("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",8L,4L)).thenReturn(List.of(java.util.Map.of("status","DRAFT")));
+        new BusinessWorkspaceService(jdbc).deleteBooking(user,8L);
+        verify(jdbc).update("DELETE FROM contracts WHERE contract_id=?",8L);
+    }
+    @Test void sentBookingCannotBeDeleted() {
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject("SELECT company_id FROM users WHERE user_id=? AND status='ACTIVE'",Long.class,1L)).thenReturn(4L);
+        when(jdbc.queryForList("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",8L,4L)).thenReturn(List.of(java.util.Map.of("status","PENDING_REVIEW")));
+        assertThrows(InvalidStateTransitionException.class,()->new BusinessWorkspaceService(jdbc).deleteBooking(user,8L));
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
     @Test void supportsBothMySqlDateTimeRepresentations() {
         var date=LocalDateTime.of(2026,10,7,8,30);
         assertEquals(date,BusinessWorkspaceService.dateTime(date));
