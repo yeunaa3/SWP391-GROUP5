@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiRequest } from "../services/apiClient.js";
 import { previewBanners, useAdPreview } from "../store/AdPreviewContext.jsx";
 import { adsForPosition } from "../data/houseAds.js";
+import { adFormat } from "../utils/adFormats.js";
 import { useAuth } from "../store/AuthContext.jsx";
 import { usePreferences } from "../store/PreferencesContext.jsx";
 import "../assets/house-ads.css";
@@ -14,6 +15,7 @@ export default function AdBanner({ position = "HOME_HERO", compact = false }) {
   const preview = useAdPreview();
   const { premiumActive, premiumLoading, loading } = useAuth();
   const { t } = usePreferences();
+  const format = adFormat(position);
   const house = !preview && !banners.length;
   const displayBanners = preview ? previewBanners : house ? adsForPosition(position) : banners;
   useEffect(() => { let alive = true; apiRequest(`/api/advertising/banners?position=${encodeURIComponent(position)}`)
@@ -34,10 +36,10 @@ export default function AdBanner({ position = "HOME_HERO", compact = false }) {
   };
   const details = brandDetails[banner.id];
   const artwork = house ? <div className={`house-ad-art tone-${banner.tone}`}><div><small>THE PLUSE · {t("KHÁM PHÁ CÙNG BẠN", "DISCOVER MORE")}</small><strong>{banner.headline}</strong><p>{banner.description}</p><span>{banner.cta} ↗</span></div><b aria-hidden="true">{banner.symbol}</b><i aria-hidden="true" /></div> : preview && details ? <div className={`preview-ad-art ${banner.id}`}><div><small>{details[0]} · QUẢNG CÁO MẪU</small><strong>{details[1]}</strong><p>{details[2]}</p><span>Khám phá ngay ↗</span></div><b aria-hidden="true">{details[3]}</b></div> : <img src={banner.mediaUrl} alt={banner.title} />;
-  return <aside data-position={position} className={`live-ad ${compact ? "live-ad-compact" : ""}`} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
+  return <aside data-position={position} data-format={format.name} className={`live-ad ad-format-${format.name} ${compact ? "live-ad-compact" : ""}`} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocus={() => setPaused(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
     <div className="ad-disclosure">{house ? t("Tự giới thiệu · The Pluse", "House promotion · The Pluse") : preview ? `Quảng cáo · xem thử vị trí ${position}` : t("Quảng cáo", "Advertisement")}</div>
     {banner.targetUrl.startsWith("/") ? <Link to={banner.targetUrl} aria-label={banner.title}>{artwork}</Link>
       : <a href={banner.targetUrl} target="_blank" rel="noopener noreferrer" aria-label={banner.title}>{artwork}</a>}
-    {displayBanners.length > 1 && <div className="banner-controls">{displayBanners.map((item, number) => <button key={item.id} aria-label={`Xem quảng cáo ${number + 1}`} aria-pressed={number === index} onClick={() => setIndex(number)}>{number + 1}</button>)}<button aria-label={paused ? "Tiếp tục xoay quảng cáo" : "Tạm dừng xoay quảng cáo"} onClick={() => setPaused(value => !value)}>{paused ? "▶" : "Ⅱ"}</button></div>}
+    {displayBanners.length > 1 && <div className="banner-controls">{displayBanners.map((item, number) => <button key={item.id} aria-label={`Xem quảng cáo ${number + 1}`} aria-pressed={number === index % displayBanners.length} onClick={() => setIndex(number)}>{number + 1}</button>)}<button aria-label={paused ? "Tiếp tục xoay quảng cáo" : "Tạm dừng xoay quảng cáo"} onClick={() => setPaused(value => !value)}>{paused ? "▶" : "Ⅱ"}</button></div>}
   </aside>;
 }
