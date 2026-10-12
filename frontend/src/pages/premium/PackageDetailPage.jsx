@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
-import usePremiumPlan from "./usePremiumPlan.js";
-import { money, packageBenefits, projectedExpiry } from "./premiumUtils.js";
-import "./premium.css";
+import usePremiumPlan from "../../hooks/usePremiumPlan.js";
+import { money, packageBenefits, projectedExpiry } from "../../utils/premium.js";
+import "../../assets/premium.css";
 
 export function PlanState({ loading, error, retry }) {
   const { t } = usePreferences();

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { safeReturnTo, workspaceHome } from "../src/utils/sessionRouting.js";
-import { packageBenefits, projectedExpiry, money } from "../src/pages/premium/premiumUtils.js";
+import { packageBenefits, projectedExpiry, money } from "../src/utils/premium.js";
 
 test("new role cannot return to the previous role's workspace", () => {
   for (const [role, home] of [["READER", "/account/profile"], ["BUSINESS", "/business"], ["ADMINISTRATOR", "/admin"], ["AD_MANAGER", "/ad-manager"]]) {

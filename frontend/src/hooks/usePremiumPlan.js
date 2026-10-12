@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { apiRequest } from "../../services/apiClient.js";
+import { getActivePremiumPlans } from "../services/premiumService.js";
 
 export default function usePremiumPlan() {
   const { packageId } = useParams();
@@ -9,7 +9,7 @@ export default function usePremiumPlan() {
   useEffect(() => {
     let alive = true;
     setState({ loading: true, plan: null, error: false });
-    apiRequest("/api/subscription-packages").then(plans => {
+    getActivePremiumPlans().then(plans => {
       if (alive) setState({ loading: false, plan: plans.find(item => String(item.id) === packageId) || null, error: false });
     }).catch(() => { if (alive) setState({ loading: false, plan: null, error: true }); });
     return () => { alive = false; };

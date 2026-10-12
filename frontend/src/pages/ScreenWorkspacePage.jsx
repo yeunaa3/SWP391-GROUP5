@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import AdvertisingRecords from "../components/AdvertisingRecords.jsx";
 import ScreenConnections from "../components/ScreenConnections.jsx";
 import { apiRequest } from "../services/apiClient.js";
-import { getAdvertisingCatalog } from "../services/contentService.js";
 
 import { primaryAction, screenFields, screenMode } from "../data/screenUiCatalog.js";
 
@@ -43,13 +41,9 @@ function sampleValue(field) {
   return "";
 }
 
-function FieldControl({ field, catalog, selected }) {
+function FieldControl({ field }) {
   const { tr, t } = usePreferences();
   const name = field.toLowerCase();
-  if (catalog && /slot|b2b package/.test(name)) {
-    const slot = name.includes("slot"); const options = slot ? catalog.slots : catalog.offers;
-    return <select key={`${tr(field)}-${selected.slotId}-${selected.packageId}`} defaultValue={(slot ? selected.slotId : selected.packageId) || ""}><option value="">Chọn {slot ? "vị trí" : "gói quảng cáo"}</option>{options.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select>;
-  }
   if (/declaration|confirmation|agreement|remember/.test(name)) {
     return <label className="check specification-check"><input type="checkbox" /> {tr("I confirm this information is correct.")}</label>;
   }
@@ -58,7 +52,7 @@ function FieldControl({ field, catalog, selected }) {
   if (/status|type|category|role|company|package|slot|device|industry|decision|filter|selector|method/.test(name)) {
     return <select defaultValue=""><option value="" disabled>{t(`Chọn ${tr(field).toLowerCase()}`, `Select ${name}`)}</option><option>{tr("Active")}</option><option>{tr("Pending review")}</option><option>{tr("Needs revision")}</option></select>;
   }
-  if (/date|time|period|expiry|deadline/.test(name)) return <input key={`${tr(field)}-${selected?.startDate}-${selected?.endDate}`} type="date" defaultValue={name.includes("start") ? selected?.startDate || "" : name.includes("end") ? selected?.endDate || "" : ""}/>;
+  if (/date|time|period|expiry|deadline/.test(name)) return <input type="date" />;
   if (name.includes("email")) return <input type="email" defaultValue={sampleValue(field)} />;
   if (name.includes("password")) return <input type="password" placeholder="••••••••" />;
   if (name.includes("phone")) return <input type="tel" defaultValue={sampleValue(field)} />;
@@ -66,10 +60,10 @@ function FieldControl({ field, catalog, selected }) {
   return <input defaultValue={sampleValue(field)} placeholder={t(`Nhập ${tr(field).toLowerCase()}`, `Enter ${name}`)} />;
 }
 
-function ScreenForm({ fields, onSubmit, catalog, selected }) {
+function ScreenForm({ fields, onSubmit }) {
   const { tr, t } = usePreferences();
   const inputFields = fields.filter((field) => !isAction(field));
-  return <form className="specification-form" onSubmit={onSubmit}><div className="form-section-heading"><div><h2>{tr("Details")}</h2><p>{tr("Fields and validation follow the SRS screen specification.")}</p></div><span>{inputFields.length} {t("trường thông tin", "components")}</span></div><div className="specification-grid">{inputFields.map((field) => <label key={tr(field)} className={/description|summary|objective|reason|terms|upload|file|information|content/.test(field.toLowerCase()) ? "field-wide" : ""}><span>{tr(field)}</span><FieldControl field={tr(field)} catalog={catalog} selected={selected}/></label>)}</div><div className="form-actions"><button type="button" className="secondary-button" onClick={onSubmit}>{tr("Save draft")}</button><button type="submit">{tr(primaryAction(fields))}</button></div></form>;
+  return <form className="specification-form" onSubmit={onSubmit}><div className="form-section-heading"><div><h2>{tr("Details")}</h2><p>{tr("Fields and validation follow the SRS screen specification.")}</p></div><span>{inputFields.length} {t("trường thông tin", "components")}</span></div><div className="specification-grid">{inputFields.map((field) => <label key={tr(field)} className={/description|summary|objective|reason|terms|upload|file|information|content/.test(field.toLowerCase()) ? "field-wide" : ""}><span>{tr(field)}</span><FieldControl field={tr(field)}/></label>)}</div><div className="form-actions"><button type="button" className="secondary-button" onClick={onSubmit}>{tr("Save draft")}</button><button type="submit">{tr(primaryAction(fields))}</button></div></form>;
 }
 
 function ScreenList({ fields }) {
@@ -90,11 +84,7 @@ function ScreenReport({ fields }) {
 export default function ScreenWorkspacePage({ screen }) {
   const { tr, t } = usePreferences();
   const [message, setMessage] = useState("");
-  const [params] = useSearchParams();
-  const [catalog, setCatalog] = useState(null);
-  useEffect(() => { setMessage(""); setCatalog(null); let alive = true;
-    if (screen.id === "BUS-07") getAdvertisingCatalog().then(data => { if (alive) setCatalog(data); });
-    return () => { alive = false; }; }, [screen.id]);
+  useEffect(() => { setMessage(""); }, [screen.id]);
   const fields = useMemo(() => screenFields[screen.id] || ["Search and filters", "Record", "Status", "Open details"], [screen.id]);
   const mode = screenMode(screen.id);
   const showTraceability = import.meta.env.VITE_SHOW_TRACEABILITY === "true";
@@ -105,8 +95,8 @@ export default function ScreenWorkspacePage({ screen }) {
       {message && <div className="success-message" role="status">{message}<button type="button" onClick={() => setMessage("")}>×</button></div>}
       <ScreenConnections screen={screen}/>
       {screen.id === "CFG-06" && <section className="dashboard-section"><h2>Nhập tin từ RSS</h2><p>VnExpress và Tuổi Trẻ · Tự cập nhật mỗi 15 phút · Giữ nguyên nguồn bài viết.</p><button onClick={async () => { try { const result = await apiRequest("/api/admin/news-import", { method: "POST" }); setMessage(`Đã xử lý ${result.processed} tin; ${result.errors.length} nguồn lỗi.`); } catch (error) { setMessage(error.message); } }}>Cập nhật tin ngay</button></section>}
-      {["BUS-01", "BUS-11", "BUS-13", "BUS-18", "BUS-19", "ADM-01", "ADM-09", "ADM-10"].includes(screen.id) && <AdvertisingRecords />}
-      {mode === "form" ? <ScreenForm fields={fields} onSubmit={submit} catalog={screen.id === "BUS-07" ? catalog : null} selected={{slotId:params.get("slotId"),packageId:params.get("packageId"),startDate:params.get("startDate"),endDate:params.get("endDate")}}/> : mode === "report" ? <ScreenReport fields={fields} /> : <ScreenList fields={fields} />}
+      {["ADM-01", "ADM-09"].includes(screen.id) && <AdvertisingRecords />}
+      {mode === "form" ? <ScreenForm fields={fields} onSubmit={submit} /> : mode === "report" ? <ScreenReport fields={fields} /> : <ScreenList fields={fields} />}
       {showTraceability && <><section className="component-inventory"><div><h2>SRS component coverage</h2><p>Components included on this page from the approved screen specification.</p></div><div>{fields.map((field) => <span key={tr(field)}>✓ {tr(field)}</span>)}</div></section><section className="trace-footer"><span>Traceability</span><strong>{screen.bf?.join(", ") || "Supporting flow"}</strong><span>{screen.uc?.join(", ") || "Dashboard/supporting screen"}</span></section></>}
     </main>
   );

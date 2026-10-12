@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { apiRequest } from "../../services/apiClient.js";
+import { getActivePremiumPlans } from "../../services/premiumService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
-import { money, packageBenefits } from "./premiumUtils.js";
-import "./premium.css";
+import { money, packageBenefits } from "../../utils/premium.js";
+import "../../assets/premium.css";
 
 export default function PackagesPage() {
   const { t, language } = usePreferences();
@@ -13,7 +13,7 @@ export default function PackagesPage() {
   useEffect(() => {
     let alive = true;
     setState({ loading: true, packages: [], error: false });
-    apiRequest("/api/subscription-packages").then(packages => { if (alive) setState({ packages, loading: false, error: false }); })
+    getActivePremiumPlans().then(packages => { if (alive) setState({ packages, loading: false, error: false }); })
       .catch(() => { if (alive) setState({ packages: [], loading: false, error: true }); });
     return () => { alive = false; };
   }, [attempt, language]);

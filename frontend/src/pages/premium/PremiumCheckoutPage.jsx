@@ -4,9 +4,9 @@ import { useAuth } from "../../store/AuthContext.jsx";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import { paymentConfig } from "../../data/paymentConfig.js";
 import { PlanState } from "./PackageDetailPage.jsx";
-import usePremiumPlan from "./usePremiumPlan.js";
-import { money } from "./premiumUtils.js";
-import "./premium.css";
+import usePremiumPlan from "../../hooks/usePremiumPlan.js";
+import { money } from "../../utils/premium.js";
+import "../../assets/premium.css";
 
 export default function PremiumCheckoutPage() {
   const state = usePremiumPlan();

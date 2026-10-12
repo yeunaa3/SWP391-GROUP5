@@ -81,17 +81,9 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); }
 .section-heading h2 { font-size: clamp(1.6rem, 3vw, 2.35rem); }
 .lead-story { margin-bottom: 2rem; }
 .article-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.4rem; }
-.article-card { overflow: hidden; border: 1px solid #dce3ec; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgb(21 47 80 / 6%); }
-.article-card-featured { display: grid; grid-template-columns: 1.25fr 1fr; }
 .article-image { position: relative; display: block; min-height: 220px; overflow: hidden; background: #dce4ed; }
 .article-image img { width: 100%; height: 100%; min-height: 220px; object-fit: cover; transition: transform .3s ease; }
-.article-card:hover img { transform: scale(1.025); }
 .premium-badge { position: absolute; top: .9rem; left: .9rem; padding: .38rem .6rem; border-radius: 99px; color: #16324f; background: #f0c96b; font-size: .68rem; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
-.article-card-body { padding: 1.25rem; }
-.article-card-body h2 { margin-bottom: .65rem; font-family: Georgia, serif; font-size: 1.35rem; }
-.article-card-featured .article-card-body { display: flex; flex-direction: column; justify-content: center; padding: clamp(1.5rem, 4vw, 3rem); }
-.article-card-featured .article-card-body h2 { font-size: clamp(2rem, 4vw, 3.2rem); }
-.article-card-body > p:not(.article-meta) { color: #617086; line-height: 1.65; }
 .article-meta { color: #2d67a3; font-size: .72rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
 .premium-strip { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 3.2rem max(1rem, calc((100vw - 1180px) / 2)); color: #fff; background: #102f50; }
 .premium-strip h2 { font-family: Georgia, serif; font-size: 2.5rem; }
@@ -193,9 +185,8 @@ h1 { font-size: clamp(2rem, 4vw, 3.25rem); }
   .field-grid { grid-template-columns: 1fr; }
   .news-hero, .premium-strip { align-items: start; flex-direction: column; }
   .ad-preview { grid-template-columns: 1fr; text-align: center; }
-  .article-grid, .article-card-featured, .stats-grid, .dashboard-grid { grid-template-columns: 1fr; }
+  .article-grid, .stats-grid, .dashboard-grid { grid-template-columns: 1fr; }
   .search-panel { grid-template-columns: 1fr; }
-  .article-card-featured .article-image { min-height: 280px; }
   .table-row { grid-template-columns: 1fr; gap: .35rem; }
   .table-head { display: none; }
   .specification-grid, .component-inventory { grid-template-columns: 1fr; }

@@ -8,7 +8,7 @@ The repository follows the revised SDS architecture: React frontend, Spring Boot
 2. Spring Security authenticates the caller and checks role permissions.
 3. A REST Controller validates the request shape and calls a Service.
 4. The Service enforces business rules and transaction boundaries.
-5. A Spring Data JPA Repository reads or writes MySQL.
+5. Authentication uses Spring Data JPA repositories. Several content and Business services currently use JdbcTemplate directly. Moving those SQL queries behind repositories is a remaining refactoring task, not completed work.
 6. The Service maps the result to a response DTO.
 7. The Controller returns JSON for React to render.
 
@@ -32,8 +32,8 @@ The repository follows the revised SDS architecture: React frontend, Spring Boot
 - `entity`: models mapped to MySQL tables.
 - `dto`: validated API request/response contracts.
 - `security`: authentication and role authorization.
-- `integration`: Payment, Email, and Cloud Storage/CDN adapters.
-- `scheduler`: background jobs.
+- `integration`: Payment, Email, and Storage gateway interfaces; provider implementations are still pending.
+- `scheduler`: reserved package for background jobs; the current RSS schedule lives in RssImportService.
 - `exception`: centralized API error handling.
 - `config`: CORS and technical configuration.
 - `util`: small technical helpers only.
