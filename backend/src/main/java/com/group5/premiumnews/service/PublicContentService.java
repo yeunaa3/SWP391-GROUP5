@@ -51,7 +51,8 @@ public class PublicContentService {
     public ArticleDetailResponse getArticle(String slug, Long viewerId) {
         List<ArticleDetailResponse> results = jdbc.query("""
                 SELECT a.article_id, a.title, a.slug, a.summary, a.content, a.thumbnail_url,
-                       a.is_premium, a.preview_percentage, a.views_count, a.published_at, a.source_name, a.source_url
+                       a.is_premium, a.preview_percentage, a.views_count, a.published_at, a.source_name, a.source_url,
+                       CAST(a.content_blocks AS CHAR) AS content_blocks,a.content_mode,a.source_author
                 FROM articles a WHERE a.slug = ? AND a.status = 'PUBLISHED'
                 """, (rs, rowNum) -> {
             long id = rs.getLong("article_id");
@@ -68,7 +69,8 @@ public class PublicContentService {
                     rs.getString("summary"), rs.getString("content"), rs.getString("thumbnail_url"),
                     rs.getBoolean("is_premium"), rs.getInt("preview_percentage"),
                     rs.getLong("views_count"), instant(rs.getTimestamp("published_at")), categories, tags,
-                    rs.getString("source_name"), rs.getString("source_url"));
+                    rs.getString("source_name"), rs.getString("source_url"), rs.getString("content_blocks"),
+                    rs.getString("content_mode"), rs.getString("source_author"));
         }, slug);
         if (results.isEmpty()) {
             throw new IllegalArgumentException("Article not found");

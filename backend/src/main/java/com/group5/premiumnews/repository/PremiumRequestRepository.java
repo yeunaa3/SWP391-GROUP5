@@ -13,11 +13,22 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class PremiumRequestRepository {
+    public record Subscription(long id, long packageId, String packageName, Instant startAt, Instant endAt, String status, boolean current) {}
     public record Plan(long id, String code, String name, BigDecimal amount, String currency, int days) {}
     public record Request(long id, long userId, Plan plan, String status) {}
     private final JdbcTemplate jdbc;
 
     public PremiumRequestRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+
+    public List<Subscription> subscriptions(long userId) {
+        return jdbc.query("""
+                SELECT subscription_id,package_id,package_name_snapshot,start_at,end_at,status,
+                    (status='ACTIVE' AND start_at<=CURRENT_TIMESTAMP(6) AND end_at>CURRENT_TIMESTAMP(6)) AS current_access
+                FROM subscriptions WHERE user_id=? ORDER BY end_at DESC LIMIT 100
+                """, (rs, n) -> new Subscription(rs.getLong("subscription_id"), rs.getLong("package_id"),
+                rs.getString("package_name_snapshot"), rs.getTimestamp("start_at").toInstant(),
+                rs.getTimestamp("end_at").toInstant(), rs.getString("status"), rs.getBoolean("current_access")), userId);
+    }
 
     public boolean lockActiveUser(long id) {
         return !jdbc.queryForList("SELECT user_id FROM users WHERE user_id=? AND status='ACTIVE' FOR UPDATE", Long.class, id).isEmpty();

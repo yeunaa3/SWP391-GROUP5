@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { getCurrentUser, logout as requestLogout } from "../services/authService.js";
+import { getPremiumAccess } from "../services/premiumService.js";
+import { currentPremium } from "../utils/premiumAccess.js";
 
 const AuthContext = createContext(null);
 
@@ -8,6 +10,26 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const sessionGeneration = useRef(0);
+  const premiumGeneration = useRef(0);
+  const [access, setAccess] = useState(null);
+  const [premiumError, setPremiumError] = useState(false);
+  const [clock, setClock] = useState(Date.now());
+  const refreshPremium = useCallback(async () => {
+    const generation = ++premiumGeneration.current;
+    if (!user) { setAccess(null); setPremiumError(false); return; }
+    try {
+      const result = await getPremiumAccess();
+      if (generation === premiumGeneration.current) { setAccess({ ...result, owner: user.id }); setPremiumError(false); setClock(Date.now()); }
+    } catch {
+      if (generation === premiumGeneration.current) { setAccess(null); setPremiumError(true); }
+    }
+  }, [user]);
+  useEffect(() => {
+    refreshPremium();
+    const timer = setInterval(() => { setClock(Date.now()); refreshPremium(); }, 60000);
+    window.addEventListener("focus", refreshPremium);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refreshPremium); premiumGeneration.current++; };
+  }, [refreshPremium]);
 
   async function refresh() {
     const generation = ++sessionGeneration.current;
@@ -30,11 +52,16 @@ export function AuthProvider({ children }) {
   async function logout() {
     await requestLogout();
     sessionGeneration.current++;
+    premiumGeneration.current++;
+    setAccess(null);
     setUser(null);
     setLoading(false);
   }
 
-  const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading]);
+  const premium = user && access?.owner === user.id ? access : null;
+  const premiumActive = Boolean(currentPremium(premium?.subscriptions, clock));
+  const value = useMemo(() => ({ user, loading, refresh, logout, premium, premiumActive, premiumError,
+    premiumLoading: Boolean(user && !premium && !premiumError), refreshPremium }), [user, loading, premium, premiumActive, premiumError, refreshPremium]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

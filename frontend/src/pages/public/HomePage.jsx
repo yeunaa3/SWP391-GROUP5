@@ -6,14 +6,16 @@ import NewsTicker from "../../components/NewsTicker.jsx";
 import NewsPhoto from "../../components/NewsPhoto.jsx";
 import { getArticles } from "../../services/contentService.js";
 import { useAdPreview } from "../../store/AdPreviewContext.jsx";
+import { useAuth } from "../../store/AuthContext.jsx";
 
 export default function HomePage() {
   const preview = useAdPreview();
+  const { premiumActive, premiumLoading } = useAuth();
   const [state, setState] = useState({ articles: [], demo: false, loading: true });
   const [source, setSource] = useState("");
   useEffect(() => { getArticles({ limit: 40 }).then(({ data, demo }) => setState({ articles: [...data].sort((a, b) => Number(Boolean(b.sourceUrl)) - Number(Boolean(a.sourceUrl))), demo, loading: false })); }, []);
   const [lead, ...more] = state.articles;
-  return <main><DemoNotice show={state.demo} /><div className="public-content">
+  return <main data-hide-promotions={premiumActive || premiumLoading}><DemoNotice show={state.demo} /><div className="public-content">
     {!preview && <AdBanner position="HOME_HERO" />}
     {state.loading ? <div className="loading-card">Đang tải tin…</div> : lead ? <>
       <NewsTicker articles={state.articles}/><div className="edition-heading"><div><p className="eyebrow">GÓC NHÌN MỖI NGÀY</p><h2>Thế giới đang chuyển động.</h2></div><span>Đọc tin. Hiểu sâu. Kết nối.</span></div>
@@ -23,7 +25,7 @@ export default function HomePage() {
         <p className="source-credit">{lead.sourceName ? `Theo ${lead.sourceName}` : "The Pulse · Nội dung mẫu"} · {new Date(lead.publishedAt).toLocaleDateString("vi-VN")}</p>
         <Link className="lead-read-link" to={`/articles/${lead.slug}`}>Đọc câu chuyện <span>↗</span></Link></div>
       </article><aside className="most-viewed"><h2>TIN MỚI</h2><ol>{state.articles.slice(1, 6).map(article => <li key={article.id}><Link className="rail-news-link" to={`/articles/${article.slug}`}><NewsPhoto article={article}/><span>{article.title}<small className="source-credit">{article.sourceName || "The Pulse"}</small></span></Link></li>)}</ol><AdBanner position="ARTICLE_SIDEBAR" compact /></aside></section>
-      <div className="editorial-tabs"><h2>Dòng tin hôm nay</h2><div>{["", "VnExpress", "Tuổi Trẻ"].map(name => <button key={name} className={source === name ? "selected" : ""} onClick={() => setSource(name)}>{name || "Tất cả"}</button>)}</div></div>
+      <div className="editorial-tabs"><h2>Dòng tin hôm nay</h2><div>{["", "VnExpress", "Tuổi Trẻ", "VietnamNet"].map(name => <button key={name} className={source === name ? "selected" : ""} onClick={() => setSource(name)}>{name || "Tất cả"}</button>)}</div></div>
       <section className="headline-grid">{more.filter(article => !source || article.sourceName === source).slice(0, 6).map(article => <article key={article.id}>
         {article.thumbnailUrl && <Link to={`/articles/${article.slug}`}><img className="news-card-photo" src={article.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} /></Link>}
         <p className="eyebrow">{article.premium ? "PREMIUM · DEMO" : article.category}</p><h2><Link to={`/articles/${article.slug}`}>{article.title}</Link></h2><p>{article.summary}</p><span className="source-credit">{article.sourceName || "The Pulse · Nội dung mẫu"}</span>

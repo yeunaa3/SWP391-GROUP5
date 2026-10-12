@@ -66,7 +66,7 @@ export default function ArticleAudio({ article, locked }) {
   }
   const busy = status === "playing" || status === "paused" || status === "starting";
   return <section className={`article-audio ${status === "playing" ? "audio-playing" : ""}`} aria-label="Đọc báo thành tiếng">
-    <div className="audio-heading"><div className="audio-wave" aria-hidden="true"><i/><i/><i/><i/><i/></div><div><strong>Nghe bài viết</strong><small>{locked ? "Chỉ đọc phần xem trước" : article.sourceUrl ? "Đọc phần giới thiệu từ RSS" : "Đọc nội dung bài viết"}</small></div><span className="audio-tag">AUDIO</span></div>
+    <div className="audio-heading"><div className="audio-wave" aria-hidden="true"><i/><i/><i/><i/><i/></div><div><strong>Nghe bài viết</strong><small>{locked ? "Chỉ đọc phần xem trước" : article.sourceUrl && article.contentMode !== "PUBLIC_TEXT" ? "Đọc phần giới thiệu từ RSS" : "Đọc nội dung bài viết"}</small></div><span className="audio-tag">AUDIO</span></div>
     {!supported ? <p>Trình duyệt này chưa hỗ trợ đọc thành tiếng.</p> : <>
       <div className="audio-controls"><button onClick={toggle} disabled={status === "starting"}>{status === "starting" ? "Đang khởi động…" : status === "playing" ? "Ⅱ Tạm dừng" : status === "paused" ? "▶ Tiếp tục" : status === "done" ? "↻ Nghe lại" : "▶ Đọc thành tiếng"}</button>{busy && <button className="audio-stop" onClick={stop}>■ Dừng</button>}
         <label>Giọng đọc<select value={voiceId} onChange={event => setVoiceId(event.target.value)} disabled={busy || !voices.length}>{!voices.length && <option value="">Tự chọn theo tiếng Việt (trình duyệt)</option>}{voices.map(voice => <option key={voice.voiceURI} value={voice.voiceURI}>{voice.name}</option>)}</select></label>

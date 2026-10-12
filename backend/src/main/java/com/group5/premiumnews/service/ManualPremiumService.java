@@ -30,6 +30,15 @@ public class ManualPremiumService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list(Long userId) { return repository.list(userId); }
 
+    @Transactional(readOnly = true)
+    public Map<String, Object> access(long userId) {
+        var subscriptions = repository.subscriptions(userId);
+        var pending = repository.pending(userId);
+        return Map.of("active", subscriptions.stream().anyMatch(PremiumRequestRepository.Subscription::current),
+                "subscriptions", subscriptions,
+                "pendingPackageId", pending.map(r -> r.plan().id()).orElse(0L));
+    }
+
     @Transactional
     public void review(long adminId, long id, boolean approve, boolean paymentConfirmed, String note) {
         var request = repository.lockRequest(id).orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu."));

@@ -75,6 +75,15 @@
 .premium-preview { border-color:#bfd5c5; background:#f6faf7; }
 .premium-bank-qr { display:block; max-width:290px; width:100%; height:auto; margin:20px auto; border-radius:12px; }
 .premium-change-plan { display:block; text-align:center; margin-top:20px; font-size:.85rem; }
+.premium-membership { border:1px solid #9bc8ac; background:linear-gradient(120deg,#f1f8ef,#f8f6e9); margin-bottom:28px; }
+.premium-plan.is-owned { border:2px solid #408465; box-shadow:0 12px 36px #22634312; }
+.premium-header-badge { background:#f4ead0; color:#755514; border:1px solid #ddc995; padding:8px 12px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; }
+.premium-comparison-wrap { overflow-x:auto; }
+.premium-comparison { width:100%; min-width:580px; border-collapse:collapse; font-size:.9rem; }
+.premium-comparison th,.premium-comparison td { padding:18px 16px; border-bottom:1px solid var(--premium-line); text-align:left; vertical-align:top; }
+.premium-comparison thead th { background:#234638; color:#fff; }.premium-comparison tbody td:last-child { background:#f0f6ef; color:#23553b; }
+html[data-theme="dark"] .premium-membership { background:#223c30; }
+html[data-theme="dark"] .premium-comparison tbody td:last-child { background:#223c30; color:#d0e9d8; }
 html[data-theme="dark"] .premium-page { --premium-ink:#e6eee8; --premium-green:#71bba0; --premium-line:#3b4e45; }
 html[data-theme="dark"] .premium-panel,html[data-theme="dark"] .premium-plan,html[data-theme="dark"] .premium-purchase-card { background:#202b25; }
 html[data-theme="dark"] .premium-hero,html[data-theme="dark"] .premium-detail-hero { background:linear-gradient(135deg,#263c30,#203b36); }

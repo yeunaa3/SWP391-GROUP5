@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, matchPath, Navigate, useNavigate } from "react-router-dom";
 import { workspaceHome } from "../utils/sessionRouting.js";
 import { usePreferences } from "../store/PreferencesContext.jsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import UiIcon from "../components/UiIcon.jsx";
 
 import { screens } from "../routes/screenCatalog.js";
@@ -16,11 +16,12 @@ function shortLabel(name) {
 
 export default function WorkspaceLayout({ area }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user, logout: requestLogout, loading } = useAuth();
+  const { user, logout: requestLogout, loading, refreshPremium } = useAuth();
   const navigate = useNavigate();
   const [logoutError, setLogoutError] = useState("");
   const { t, tr } = usePreferences();
   const { pathname } = useLocation();
+  useEffect(() => { if (area === "premium") refreshPremium(); }, [area, pathname, refreshPremium]);
   const current = screens.find(screen => screen.area === area && matchPath({ path: screen.path, end: true }, pathname));
   const navigation = screens.filter((screen) => screen.area === area && !screen.path.includes(":") && (!screen.roles?.length || screen.roles.some(role => user?.roles?.includes(role))));
   const navigationGroups = [...new Set(navigation.filter(screen => !["BUS-10", "PRE-04"].includes(screen.id)).map(screen => screen.feature))];

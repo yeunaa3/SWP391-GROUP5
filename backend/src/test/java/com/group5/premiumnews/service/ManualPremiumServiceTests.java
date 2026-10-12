@@ -20,6 +20,25 @@ class ManualPremiumServiceTests {
 
     @BeforeEach void setup() { when(repository.lockActiveUser(11)).thenReturn(true); }
 
+    @Test void membershipReadsActualScopedSubscriptionsNotRequestHistory() {
+        var subscription = new PremiumRequestRepository.Subscription(3, 2, "Monthly", Instant.now().minusSeconds(10), Instant.now().plusSeconds(100), "ACTIVE", true);
+        when(repository.subscriptions(11)).thenReturn(java.util.List.of(subscription));
+        when(repository.pending(11)).thenReturn(Optional.empty());
+        var result = service.access(11);
+        assertEquals(true, result.get("active"));
+        assertEquals(java.util.List.of(subscription), result.get("subscriptions"));
+        assertEquals(0L, result.get("pendingPackageId"));
+        verify(repository, never()).list(any());
+    }
+
+    @Test void pendingAndFuturePeriodsDoNotGrantCurrentAccess() {
+        var future = new PremiumRequestRepository.Subscription(3, 2, "Monthly", Instant.now().plusSeconds(100), Instant.now().plusSeconds(200), "ACTIVE", false);
+        when(repository.subscriptions(11)).thenReturn(java.util.List.of(future));
+        when(repository.pending(11)).thenReturn(Optional.of(request));
+        assertEquals(false, service.access(11).get("active"));
+        assertEquals(2L, service.access(11).get("pendingPackageId"));
+    }
+
     @Test void submittingUsesCatalogSnapshotAndDoesNotActivate() {
         when(repository.pending(11)).thenReturn(Optional.empty());
         when(repository.activePlan(2)).thenReturn(Optional.of(plan));

@@ -20,6 +20,10 @@ public class ManualPremiumController {
     private final ManualPremiumService service;
     public ManualPremiumController(ManualPremiumService service) { this.service = service; }
 
+    @GetMapping("/premium/access")
+    @PreAuthorize("isAuthenticated()")
+    public Map<String,Object> access(@AuthenticationPrincipal AuthenticatedUserPrincipal user) { return service.access(user.id()); }
+
     @PostMapping("/premium/requests")
     @PreAuthorize("hasAnyRole('READER','SUBSCRIBER')")
     public Map<String,Object> submit(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody Submit body) {

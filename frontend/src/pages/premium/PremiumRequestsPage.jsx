@@ -3,21 +3,24 @@ import { Link } from "react-router-dom";
 import { getMyPremiumRequests } from "../../services/premiumService.js";
 import { paymentConfig } from "../../data/paymentConfig.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
+import PremiumMembership from "../../components/PremiumMembership.jsx";
+import { useAuth } from "../../store/AuthContext.jsx";
 import { money } from "../../utils/premium.js";
 import "../../assets/premium.css";
 
 export default function PremiumRequestsPage() {
   const { t, language } = usePreferences();
+  const { refreshPremium } = useAuth();
   const [rows, setRows] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   async function load() {
     setLoading(true); setError("");
-    try { setRows(await getMyPremiumRequests()); } catch (e) { setError(e.message); } finally { setLoading(false); }
+    try { setRows(await getMyPremiumRequests()); await refreshPremium(); } catch (e) { setError(e.message); } finally { setLoading(false); }
   }
   useEffect(() => { load(); }, []);
   const date = value => value ? new Date(value).toLocaleString(language === "vi" ? "vi-VN" : "en-GB") : "—";
-  return <main className="page-content premium-page"><header className="premium-checkout-heading"><span className="premium-kicker">THE PLUSE PREMIUM</span><h1>{t("Đăng ký và trạng thái duyệt", "Requests and approval status")}</h1>
+  return <main className="page-content premium-page"><PremiumMembership /><header className="premium-checkout-heading"><span className="premium-kicker">THE PLUSE PREMIUM</span><h1>{t("Đăng ký và trạng thái duyệt", "Requests and approval status")}</h1>
     <p>{t("Yêu cầu chờ duyệt chưa mở quyền. Cập nhật sau khi admin xử lý; quyền đọc bài được kiểm tra trực tiếp từ DB.", "Pending requests do not grant access. Refresh after review; article access is checked against the database.")}</p><button className="secondary-button" onClick={load} disabled={loading}>{t("Cập nhật trạng thái", "Refresh status")}</button></header>
     {loading && <p role="status">{t("Đang tải…", "Loading…")}</p>}{error && <p className="error-message" role="alert">{error}</p>}
     {!loading && !error && !rows.length && <section className="premium-panel"><p>{t("Chưa có yêu cầu duyệt thủ công. Gói mẫu đã cấp trước đó không nằm trong lịch sử yêu cầu này.", "No manual requests. Pre-existing demo subscriptions are not listed here.")}</p><Link to="/premium/packages">{t("Chọn gói", "Choose plan")}</Link></section>}
