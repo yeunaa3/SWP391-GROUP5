@@ -1,0 +1,26 @@
+-- Requests do not grant access. Only administrator approval creates entitlement.
+CREATE TABLE premium_requests (
+    request_id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    package_id BIGINT NOT NULL,
+    package_code VARCHAR(50) NOT NULL,
+    package_name VARCHAR(100) NOT NULL,
+    amount DECIMAL(18,2) NOT NULL,
+    currency CHAR(3) NOT NULL,
+    duration_days INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    pending_user_id BIGINT GENERATED ALWAYS AS (CASE WHEN status = 'PENDING' THEN user_id ELSE NULL END) STORED,
+    submitted_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    reviewed_by BIGINT NULL,
+    reviewed_at DATETIME(6) NULL,
+    review_note VARCHAR(500) NULL,
+    subscription_id BIGINT NULL,
+    UNIQUE KEY uq_premium_pending_user (pending_user_id),
+    KEY idx_premium_request_queue (status, submitted_at),
+    CONSTRAINT fk_premium_request_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_premium_request_package FOREIGN KEY (package_id) REFERENCES subscription_packages(package_id),
+    CONSTRAINT fk_premium_request_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(user_id),
+    CONSTRAINT fk_premium_request_subscription FOREIGN KEY (subscription_id) REFERENCES subscriptions(subscription_id),
+    CONSTRAINT ck_premium_request_status CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    CONSTRAINT ck_premium_request_values CHECK (duration_days > 0 AND amount >= 0)
+) ENGINE=InnoDB;

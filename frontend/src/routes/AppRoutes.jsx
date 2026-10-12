@@ -14,6 +14,9 @@ import BusinessWorkspacePage from "../pages/business/BusinessWorkspacePage.jsx";
 import PackagesPage from "../pages/premium/PackagesPage.jsx";
 import PackageDetailPage from "../pages/premium/PackageDetailPage.jsx";
 import PremiumCheckoutPage from "../pages/premium/PremiumCheckoutPage.jsx";
+import PremiumRequestsPage from "../pages/premium/PremiumRequestsPage.jsx";
+import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
+import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
 import SearchPage from "../pages/public/SearchPage.jsx";
@@ -32,6 +35,10 @@ const specialPages = {
   "PRE-01": <PackagesPage />,
   "PRE-02": <PackageDetailPage />,
   "PRE-03": <PremiumCheckoutPage />,
+  "PRE-04": <PremiumRequestsPage />,
+  "PRE-05": <PremiumRequestsPage />,
+  "CFG-03": <PremiumReviewPage />,
+  "CFG-01": <AdminDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,
   "BUS-18": <PerformancePage />,

@@ -1,6 +1,7 @@
 // Exact UI translations. Keep identifiers, source article text and database values unchanged.
 const pairs = `
 My Account|Tài khoản của tôi
+Premium Request Review|Duyệt đăng ký Premium
 Premium Workspace|Không gian Premium
 Business Portal|Cổng doanh nghiệp
 Ad Manager Workspace|Quản lý quảng cáo

@@ -1,4 +1,13 @@
 .premium-page { --premium-ink:#192b2d; --premium-green:#176354; --premium-line:#dce4df; max-width:1260px; margin-inline:auto; color:var(--premium-ink); }
+.premium-request-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.premium-request-status { padding:8px 14px; border-radius:30px; background:#fff0cf; color:#745000; font-weight:700; }
+.premium-request-status.is-approved { background:#e2f3e9; color:#176354; }
+.premium-request-status.is-rejected { background:#fde6e7; color:#a52031; }
+.premium-manual-transfer { display:grid; grid-template-columns:minmax(180px,280px) 1fr; gap:24px; align-items:center; }
+.premium-review-note { display:grid; gap:10px; margin:20px 0; }
+.premium-review-note textarea { min-height:100px; width:100%; }
+.premium-review-actions { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+@media(max-width:650px) { .premium-manual-transfer { grid-template-columns:1fr; } }
 .premium-page h1,.premium-page h2,.premium-page h3 { color:inherit; letter-spacing:-.035em; }
 .premium-page h1 { font-size:clamp(2rem,3.5vw,3.5rem); line-height:1.12; margin:18px 0; }
 .premium-page h2 { font-size:1.4rem; margin:10px 0 18px; }

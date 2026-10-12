@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../store/AuthContext.jsx";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
-import { paymentConfig } from "../../data/paymentConfig.js";
+import { submitPremiumRequest } from "../../services/premiumService.js";
 import { PlanState } from "./PackageDetailPage.jsx";
 import usePremiumPlan from "../../hooks/usePremiumPlan.js";
 import { money } from "../../utils/premium.js";
@@ -12,24 +12,36 @@ export default function PremiumCheckoutPage() {
   const state = usePremiumPlan();
   const { user } = useAuth();
   const { t } = usePreferences();
-  const [method, setMethod] = useState("qr");
+  const navigate = useNavigate();
   const [confirmed, setConfirmed] = useState(false);
-  const [preview, setPreview] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   if (!state.plan) return <PlanState {...state} />;
   const { plan } = state;
-  const methods = [
-    { id: "qr", icon: "▦", name: t("Chuyển khoản bằng QR", "Bank transfer QR"), note: t("QR tĩnh · xác minh thủ công", "Static QR · manual verification"), enabled: true },
-    { id: "card", icon: "▰", name: t("Thẻ nội địa / quốc tế", "Debit / credit card"), note: "NAPAS · Visa · Mastercard", enabled: false },
-    { id: "wallet", icon: "◈", name: t("Ví điện tử", "E-wallet"), note: "MoMo / ZaloPay", enabled: false },
-  ];
-  const reference = `PLUSE-P${plan.id}-U${user?.id || user?.username || "READER"}`.replace(/[^a-zA-Z0-9-]/g, "");
-  function submit(event) { event.preventDefault(); if (confirmed) { setPreview(true); setNotice(""); } }
-  return <main className="page-content premium-page"><Link className="premium-back" to={`/premium/packages/${plan.id}`}>← {t("Quay lại quyền lợi gói", "Back to plan benefits")}</Link><header className="premium-checkout-heading"><span className="premium-kicker">THE PLUSE PREMIUM</span><h1>{t("Hoàn tất lựa chọn của bạn", "Review your order")}</h1><p>{t("Gói bạn đã chọn được điền sẵn. Kiểm tra thông tin trước khi tiếp tục.", "Your selected plan is already filled in. Review your details below.")}</p><ol className="premium-steps"><li>✓ {t("Chọn gói", "Choose plan")}</li><li aria-current="step">2. {t("Thanh toán", "Checkout")}</li><li>3. {t("Xác minh và kích hoạt", "Verify and activate")}</li></ol></header>
-    <div className="premium-detail-grid"><form id="premium-checkout-form" onSubmit={submit}><section className="premium-panel"><h2>01 · {t("Tài khoản nhận quyền lợi", "Account receiving access")}</h2><div className="premium-customer"><span className="premium-customer-icon">◎</span><div><strong>{user?.fullName || user?.username}</strong><p>{user?.email || user?.username}</p></div><span className="premium-tag">{t("Đã đăng nhập", "Signed in")}</span></div><p className="premium-muted">{t("Gói gắn với tài khoản này, không cần địa chỉ giao hàng. Hiện chưa hỗ trợ mua tặng.", "Access belongs to this account. No shipping address is needed. Gift purchases are not supported yet.")}</p></section>
-      <section className="premium-panel"><h2>02 · {t("Phương thức thanh toán", "Payment method")}</h2><fieldset className="premium-methods"><legend>{t("Chọn cách thanh toán", "Choose how to pay")}</legend>{methods.map(item => <label className={`premium-method ${method === item.id ? "is-selected" : ""} ${!item.enabled ? "is-unavailable" : ""}`} key={item.id}><input type="radio" name="payment-method" value={item.id} disabled={!item.enabled} checked={method === item.id} onChange={() => { setMethod(item.id); setPreview(false); }} /><span className="premium-method-icon">{item.icon}</span><span><strong>{item.name}</strong><small>{item.note}</small></span><span className="premium-tag">{item.enabled ? t("Thủ công", "Manual") : t("Sắp có", "Coming soon")}</span></label>)}</fieldset></section>
-      <section className="premium-panel"><h2>03 · {t("Xác nhận thông tin", "Confirm details")}</h2><label className="premium-consent"><input type="checkbox" required checked={confirmed} onChange={event => setConfirmed(event.target.checked)} /><span>{t("Tôi đã xem quyền lợi, thời hạn và hiểu QR tĩnh không tự xác nhận thanh toán hoặc kích hoạt Premium.", "I reviewed the benefits and duration and understand that static QR does not automatically confirm payment or activate Premium.")}</span></label><p className="premium-muted">{t("Không nhập mật khẩu ngân hàng hoặc OTP trên The Pluse.", "Never enter bank passwords or OTPs on The Pluse.")}</p></section>
-      {preview && <section className="premium-panel premium-preview" role="status"><span className="premium-kicker">{t("CHUYỂN KHOẢN · XÁC MINH THỦ CÔNG", "BANK TRANSFER · MANUAL VERIFICATION")}</span><h2>{t("Quét QR bằng ứng dụng ngân hàng", "Scan with your banking app")}</h2><img className="premium-bank-qr" src={paymentConfig.qrImage} alt={t("Mã QR chuyển khoản do chủ dự án cung cấp", "Bank QR supplied by the project owner")} /><dl className="premium-order-lines"><div><dt>{t("Người nhận", "Recipient")}</dt><dd>{paymentConfig.accountName}</dd></div><div><dt>{t("Số tài khoản", "Account number")}</dt><dd>{paymentConfig.accountNumber}</dd></div><div><dt>{t("Số tiền theo gói", "Plan amount")}</dt><dd>{money(plan.price, plan.currency)}</dd></div><div><dt>{t("Nội dung tham khảo", "Suggested reference")}</dt><dd>{reference}</dd></div></dl><p className="premium-muted">{t("QR tĩnh không chứa riêng số tiền của gói hoặc mã đơn. Kiểm tra người nhận, nhập đúng số tiền và nội dung trong ứng dụng ngân hàng. Nội dung tham khảo không phải mã giao dịch/đơn duy nhất. Hãy liên hệ quản trị viên trước khi chuyển tiền thật trong giai đoạn thử nghiệm.", "Static QR does not encode this plan's price or a unique order. Verify the recipient and enter the correct amount and reference in your banking app. The suggested reference is not a unique transaction ID. Contact the administrator before sending real money during testing.")}</p><button type="button" className="secondary-button" onClick={() => setNotice(t("Chưa thể gửi yêu cầu đối soát trong phiên bản này. Hãy liên hệ quản trị viên và cung cấp chứng từ. Chưa có giao dịch nào được ghi nhận hoặc quyền Premium nào được cấp từ thao tác này.", "Reconciliation requests are not connected yet. Contact the administrator with your receipt. This action does not record payment or grant Premium access."))}>{t("Tôi đã chuyển khoản — bước tiếp theo?", "I transferred — what next?")}</button>{notice && <p role="status">{notice}</p>}</section>}
-    </form><aside className="premium-purchase-card"><span className="premium-kicker">{t("TÓM TẮT ĐƠN", "ORDER SUMMARY")}</span><h2>{plan.name}</h2><span className="premium-duration">{plan.durationDays} {t("ngày truy cập", "days of access")}</span><dl className="premium-order-lines"><div><dt>{t("Giá niêm yết", "Listed price")}</dt><dd>{money(plan.price, plan.currency)}</dd></div><div><dt>{t("Giảm giá", "Discount")}</dt><dd>{money(0, plan.currency)}</dd></div><div><dt>{t("Phí bổ sung của hệ thống", "Additional system fees")}</dt><dd>{money(0, plan.currency)}</dd></div></dl><div className="premium-total"><span>{t("Tổng theo danh mục", "Catalog total")}</span><strong>{money(plan.price, plan.currency)}</strong></div><Link to={`/premium/packages/${plan.id}`}>{t("Xem lại quyền lợi", "Review benefits")}</Link><button form="premium-checkout-form" type="submit" disabled={!confirmed}>{t("Hiển thị QR chuyển khoản", "Show bank transfer QR")} →</button><small>{t("Ngân hàng có thể tính phí riêng. Chưa tạo đơn thanh toán trên máy chủ; cần quản trị viên xác minh trước khi cấp quyền.", "Your bank may charge its own fees. No server payment order is created; administrator verification is required before access is granted.")}</small><Link className="premium-change-plan" to="/premium/packages">{t("Đổi gói khác", "Choose another plan")}</Link></aside></div>
-  </main>;
+  async function submit(event) {
+    event.preventDefault();
+    if (!confirmed || busy) return;
+    setBusy(true); setError("");
+    try { await submitPremiumRequest(plan.id); navigate("/premium/payment-result"); }
+    catch (failure) { setError(failure.message); }
+    finally { setBusy(false); }
+  }
+  return <main className="page-content premium-page">
+    <Link className="premium-back" to={`/premium/packages/${plan.id}`}>← {t("Quay lại quyền lợi gói", "Back to plan benefits")}</Link>
+    <header className="premium-checkout-heading"><span className="premium-kicker">THE PLUSE PREMIUM</span><h1>{t("Đăng ký gói Premium", "Register for Premium")}</h1>
+      <p>{t("Gửi đăng ký trước để nhận mã đối soát. Admin xác nhận thanh toán rồi mới kích hoạt gói.", "Submit first to receive your transfer reference. An administrator verifies payment before activation.")}</p>
+      <ol className="premium-steps"><li>✓ {t("Chọn gói", "Choose plan")}</li><li>2. {t("Gửi đăng ký", "Submit request")}</li><li>3. {t("Admin duyệt", "Administrator review")}</li></ol></header>
+    <div className="premium-detail-grid"><form id="premium-checkout-form" onSubmit={submit}>
+      <section className="premium-panel"><h2>{t("Tài khoản nhận quyền lợi", "Account receiving access")}</h2><strong>{user?.fullName || user?.username}</strong><p>{user?.email}</p></section>
+      <section className="premium-panel"><h2>{t("Chuyển khoản QR · Duyệt thủ công", "Bank QR · Manual approval")}</h2>
+        <p>{t("Sau khi gửi, trang kết quả hiển thị QR, số tiền đã chốt và mã chuyển khoản riêng. Không chuyển tiền trước khi nhận mã yêu cầu.", "After submission you receive the QR, confirmed amount and unique reference. Submit before transferring.")}</p>
+        <p className="premium-muted">{t("Không nhập OTP/mật khẩu ngân hàng trên The Pluse. Chưa tích hợp payOS, thẻ hoặc ví.", "Never enter banking credentials here. payOS, cards and wallets are not integrated.")}</p></section>
+      <section className="premium-panel"><label className="premium-consent"><input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /><span>{t("Tôi đã xem quyền lợi và đồng ý chờ admin xác minh thanh toán. Gửi đăng ký không đồng nghĩa đã trả tiền hoặc có quyền Premium.", "I reviewed the benefits and agree to wait for payment verification. Submitting does not confirm payment or Premium access.")}</span></label></section>
+      {error && <p className="error-message" role="alert">{error}</p>}
+    </form><aside className="premium-purchase-card"><span className="premium-kicker">{t("TÓM TẮT ĐĂNG KÝ", "REQUEST SUMMARY")}</span><h2>{plan.name}</h2><span className="premium-duration">{plan.durationDays} {t("ngày", "days")}</span>
+      <div className="premium-total"><span>{t("Số tiền", "Amount")}</span><strong>{money(plan.price, plan.currency)}</strong></div>
+      <p>{t("Tính hạn từ lúc duyệt. Nếu gói hiện tại còn hạn, thời gian mới nối tiếp hạn đó.", "Access starts on approval or after your existing active period ends.")}</p>
+      <button form="premium-checkout-form" type="submit" disabled={!confirmed || busy}>{busy ? t("Đang gửi…", "Submitting…") : t("Gửi đăng ký — chờ admin duyệt", "Submit for review")}</button>
+      <small>{t("Không tự động trừ tiền. Tối đa một yêu cầu chờ duyệt mỗi tài khoản.", "No automatic charge. One pending request per account.")}</small><Link className="premium-change-plan" to="/premium/packages">{t("Đổi gói", "Change plan")}</Link>
+    </aside></div></main>;
 }
