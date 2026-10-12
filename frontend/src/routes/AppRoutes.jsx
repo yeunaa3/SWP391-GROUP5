@@ -12,6 +12,8 @@ import SlotCalendarPage from "../pages/business/SlotCalendarPage.jsx";
 import PerformancePage from "../pages/business/PerformancePage.jsx";
 import BusinessWorkspacePage from "../pages/business/BusinessWorkspacePage.jsx";
 import PackagesPage from "../pages/premium/PackagesPage.jsx";
+import PackageDetailPage from "../pages/premium/PackageDetailPage.jsx";
+import PremiumCheckoutPage from "../pages/premium/PremiumCheckoutPage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
 import SearchPage from "../pages/public/SearchPage.jsx";
@@ -28,6 +30,8 @@ const specialPages = {
   "AUTH-03": <ForgotPasswordPage />,
   "AUTH-04": <ResetPasswordPage />,
   "PRE-01": <PackagesPage />,
+  "PRE-02": <PackageDetailPage />,
+  "PRE-03": <PremiumCheckoutPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,
   "BUS-18": <PerformancePage />,

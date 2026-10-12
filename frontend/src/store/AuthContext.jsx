@@ -10,9 +10,12 @@ export function AuthProvider({ children }) {
 
   async function refresh() {
     try {
-      setUser(await getCurrentUser());
+      const current = await getCurrentUser();
+      setUser(current);
+      return current;
     } catch {
       setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }

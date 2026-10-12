@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login } from "../../services/authService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
 import AuthShell from "../../components/AuthShell.jsx";
+import { safeReturnTo } from "../../utils/sessionRouting.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 
 export default function LoginPage() {
@@ -21,8 +22,9 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(form);
-      await refresh();
-      navigate(location.state?.returnTo || "/", { replace: true });
+      const current = await refresh();
+      if (!current) throw new Error(t("Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.", "Unable to verify your session. Please try again."));
+      navigate(safeReturnTo(location.state?.returnTo, current), { replace: true });
     } catch (requestError) {
       setError(requestError.message === "Invalid username/email or password"
         ? t("Tên đăng nhập hoặc mật khẩu chưa đúng. Vui lòng kiểm tra và thử lại.", "Incorrect username or password. Please check and try again.")
