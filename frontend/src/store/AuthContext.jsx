@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { getCurrentUser, logout as requestLogout } from "../services/authService.js";
 
@@ -7,17 +7,21 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const sessionGeneration = useRef(0);
 
   async function refresh() {
+    const generation = ++sessionGeneration.current;
+    setLoading(true);
     try {
       const current = await getCurrentUser();
+      if (generation !== sessionGeneration.current) return null;
       setUser(current);
       return current;
     } catch {
-      setUser(null);
+      if (generation === sessionGeneration.current) setUser(null);
       return null;
     } finally {
-      setLoading(false);
+      if (generation === sessionGeneration.current) setLoading(false);
     }
   }
 
@@ -25,7 +29,9 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await requestLogout();
+    sessionGeneration.current++;
     setUser(null);
+    setLoading(false);
   }
 
   const value = useMemo(() => ({ user, loading, refresh, logout }), [user, loading]);
