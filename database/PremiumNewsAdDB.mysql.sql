@@ -346,7 +346,7 @@ CREATE TABLE contracts (
     CONSTRAINT ck_contracts_value CHECK (total_value >= 0),
     CONSTRAINT ck_contracts_payment_status CHECK (payment_status IN ('UNPAID', 'PENDING', 'PAID', 'FAILED', 'REFUNDED')),
     CONSTRAINT ck_contracts_status CHECK (
-        status IN ('DRAFT', 'PROPOSED', 'REVISION_REQUESTED', 'ACCEPTED', 'PENDING_PAYMENT', 'ACTIVE', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED', 'COMPLETED')
+        status IN ('DRAFT', 'PENDING_REVIEW', 'PROPOSED', 'REVISION_REQUESTED', 'ACCEPTED', 'PENDING_PAYMENT', 'ACTIVE', 'PAYMENT_FAILED', 'CANCELLED', 'EXPIRED', 'COMPLETED')
     )
 ) ENGINE=InnoDB;
 

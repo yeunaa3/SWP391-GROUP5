@@ -103,8 +103,24 @@ public class BusinessWorkspaceService {
             VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,code("BOOK"),request.name().trim(),id,request.packageId(),request.slotId(),pack.get("code"),pack.get("name"),pack.get("price"),
             pack.get("duration_days"),pack.get("impressions_quota"),slot.get("slot_name"),slot.get("position_code"),price,start,end);
-        audit(user,"SUBMIT_BOOKING_REQUEST","CONTRACT",contract);
-        return Map.of("id",contract,"amount",price,"status","DRAFT");
+        submitBooking(user,contract);
+        return Map.of("id",contract,"amount",price,"status","PENDING_REVIEW");
+    }
+    @Transactional
+    public Map<String,Object> submitBooking(AuthenticatedUserPrincipal user,Long id) {
+        Long company=requireCompany(user);
+        Map<String,Object> profile=one("SELECT * FROM companies WHERE company_id=? FOR UPDATE",company);
+        Map<String,Object> contract=one("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",id,company);
+        if(!"DRAFT".equals(contract.get("status"))) throw new InvalidStateTransitionException("Chỉ yêu cầu nháp mới được gửi xét duyệt.");
+        if(!"APPROVED".equals(profile.get("application_status"))) throw new InvalidStateTransitionException("Doanh nghiệp cần được duyệt hợp tác trước khi đặt quảng cáo.");
+        LocalDateTime start=dateTime(contract.get("start_at")),end=dateTime(contract.get("end_at"));
+        if(start.toLocalDate().isBefore(LocalDate.now()) || !end.isAfter(start)) throw new InvalidStateTransitionException("Lịch quảng cáo đã hết hạn hoặc không hợp lệ. Hãy tạo yêu cầu với lịch mới.");
+        one("SELECT * FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",contract.get("slot_id"));
+        one("SELECT * FROM b2b_packages WHERE b2b_package_id=? AND status='ACTIVE'",contract.get("b2b_package_id"));
+        requireAvailable(((Number)contract.get("slot_id")).longValue(),start,end);
+        jdbc.update("UPDATE contracts SET status='PENDING_REVIEW' WHERE contract_id=?",id);
+        audit(user,"SUBMIT_BOOKING_REQUEST","CONTRACT",id);
+        return Map.of("id",id,"status","PENDING_REVIEW");
     }
     @Transactional
     public Map<String,Object> saveCampaign(AuthenticatedUserPrincipal user,Long campaignId,BusinessRequests.Campaign request) {

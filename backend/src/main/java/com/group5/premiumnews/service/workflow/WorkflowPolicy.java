@@ -22,7 +22,8 @@ public final class WorkflowPolicy {
 
     private static final Map<ContractStatus, Set<ContractStatus>> CONTRACT = transitions(
             ContractStatus.class,
-            entry(ContractStatus.DRAFT, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
+            entry(ContractStatus.DRAFT, ContractStatus.PENDING_REVIEW, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
+            entry(ContractStatus.PENDING_REVIEW, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
             entry(ContractStatus.PROPOSED, ContractStatus.REVISION_REQUESTED, ContractStatus.ACCEPTED, ContractStatus.EXPIRED, ContractStatus.CANCELLED),
             entry(ContractStatus.REVISION_REQUESTED, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
             entry(ContractStatus.ACCEPTED, ContractStatus.PENDING_PAYMENT, ContractStatus.CANCELLED),
