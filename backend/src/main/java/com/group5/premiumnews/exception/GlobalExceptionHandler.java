@@ -69,11 +69,6 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request.getRequestURI());
     }
 
-    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
-    ResponseEntity<ApiError> handleInvalidParameter(Exception exception, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "Invalid request parameter", request.getRequestURI());
-    }
-
     private ResponseEntity<ApiError> build(HttpStatus status, String message, String path) {
         return ResponseEntity.status(status).body(new ApiError(
                 Instant.now(), status.value(), status.getReasonPhrase(), message, path));
