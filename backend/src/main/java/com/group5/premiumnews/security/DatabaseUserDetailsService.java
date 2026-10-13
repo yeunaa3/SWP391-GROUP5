@@ -19,7 +19,9 @@ public class DatabaseUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String login) throws UsernameNotFoundException { //login có thể là email hoặc ủe name
+        // UC-06: tham số login có thể là username hoặc email; truy vấn không phân biệt hoa/thường.
+        // Hàm chỉ nạp dữ liệu user; DaoAuthenticationProvider chịu trách nhiệm so mật khẩu.
         User user = userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(login, login)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid username/email or password"));
         return AuthenticatedUserPrincipal.from(user);

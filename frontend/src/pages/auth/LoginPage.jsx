@@ -17,6 +17,7 @@ export default function LoginPage() {
   const location = useLocation();
 
   async function submit(event) {
+    // UC-06: gửi thông tin đăng nhập, kiểm tra lại session rồi điều hướng theo quyền tài khoản.
     event.preventDefault();
     setError("");
     setSubmitting(true);

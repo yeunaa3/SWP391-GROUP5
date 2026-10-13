@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public final class BusinessRequests {
     private BusinessRequests() {}
+    // UC-38: 6 trường hồ sơ đều bắt buộc; email kiểm tra định dạng, mỗi trường có giới hạn độ dài.
     public record Company(@NotBlank @Size(max=150) String name,
             @NotBlank @Size(max=50) String taxCode,
             @NotBlank @Email @Size(max=254) String email,
@@ -19,3 +20,4 @@ public final class BusinessRequests {
             @NotBlank @Size(max=150) String name, @Size(max=2000) String description,
             @NotNull LocalDateTime startTime, @NotNull LocalDateTime endTime) {}
 }
+// chưa được kiểm tra đầu sđt

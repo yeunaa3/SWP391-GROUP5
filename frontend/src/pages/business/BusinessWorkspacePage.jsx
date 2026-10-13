@@ -28,6 +28,7 @@ export default function BusinessWorkspacePage({screen}) {
   const { tr }=usePreferences();const params=useParams();const navigate=useNavigate();const [query]=useSearchParams();
   const [data,setData]=useState(empty);const [catalog,setCatalog]=useState(null);const [loading,setLoading]=useState(true);
   const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [message,setMessage]=useState("");
+  // UC-38/BUS-02: dữ liệu đang chỉnh sửa của hồ sơ công ty, độc lập với hồ sơ cá nhân ở UC-08.
   const [companyForm,setCompanyForm]=useState({name:"",taxCode:"",email:"",phone:"",address:"",billingAddress:""});
   const [booking,setBooking]=useState({name:"",slotId:query.get("slotId") || "",packageId:query.get("packageId") || "",startDate:query.get("startDate") || "",endDate:query.get("endDate") || ""});
   const [editingBooking,setEditingBooking]=useState(false);const [deleteConfirm,setDeleteConfirm]=useState(false);
@@ -37,6 +38,7 @@ export default function BusinessWorkspacePage({screen}) {
   useEffect(()=>{if(screen.id==="BUS-07") {const selected=new URLSearchParams(queryString);setBooking({name:"",slotId:selected.get("slotId") || "",packageId:selected.get("packageId") || "",startDate:selected.get("startDate") || "",endDate:selected.get("endDate") || ""});}},[screen.id,queryString]);
   const current=data.campaigns.find(c=>String(c.campaign_id)===params.campaignId);
   const contract=data.contracts.find(c=>String(c.contract_id)===params.contractId);
+  // Nạp lại dữ liệu thật từ backend sau thao tác lưu/gửi; không tự giả lập trạng thái thành công.
   async function refresh(){const result=await apiRequest("/api/business/workspace");setData(result);return result;}
   useEffect(()=>{let alive=true;setLoading(true);setError("");setMessage("");setFile(null);setEditingBooking(false);setDeleteConfirm(false);
     Promise.all([apiRequest("/api/business/workspace"),getAdvertisingCatalog()]).then(([result,offers])=>{if(!alive)return;
@@ -49,10 +51,12 @@ export default function BusinessWorkspacePage({screen}) {
       setTargetUrl(selected?.target_url || "");
     }).catch(e=>{if(alive)setError(e.message);}).finally(()=>{if(alive)setLoading(false);});return ()=>{alive=false;};
   },[screen.id,params.campaignId,params.contractId]);
+  // Bao thao tác API: khóa gửi lặp, hiển thị lỗi/thành công, đồng bộ workspace rồi gọi callback nếu có.
   async function action(task,success,after){if(busy)return;setBusy(true);setError("");setMessage("");try{const result=await task();await refresh();setMessage(success);after?.(result);}catch(e){setError(e.message);}finally{setBusy(false);}}
   const json=(path,body,method="POST")=>apiRequest(path,{method,body:JSON.stringify(body)});
   const activeContracts=data.contracts.filter(c=>c.status==="ACTIVE" && c.payment_status==="PAID" && new Date(c.end_at)>new Date());
   const isProfile=screen.id==="BUS-02";const isApplication=["BUS-03","BUS-04"].includes(screen.id);
+  // BUS-13 hiển thị danh sách ở nhánh riêng; isCampaign dùng cho màn tạo/sửa/banner/gửi/chi tiết.
   const isCampaign=["BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id);
   // Kiểm tra cả đường dẫn trực tiếp: chỉ hồ sơ APPROVED được mở booking và chiến dịch.
   if(!loading && ["BUS-07","BUS-13","BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id) && data.company.application_status!=="APPROVED") return <main className="page-content business-live"><div className="page-heading"><h1>{tr(screen.name)}</h1></div>{error && <p className="form-error" role="alert">{error}</p>}<section className="dashboard-section"><p className="info-note" role="status">{partnershipNotice(data.company.application_status)}</p><div className="form-actions"><Link className="button-link" to="/business/partnership/status">Xem hồ sơ hợp tác</Link><Link className="outline-button" to="/business">Về tổng quan doanh nghiệp</Link></div></section></main>;

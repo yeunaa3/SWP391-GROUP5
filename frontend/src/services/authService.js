@@ -5,6 +5,7 @@ export function getCurrentUser() {
 }
 
 export function login(credentials) {
+  // UC-06: gửi username/email và mật khẩu; apiRequest kèm CSRF và cookie session.
   return apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify(credentials) });
 }
 

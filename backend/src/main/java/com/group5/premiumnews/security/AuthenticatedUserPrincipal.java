@@ -19,6 +19,7 @@ public record AuthenticatedUserPrincipal(
         Collection<? extends GrantedAuthority> authorities) implements UserDetails {
 
     public static AuthenticatedUserPrincipal from(User user) {
+        // Chuyển User sang thông tin Spring Security: hash mật khẩu, role ACTIVE và trạng thái tài khoản.
         List<SimpleGrantedAuthority> authorities = user.getRoles().stream()
                 .filter(role -> "ACTIVE".equals(role.getStatus()))
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))

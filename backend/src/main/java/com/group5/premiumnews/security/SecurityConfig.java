@@ -57,23 +57,27 @@ public class SecurityConfig {
     DaoAuthenticationProvider authenticationProvider(
             DatabaseUserDetailsService userDetailsService,
             PasswordEncoder passwordEncoder) {
+        // UC-06: nối service đọc DB với BCrypt để xác thực mật khẩu và trạng thái UserDetails. nạp tk vào để xác thực
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
 
     @Bean
-    AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+    AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {// cung cấp manager mà controller gọi
+        // Controller dùng manager này để giao yêu cầu xác thực cho provider đã cấu hình.
         return configuration.getAuthenticationManager();
     }
 
     @Bean
     SecurityContextRepository securityContextRepository() {
+        // Giữ SecurityContext trong HTTP session để các API sau nhận biết người đã đăng nhập.
         return new HttpSessionSecurityContextRepository();
     }
 
     @Bean
     PasswordEncoder passwordEncoder() {
+        // BCrypt dùng encode khi đăng ký và matches khi xác thực; không giải mã hash mật khẩu.
         return new BCryptPasswordEncoder();
     }
 }

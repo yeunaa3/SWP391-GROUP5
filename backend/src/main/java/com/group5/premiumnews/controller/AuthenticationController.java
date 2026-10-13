@@ -54,8 +54,10 @@ public class AuthenticationController {
     @PostMapping("/login")
     public AuthenticatedUserResponse login(@Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
+        // UC-06: provider đọc user từ DB và so mật khẩu; chỉ tiếp tục khi xác thực thành công.
         Authentication authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login(), request.password()));
+        // Lưu người đã xác thực vào context của request hiện tại và session cho request tiếp theo.
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
@@ -65,6 +67,7 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     public AuthenticatedUserResponse me(Authentication authentication) {
+        // Trả tài khoản từ session để frontend xác nhận đăng nhập; không truy vấn lại users tại đây.
         return AuthenticatedUserResponse.from((AuthenticatedUserPrincipal) authentication.getPrincipal());
     }
 

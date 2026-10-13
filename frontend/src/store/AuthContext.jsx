@@ -32,6 +32,7 @@ export function AuthProvider({ children }) {
   }, [refreshPremium]);
 
   async function refresh() {
+    // UC-06: gọi /me để xác nhận session, cập nhật user/loading và trả tài khoản hoặc null khi lỗi.
     const generation = ++sessionGeneration.current;
     setLoading(true);
     try {
