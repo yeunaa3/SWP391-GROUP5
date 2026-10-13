@@ -30,6 +30,9 @@ public class AuthenticationService {
 
     @Transactional
     public AuthenticatedUserResponse register(RegistrationRequest request) {
+        if(!Boolean.TRUE.equals(request.acceptedTerms()) || !request.isPasswordConfirmed())
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Cần đồng ý điều khoản và nhập mật khẩu xác nhận trùng khớp.");
         String phone = validatePhone(request.phoneNumber());
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
