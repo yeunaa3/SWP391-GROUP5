@@ -5,24 +5,27 @@ import { registerAccount } from "../../services/authService.js";
 import AuthShell from "../../components/AuthShell.jsx";
 import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 
-const initial = { username: "", email: "", password: "", fullName: "", phoneNumber: "", accountType: "READER" };
+const initial = { username: "", email: "", password: "", fullName: "", phoneNumber: "", accountType: "READER", confirmPassword: "", acceptedTerms: false };
 
 export default function RegisterPage() {
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
-  function update(event) { setForm({ ...form, [event.target.name]: event.target.value }); }
+  const detectedPhone=form.phoneNumber?parsePhoneNumberFromString(form.phoneNumber.startsWith("0")?form.phoneNumber:"+"+form.phoneNumber,"VN"):null;
+  function update(event) { setError(""); setForm({ ...form, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }); }
   async function submit(event) {
     event.preventDefault(); setError("");
     const payload={...form,fullName:form.fullName.trim().replace(/\s+/g," "),email:form.email.trim().toLowerCase()};
     if(!/^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u.test(payload.fullName)) {setError("Họ tên chỉ được chứa chữ và khoảng trắng.");return;}
-    if(!/^[A-Za-z0-9@]{3,50}$/.test(payload.username)) {setError("Username chỉ dùng chữ không dấu, số và @ (3–50 ký tự).");return;}
+    if(!/^[A-Za-z0-9@.]{3,50}$/.test(payload.username)) {setError("Username chỉ dùng chữ không dấu, số, @ và dấu chấm (3–50 ký tự).");return;}
     if(!/^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$/.test(payload.email)) {setError("Email không đúng định dạng.");return;}
     if(payload.phoneNumber) {
       const phone=parsePhoneNumberFromString(payload.phoneNumber.startsWith("0")?payload.phoneNumber:"+"+payload.phoneNumber,"VN");
       if(!/^[0-9]{8,15}$/.test(payload.phoneNumber) || !phone?.isValid()) {setError("Số điện thoại không hợp lệ theo đầu số quốc gia. Ví dụ: 0901234567 hoặc 84901234567.");return;}
     }
+    if(payload.password!==payload.confirmPassword) {setError("Mật khẩu xác nhận không khớp.");return;}
+    if(!payload.acceptedTerms) {setError("Bạn cần chấp nhận điều khoản để đăng ký.");return;}
     setSubmitting(true);
     try { await registerAccount(payload); navigate("/login", { replace: true }); }
     catch (requestError) { setError(requestError.message); }
@@ -38,14 +41,17 @@ export default function RegisterPage() {
         </fieldset>
         {form.accountType === "BUSINESS" && <p className="info-note">Legal company documents are submitted later in the Partnership Application, not during account registration.</p>}
         <div className="field-grid">
-          <label>Full name<input name="fullName" required maxLength="100" value={form.fullName} onChange={update} /><small>Chỉ nhập chữ (có dấu) và khoảng trắng.</small></label>
-          <label>Username<input name="username" required minLength="3" maxLength="50" pattern="[A-Za-z0-9@]+" title="Chỉ dùng chữ không dấu, số và @" value={form.username} onChange={update} /></label>
+          <label>Full name<input name="fullName" required maxLength="100" value={form.fullName} onChange={update} /></label>
+          <label>Username<input name="username" required minLength="3" maxLength="50" pattern="[A-Za-z0-9@.]+" title="Chỉ dùng chữ không dấu, số, @ và dấu chấm" value={form.username} onChange={update} /></label>
           <label>Email<input name="email" type="email" required maxLength="254" value={form.email} onChange={update} /></label>
-          <label>Phone number<input name="phoneNumber" type="tel" inputMode="numeric" maxLength="15" pattern="[0-9]{8,15}" value={form.phoneNumber} onChange={event=>setForm({...form,phoneNumber:event.target.value.replace(/[^0-9]/g,"")})} /><small>Việt Nam: 0901234567 hoặc 84901234567. Quốc tế: mã quốc gia + số, chỉ nhập chữ số.</small></label>
+          <label>Phone number<input name="phoneNumber" type="tel" inputMode="numeric" maxLength="15" pattern="[0-9]{8,15}" value={form.phoneNumber} onChange={event=>setForm({...form,phoneNumber:event.target.value.replace(/[^0-9]/g,"")})} />{(detectedPhone?.country || /^0[235789]|^84/.test(form.phoneNumber)) && <small>{detectedPhone?.country?new Intl.DisplayNames(["vi"],{type:"region"}).of(detectedPhone.country):"Việt Nam"} (+{detectedPhone?.countryCallingCode || "84"}) · {detectedPhone?.isValid()?detectedPhone.formatInternational():""}</small>}</label>
         </div>
         <label>Password<input name="password" type="password" required minLength="8" maxLength="72" value={form.password} onChange={update} /></label>
+        <label>Confirm password<input name="confirmPassword" type="password" autoComplete="new-password" required maxLength="72" value={form.confirmPassword} onChange={update}/></label>
+        <label style={{display:"flex",alignItems:"center",gap:8}}><input name="acceptedTerms" type="checkbox" checked={form.acceptedTerms} onChange={update}/> Tôi chấp nhận các điều khoản sử dụng.</label>
+        {!form.acceptedTerms && <p role="status" className="info-note">Bạn cần tích chấp nhận điều khoản để đăng ký.</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button type="submit" disabled={submitting}>{submitting ? "Creating..." : "Create account"}</button>
+        <button type="submit" disabled={submitting || !form.acceptedTerms} style={!form.acceptedTerms?{opacity:.45,cursor:"not-allowed"}:undefined}>{submitting ? "Creating..." : "Create account"}</button>
         <p className="form-footer">Already have an account? <Link to="/login">Sign in</Link></p>
       </form>
     </AuthShell>

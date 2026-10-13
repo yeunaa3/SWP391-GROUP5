@@ -11,12 +11,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 class RegistrationValidationTests {
     private RegistrationRequest request(String name,String username,String email) {
-        return new RegistrationRequest(username,email,"Password123",name,"0901234567",AccountType.READER);
+        return new RegistrationRequest(username,email,"Password123",name,"0901234567",AccountType.READER,"Password123",true);
     }
     @Test void namesUsernamesAndEmailsAreValidated() {
         try(var factory=Validation.buildDefaultValidatorFactory()) {
             var validator=factory.getValidator();
             assertTrue(validator.validate(request("Nguyễn Văn An","an@123","an+news@example.com")).isEmpty());
+            assertTrue(validator.validate(request("Nguyễn Văn An","an.demo","an@example.com")).isEmpty());
+            assertFalse(validator.validate(new RegistrationRequest("an.demo","an@example.com","Password123","An","0901234567",AccountType.READER,"Different123",true)).isEmpty());
+            assertFalse(validator.validate(new RegistrationRequest("an.demo","an@example.com","Password123","An","0901234567",AccountType.READER,"Password123",false)).isEmpty());
             assertFalse(validator.validate(request("An!","an123","an@example.com")).isEmpty());
             assertFalse(validator.validate(request("An","an_123","an@example.com")).isEmpty());
             assertFalse(validator.validate(request("An","an123","an..news@example.com")).isEmpty());
