@@ -215,5 +215,23 @@ public class BusinessWorkspaceService {
     private String code(String prefix) { return prefix+"-"+UUID.randomUUID().toString().substring(0,18); }
     private void audit(AuthenticatedUserPrincipal user,String action,String type,Long id) {
         jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES(?,?,?,?)",user.id(),action,type,String.valueOf(id));
+        String title = switch(action) {
+            case "SUBMIT_APPLICATION" -> "Hồ sơ hợp tác đã được gửi duyệt";
+            case "SUBMIT_BOOKING_REQUEST" -> "Yêu cầu đặt quảng cáo đã được gửi";
+            case "SUBMIT_CAMPAIGN" -> "Chiến dịch đã được gửi duyệt";
+            default -> null;
+        };
+        if(title != null) {
+            jdbc.update("""
+                INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
+                VALUES (?,?,?,'WORKFLOW',?,?,'SENT',CURRENT_TIMESTAMP(6))
+                """,user.id(),title,"Bản ghi #"+id+" đã được gửi tới quản lý quảng cáo. Mở trang liên quan để theo dõi trạng thái; gửi duyệt chưa có nghĩa là đã được chấp nhận.",type,String.valueOf(id));
+            jdbc.update("""
+                INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
+                SELECT DISTINCT u.user_id,?,?,'WORKFLOW',?,?,'SENT',CURRENT_TIMESTAMP(6)
+                FROM users u JOIN user_roles ur ON ur.user_id=u.user_id JOIN roles r ON r.role_id=ur.role_id
+                WHERE r.role_name='AD_MANAGER' AND r.status='ACTIVE' AND u.status='ACTIVE'
+                ""","Có bản gửi cần kiểm tra: "+title,"Bản ghi #"+id+" đang chờ xem xét. Mở trang liên quan để kiểm tra hồ sơ trước khi đưa ra quyết định.",type,String.valueOf(id));
+        }
     }
 }

@@ -5,6 +5,7 @@ import { previewBanners, useAdPreview } from "../store/AdPreviewContext.jsx";
 import { adsForPosition } from "../data/houseAds.js";
 import { adFormat } from "../utils/adFormats.js";
 import { useAuth } from "../store/AuthContext.jsx";
+import { useAdAllowance } from "../store/AdAllowanceContext.jsx";
 import { usePreferences } from "../store/PreferencesContext.jsx";
 import "../assets/house-ads.css";
 
@@ -13,7 +14,8 @@ export default function AdBanner({ position = "HOME_HERO", compact = false }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const preview = useAdPreview();
-  const { premiumActive, premiumLoading, loading } = useAuth();
+  const { premiumLoading, loading } = useAuth();
+  const { adFreeActive } = useAdAllowance();
   const { t } = usePreferences();
   const format = adFormat(position);
   const house = !preview && !banners.length;
@@ -28,7 +30,7 @@ export default function AdBanner({ position = "HOME_HERO", compact = false }) {
     return () => clearInterval(timer);
   }, [displayBanners.length, paused, preview]);
   const banner = displayBanners[index % Math.max(1, displayBanners.length)];
-  if (!banner || premiumActive || premiumLoading || loading) return null;
+  if (!banner || adFreeActive || premiumLoading || loading) return null;
   const brandDetails = {
     "preview-nova": ["NOVA LEARN", "Kỹ năng mới. Cơ hội mới.", "Học công nghệ, dữ liệu và tư duy sáng tạo mỗi ngày.", "LEARN"],
     "preview-farm": ["GREEN FARM", "Công nghệ xanh. Mùa vụ tốt hơn.", "Giải pháp thông minh cho một tương lai bền vững.", "GROW"],

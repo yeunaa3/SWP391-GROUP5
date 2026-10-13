@@ -8,3 +8,7 @@ export function packageBenefits(plan) {
 export function projectedExpiry(start, durationDays) {
   return new Date(new Date(start).getTime() + Number(durationDays) * 86400000);
 }
+export function readingBenefits(language = "vi") {
+  return language === "vi" ? ["Đọc tập trung · Chỉ Premium", "Đọc thành tiếng · Cần giọng tiếng Việt", "5 phút miễn quảng cáo mỗi ngày", "Đọc nội dung Premium của The Pluse"]
+    : ["Focus reading · Premium only", "Read aloud · Vietnamese voice required", "5 ad-free minutes daily", "The Pluse Premium content"];
+}

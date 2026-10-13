@@ -55,10 +55,21 @@ public class PremiumRequestRepository {
     }
 
     public long create(long userId, Plan plan) {
-        return insert("""
+        long requestId = insert("""
                 INSERT INTO premium_requests(user_id,package_id,package_code,package_name,amount,currency,duration_days)
                 VALUES (?,?,?,?,?,?,?)
                 """, userId, plan.id(), plan.code(), plan.name(), plan.amount(), plan.currency(), plan.days());
+        jdbc.update("""
+            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
+            VALUES (?,?,?,'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6))
+            """, userId,"Đã nhận yêu cầu đăng ký Premium","Yêu cầu cho gói " + plan.name() + " đang chờ admin kiểm tra thanh toán. Chưa được cấp quyền; không chuyển tiền lại nếu đã thanh toán.",String.valueOf(requestId));
+        jdbc.update("""
+            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
+            SELECT DISTINCT u.user_id,?,?, 'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6)
+            FROM users u JOIN user_roles ur ON ur.user_id=u.user_id JOIN roles r ON r.role_id=ur.role_id
+            WHERE r.role_name='ADMINISTRATOR' AND r.status='ACTIVE' AND u.status='ACTIVE'
+            """, "Có yêu cầu Premium cần kiểm tra","Yêu cầu #"+requestId+" · "+plan.name()+". Hãy xác minh tiền đã nhận trước khi duyệt.",String.valueOf(requestId));
+        return requestId;
     }
 
     public List<Map<String, Object>> list(Long userId) {
@@ -104,6 +115,12 @@ public class PremiumRequestRepository {
                 UPDATE premium_requests SET status=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP(6),review_note=?,subscription_id=?
                 WHERE request_id=? AND status='PENDING'
                 """, status, adminId, note, subscription, id);
+        jdbc.update("""
+            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
+            SELECT user_id,?,?,'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6)
+            FROM premium_requests WHERE request_id=?
+            """, "APPROVED".equals(status)?"Gói Premium đã được duyệt":"Yêu cầu Premium chưa được duyệt",
+            "APPROVED".equals(status)?"Admin đã xác minh yêu cầu. Mở gói của tôi để xem thời gian có hiệu lực và các quyền lợi.":"Admin đã từ chối yêu cầu. Mở lịch sử đăng ký để xem lý do trước khi gửi lại.",String.valueOf(id),id);
     }
 
     private long insert(String sql, Object... values) {

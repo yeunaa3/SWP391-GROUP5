@@ -7,16 +7,19 @@ import ModalShell from "../../components/ModalShell.jsx";
 import ArticleAudio from "../../components/ArticleAudio.jsx";
 import { getArticle, getArticles } from "../../services/contentService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
+import { useAdAllowance } from "../../store/AdAllowanceContext.jsx";
 
 export default function ArticlePage() {
   const { slug } = useParams();
   const { user, premiumActive, premiumLoading } = useAuth();
+  const { adFreeActive } = useAdAllowance();
   const [state, setState] = useState({ article: null, demo: false });
   const [related, setRelated] = useState([]);
   const [notice, setNotice] = useState("");
   const [fontSize, setFontSize] = useState(19);
   const [focus, setFocus] = useState(false);
   const [photoOpen, setPhotoOpen] = useState(false);
+  useEffect(() => { if (!premiumActive) setFocus(false); }, [premiumActive]);
   const closePhoto = useCallback(() => setPhotoOpen(false), []);
   const accessKey = `${slug}:${user?.id || "guest"}:${premiumActive}`;
   useEffect(() => {
@@ -28,15 +31,15 @@ export default function ArticlePage() {
   }, [accessKey]);
   if (!state.article || state.accessKey !== accessKey || premiumLoading) return <main className="route-state">Đang tải tin…</main>;
   const article = state.article;
-  const subscriber = premiumActive;
-  const locked = article.premium && !subscriber;
+  const subscriber = adFreeActive;
+  const locked = article.premium && !premiumActive;
   const blocks = articleBlocks(article, locked);
-  return <main className={focus ? "reader-focus" : ""}><DemoNotice show={state.demo} /><div className="public-content">
+  return <main className={focus && premiumActive ? "reader-focus" : ""}><DemoNotice show={state.demo} /><div className="public-content">
     <div className="article-breadcrumb"><Link to="/">Trang chủ</Link><span>／</span><Link to="/search">Tin tức</Link><span>／</span><span>{article.categories?.[0] || "Bài viết"}</span></div>
     {!subscriber && <AdBanner position="ARTICLE_TOP" />}
     <section className="srs-article-grid"><article className="srs-article"><p className="eyebrow">{article.categories?.join(" · ") || article.category} {article.premium && "· PREMIUM DEMO"}</p><h1>{article.title}</h1>
       <div className="article-author-row"><span className="source-avatar">{(article.sourceName || "TP").slice(0, 2).toUpperCase()}</span><div><p className="article-byline">{article.sourceName ? `Theo ${article.sourceName}` : "The Pulse · Nội dung mẫu"}</p><small>{new Date(article.publishedAt).toLocaleString("vi-VN")} · {article.sourceUrl ? "Tin từ nguồn báo" : "Bài viết mẫu"}</small></div><span className="article-access-label">{article.premium ? "PREMIUM" : "CÔNG KHAI"}</span></div>
-      <div className="reader-toolbar"><span>Không gian đọc</span><div><button aria-label="Giảm cỡ chữ" disabled={fontSize <= 16} onClick={() => setFontSize(value => value - 1)}>A−</button><span>{fontSize}px</span><button aria-label="Tăng cỡ chữ" disabled={fontSize >= 26} onClick={() => setFontSize(value => value + 1)}>A+</button><button aria-pressed={focus} onClick={() => setFocus(value => !value)}>{focus ? "Thoát tập trung" : "Đọc tập trung"}</button></div></div>
+      <div className="reader-toolbar"><span>Không gian đọc</span><div><button aria-label="Giảm cỡ chữ" disabled={fontSize <= 16} onClick={() => setFontSize(value => value - 1)}>A−</button><span>{fontSize}px</span><button aria-label="Tăng cỡ chữ" disabled={fontSize >= 26} onClick={() => setFontSize(value => value + 1)}>A+</button>{premiumActive ? <button aria-pressed={focus} onClick={() => setFocus(value => !value)}>{focus ? "Thoát tập trung" : "Đọc tập trung"}</button> : <Link to="/premium/packages">✦ Đọc tập trung · Premium</Link>}</div></div>
       {article.thumbnailUrl && <figure><button className="article-photo-button" aria-label="Phóng to ảnh bài viết" onClick={() => setPhotoOpen(true)}><img className="news-detail-photo" src={article.thumbnailUrl} alt={article.title} referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} /><span>⤢ Xem ảnh lớn</span></button><figcaption>{article.sourceName ? `Ảnh trong RSS: ${article.sourceName}` : "Ảnh minh họa"}</figcaption></figure>}
       {article.sourceUrl && <section className="article-source-origin"><a href={article.sourceUrl} target="_blank" rel="noopener noreferrer">Theo {article.sourceName || new URL(article.sourceUrl).hostname} ↗</a>{article.sourceAuthor && <span> · {article.sourceAuthor}</span>}<p>{article.contentMode === "PUBLIC_TEXT" ? "Nội dung công khai được nhập từ bài nguồn. Video, nội dung nhúng hoặc phần cập nhật có thể chỉ có trên báo gốc." : "Bài này hiện chỉ có phần giới thiệu RSS; mở báo nguồn để đọc đầy đủ."}</p></section>}<ArticleAudio key={article.slug} article={article} locked={locked}/>
       <div style={{ fontSize }} className={locked ? "article-copy article-copy-locked" : "article-copy"}>{blocks.map((block, index) => <div key={index}>{block.type === "image" ? <figure className="source-article-figure"><img loading="lazy" src={block.url} alt={block.text || article.title} referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} /><figcaption>{block.caption || `Ảnh: ${article.sourceName || "Báo nguồn"}`}</figcaption></figure> : block.type === "heading" ? <h2>{block.text}</h2> : <p>{block.text}</p>}{!subscriber && !locked && index === Math.floor((blocks.length - 1) / 2) && <AdBanner position="IN_ARTICLE"/>}</div>)}</div>

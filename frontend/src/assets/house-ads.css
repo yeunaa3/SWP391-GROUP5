@@ -21,6 +21,7 @@
 @media(prefers-reduced-motion:reduce) { .house-ad-art>i { animation:none; } }
 /* Membership also hides the homepage's promotional Premium panel. */
 main[data-hide-promotions="true"] .premium-experience { display: none; }
+.premium-ad-clock { margin:12px auto; width:min(1180px,calc(100% - 32px)); padding:12px 18px; border:1px solid #b2d6c4; border-radius:12px; background:#eaf5ef; color:#175746; font-size:13px; font-variant-numeric:tabular-nums; }
 
 /* Each placement has its own silhouette; media remains uncropped. These are
    responsive UI proportions, not new bookable inventory sizes in the DB. */
