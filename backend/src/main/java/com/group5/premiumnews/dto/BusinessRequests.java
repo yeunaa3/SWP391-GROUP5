@@ -11,7 +11,7 @@ public final class BusinessRequests {
             @NotBlank @Email @Size(max=254) String email,
             @NotBlank @Size(max=30) String phone,
             @NotBlank @Size(max=500) String address,
-            @Size(max=500) String billingAddress) {}
+            @NotBlank @Size(max=500) String billingAddress) {}
     public record Booking(@NotNull @Positive Long slotId, @NotNull @Positive Long packageId,
             @NotNull LocalDate startDate, @NotNull LocalDate endDate,
             @NotBlank @Size(max=200) String name) {}
