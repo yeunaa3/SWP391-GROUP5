@@ -36,11 +36,13 @@ public class AuthenticationService {
         String phone = validatePhone(request.phoneNumber());
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
-        if (userRepository.existsByUsernameIgnoreCase(username)) {
-            throw new ConflictException("Username is already in use");
-        }
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw new ConflictException("Email is already in use");
+        boolean usernameTaken=userRepository.existsByUsernameIgnoreCase(username);
+        boolean emailTaken=userRepository.existsByEmailIgnoreCase(email);
+        if(usernameTaken || emailTaken) {
+            String message=(usernameTaken?"Username đã được sử dụng. Vui lòng đặt username khác.":"")
+                +(usernameTaken && emailTaken?" ":"")
+                +(emailTaken?"Email đã được sử dụng. Vui lòng sử dụng email khác.":"");
+            throw new ConflictException(message);
         }
 
         String roleName = request.accountType() == AccountType.BUSINESS ? "BUSINESS" : "READER";

@@ -10,12 +10,13 @@ const initial = { username: "", email: "", password: "", fullName: "", phoneNumb
 export default function RegisterPage() {
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
+  const [duplicateErrors,setDuplicateErrors]=useState({});
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const detectedPhone=form.phoneNumber?parsePhoneNumberFromString(form.phoneNumber.startsWith("0")?form.phoneNumber:"+"+form.phoneNumber,"VN"):null;
-  function update(event) { setError(""); setForm({ ...form, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }); }
+  function update(event) { setError(""); setDuplicateErrors(previous=>({...previous,[event.target.name]:undefined})); setForm({ ...form, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }); }
   async function submit(event) {
-    event.preventDefault(); setError("");
+    event.preventDefault(); setError("");setDuplicateErrors({});
     const payload={...form,fullName:form.fullName.trim().replace(/\s+/g," "),email:form.email.trim().toLowerCase()};
     if(!/^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u.test(payload.fullName)) {setError("Họ tên chỉ được chứa chữ và khoảng trắng.");return;}
     if(!/^[A-Za-z0-9@.]{3,50}$/.test(payload.username)) {setError("Username chỉ dùng chữ không dấu, số, @ và dấu chấm (3–50 ký tự).");return;}
@@ -28,7 +29,13 @@ export default function RegisterPage() {
     if(!payload.acceptedTerms) {setError("Bạn cần chấp nhận điều khoản để đăng ký.");return;}
     setSubmitting(true);
     try { await registerAccount(payload); navigate("/login", { replace: true }); }
-    catch (requestError) { setError(requestError.message); }
+    catch (requestError) {
+      const message=requestError.message;
+      const duplicates={};
+      if(message.includes("Username đã được sử dụng") || message==="Username is already in use") duplicates.username="Username đã được sử dụng. Vui lòng đặt username khác.";
+      if(message.includes("Email đã được sử dụng") || message==="Email is already in use") duplicates.email="Email đã được sử dụng. Vui lòng sử dụng email khác.";
+      if(Object.keys(duplicates).length) setDuplicateErrors(duplicates);else setError(message);
+    }
     finally { setSubmitting(false); }
   }
 
@@ -42,8 +49,8 @@ export default function RegisterPage() {
         {form.accountType === "BUSINESS" && <p className="info-note">Legal company documents are submitted later in the Partnership Application, not during account registration.</p>}
         <div className="field-grid">
           <label>Full name<input name="fullName" required maxLength="100" value={form.fullName} onChange={update} /></label>
-          <label>Username<input name="username" required minLength="3" maxLength="50" pattern="[A-Za-z0-9@.]+" title="Chỉ dùng chữ không dấu, số, @ và dấu chấm" value={form.username} onChange={update} /></label>
-          <label>Email<input name="email" type="email" required maxLength="254" value={form.email} onChange={update} /></label>
+          <label>Username<input name="username" required minLength="3" maxLength="50" pattern="[A-Za-z0-9@.]+" title="Chỉ dùng chữ không dấu, số, @ và dấu chấm" value={form.username} onChange={update} aria-invalid={Boolean(duplicateErrors.username)} aria-describedby={duplicateErrors.username?"username-duplicate":undefined} />{duplicateErrors.username && <small id="username-duplicate" className="form-error" role="alert">{duplicateErrors.username}</small>}</label>
+          <label>Email<input name="email" type="email" required maxLength="254" value={form.email} onChange={update} aria-invalid={Boolean(duplicateErrors.email)} aria-describedby={duplicateErrors.email?"email-duplicate":undefined} />{duplicateErrors.email && <small id="email-duplicate" className="form-error" role="alert">{duplicateErrors.email}</small>}</label>
           <label>Phone number<input name="phoneNumber" type="tel" inputMode="numeric" maxLength="15" pattern="[0-9]{8,15}" value={form.phoneNumber} onChange={event=>setForm({...form,phoneNumber:event.target.value.replace(/[^0-9]/g,"")})} />{(detectedPhone?.country || /^0[235789]|^84/.test(form.phoneNumber)) && <small>{detectedPhone?.country?new Intl.DisplayNames(["vi"],{type:"region"}).of(detectedPhone.country):"Việt Nam"} (+{detectedPhone?.countryCallingCode || "84"}) · {detectedPhone?.isValid()?detectedPhone.formatInternational():""}</small>}</label>
         </div>
         <label>Password<input name="password" type="password" required minLength="8" maxLength="72" value={form.password} onChange={update} /></label>

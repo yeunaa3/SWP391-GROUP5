@@ -40,4 +40,19 @@ class RegistrationValidationTests {
         assertThrows(ConflictException.class,()->service.register(request("An","an@123","an@example.com")));
         verify(users,never()).save(any());
     }
+    @Test void duplicateFieldsAreRejectedForReaderAndBusiness() {
+        for(var type:AccountType.values()) {
+            for(int mask=1;mask<=3;mask++) {
+                var users=mock(UserRepository.class);
+                when(users.existsByUsernameIgnoreCase("An.demo")).thenReturn((mask&1)!=0);
+                when(users.existsByEmailIgnoreCase("an@example.com")).thenReturn((mask&2)!=0);
+                var service=new AuthenticationService(users,mock(RoleRepository.class),mock(PasswordEncoder.class));
+                var body=new RegistrationRequest("An.demo","AN@EXAMPLE.COM","Password123","An","",type,"Password123",true);
+                var error=assertThrows(ConflictException.class,()->service.register(body));
+                assertEquals((mask&1)!=0,error.getMessage().contains("đặt username khác"));
+                assertEquals((mask&2)!=0,error.getMessage().contains("sử dụng email khác"));
+                verify(users,never()).save(any());
+            }
+        }
+    }
 }
