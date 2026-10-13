@@ -13,6 +13,14 @@ const datetime=value=>value?String(value).replace(" ","T").slice(0,16):"";
 const editable=value=>["DRAFT","NEEDS_REVISION"].includes(value);
 const empty={company:{},documents:[],contracts:[],campaigns:[]};
 
+// UC-25/BUS-13: giải thích vì sao các thao tác booking/chiến dịch bị khóa theo hồ sơ hợp tác.
+function partnershipNotice(state) {
+  if(["PENDING_REVIEW","RESUBMITTED"].includes(state)) return "Hồ sơ hợp tác đã gửi yêu cầu. Vui lòng chờ Partnership Application được phê duyệt.";
+  if(state==="REJECTED") return "Hồ sơ hợp tác bị từ chối. Vui lòng tạo Partnership Application mới và chờ phê duyệt.";
+  if(state==="NEEDS_REVISION") return "Hồ sơ hợp tác cần chỉnh sửa. Vui lòng sửa, gửi lại và chờ phê duyệt.";
+  return "Vui lòng hoàn thiện và gửi Partnership Application, sau đó chờ phê duyệt để sử dụng chức năng này.";
+}
+
 function Field({label,children}) {return <label className="business-field"><span>{label}</span>{children}</label>;}
 function Badge({value}) {return <span className={`status-pill business-badge badge-${String(value || 'EMPTY').toLowerCase()}`}>{status(value)}</span>;}
 
@@ -46,6 +54,8 @@ export default function BusinessWorkspacePage({screen}) {
   const activeContracts=data.contracts.filter(c=>c.status==="ACTIVE" && c.payment_status==="PAID" && new Date(c.end_at)>new Date());
   const isProfile=screen.id==="BUS-02";const isApplication=["BUS-03","BUS-04"].includes(screen.id);
   const isCampaign=["BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id);
+  // Kiểm tra cả đường dẫn trực tiếp: chỉ hồ sơ APPROVED được mở booking và chiến dịch.
+  if(!loading && ["BUS-07","BUS-13","BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id) && data.company.application_status!=="APPROVED") return <main className="page-content business-live"><div className="page-heading"><h1>{tr(screen.name)}</h1></div>{error && <p className="form-error" role="alert">{error}</p>}<section className="dashboard-section"><p className="info-note" role="status">{partnershipNotice(data.company.application_status)}</p><div className="form-actions"><Link className="button-link" to="/business/partnership/status">Xem hồ sơ hợp tác</Link><Link className="outline-button" to="/business">Về tổng quan doanh nghiệp</Link></div></section></main>;
   return <main className="page-content business-live"><div className="page-heading"><div><p className="eyebrow">THE PULSE BUSINESS · {screen.id}</p><h1>{tr(screen.name)}</h1><p className="page-subtitle">Hồ sơ, hợp đồng và chiến dịch — mọi thông tin trong một không gian.</p></div><button className="secondary-button" disabled={busy || loading} onClick={()=>action(refresh,"Đã cập nhật dữ liệu mới nhất.")}>Làm mới</button></div>
     {error && <p role="alert" className="form-error">{error}</p>}{message && <p role="status" className="success-message">{message}</p>}
     {loading?<p className="loading-card">Đang tải dữ liệu doanh nghiệp…</p>:<>

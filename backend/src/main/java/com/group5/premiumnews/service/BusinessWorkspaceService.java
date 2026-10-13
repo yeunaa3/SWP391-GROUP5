@@ -43,7 +43,8 @@ public class BusinessWorkspaceService {
             JOIN ad_slots s ON s.slot_id=ct.slot_id WHERE ct.company_id=? ORDER BY c.created_at DESC
             """,id);
         Map<String,Object> result=new HashMap<>();result.put("company",company);result.put("documents",documents);
-        result.put("contracts",contracts);result.put("campaigns",campaigns);return result;
+        // BUS-13: không trả danh sách chiến dịch khi hồ sơ hợp tác chưa được phê duyệt.
+        result.put("contracts",contracts);result.put("campaigns","APPROVED".equals(company.get("application_status"))?campaigns:List.of());return result;
     }
     @Transactional
     public Map<String,Object> saveCompany(AuthenticatedUserPrincipal user,BusinessRequests.Company request) {
@@ -90,7 +91,7 @@ public class BusinessWorkspaceService {
     public Map<String,Object> saveBooking(AuthenticatedUserPrincipal user,Long bookingId,BusinessRequests.Booking request,boolean submit) {
         Long id=requireCompany(user);
         Map<String,Object> company=jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE",id);
-        if(!"APPROVED".equals(company.get("application_status"))) throw new InvalidStateTransitionException("Doanh nghiệp cần được duyệt hợp tác trước khi đặt quảng cáo.");
+        requireApprovedStatus((String)company.get("application_status"));
         long days=ChronoUnit.DAYS.between(request.startDate(),request.endDate())+1;
         if(request.startDate().isBefore(LocalDate.now()) || days<=0 || request.startDate().isAfter(LocalDate.now().plusYears(1)))
             throw new InvalidStateTransitionException("Ngày bắt đầu phải từ hôm nay, trong một năm tới; ngày kết thúc không được trước ngày bắt đầu.");
@@ -121,7 +122,7 @@ public class BusinessWorkspaceService {
         Map<String,Object> profile=one("SELECT * FROM companies WHERE company_id=? FOR UPDATE",company);
         Map<String,Object> contract=one("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",id,company);
         if(!"DRAFT".equals(contract.get("status"))) throw new InvalidStateTransitionException("Chỉ yêu cầu nháp mới được gửi xét duyệt.");
-        if(!"APPROVED".equals(profile.get("application_status"))) throw new InvalidStateTransitionException("Doanh nghiệp cần được duyệt hợp tác trước khi đặt quảng cáo.");
+        requireApprovedStatus((String)profile.get("application_status"));
         LocalDateTime start=dateTime(contract.get("start_at")),end=dateTime(contract.get("end_at"));
         if(start.toLocalDate().isBefore(LocalDate.now()) || !end.isAfter(start)) throw new InvalidStateTransitionException("Lịch quảng cáo đã hết hạn hoặc không hợp lệ. Hãy tạo yêu cầu với lịch mới.");
         one("SELECT * FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",contract.get("slot_id"));
@@ -147,7 +148,7 @@ public class BusinessWorkspaceService {
     }
     @Transactional
     public Map<String,Object> saveCampaign(AuthenticatedUserPrincipal user,Long campaignId,BusinessRequests.Campaign request) {
-        Long company=requireCompany(user);
+        Long company=requireApprovedPartnership(user);
         Map<String,Object> contract=one("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",request.contractId(),company);
         if(!"ACTIVE".equals(contract.get("status")) || !"PAID".equals(contract.get("payment_status"))) throw new InvalidStateTransitionException("Cần hợp đồng đang hiệu lực và đã thanh toán.");
         LocalDateTime contractStart=dateTime(contract.get("start_at")), contractEnd=dateTime(contract.get("end_at"));
@@ -180,7 +181,25 @@ public class BusinessWorkspaceService {
         Long id=companyId(user);if(id==null) throw new InvalidStateTransitionException("Hãy lưu hồ sơ doanh nghiệp trước.");return id;
     }
     public Map<String,Object> ownedCampaign(AuthenticatedUserPrincipal user,Long id,boolean lock) {
-        return one("SELECT c.* FROM ad_campaigns c JOIN contracts ct ON ct.contract_id=c.contract_id WHERE c.campaign_id=? AND ct.company_id=?"+(lock?" FOR UPDATE":""),id,requireCompany(user));
+        return one("SELECT c.* FROM ad_campaigns c JOIN contracts ct ON ct.contract_id=c.contract_id WHERE c.campaign_id=? AND ct.company_id=?"+(lock?" FOR UPDATE":""),id,requireApprovedPartnership(user));
+    }
+    /** UC-25: kiểm tra trạng thái hồ sơ mới nhất từ DB trước khi dùng chiến dịch. */
+    public Long requireApprovedPartnership(AuthenticatedUserPrincipal user) {
+        Long company=requireCompany(user);
+        String state=jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,company);
+        requireApprovedStatus(state);
+        return company;
+    }
+    /** Chỉ APPROVED được đặt quảng cáo/tạo chiến dịch; các trạng thái còn lại có hướng dẫn riêng. */
+    static void requireApprovedStatus(String state) {
+        if("APPROVED".equals(state)) return;
+        String message=switch(state==null?"":state) {
+            case "PENDING_REVIEW","RESUBMITTED" -> "Hồ sơ hợp tác đã gửi yêu cầu, vui lòng chờ được phê duyệt để đặt quảng cáo và sử dụng chiến dịch.";
+            case "REJECTED" -> "Hồ sơ hợp tác bị từ chối. Vui lòng tạo Partnership Application mới và chờ phê duyệt.";
+            case "NEEDS_REVISION" -> "Hồ sơ hợp tác cần chỉnh sửa. Vui lòng sửa, gửi lại và chờ phê duyệt.";
+            default -> "Vui lòng gửi Partnership Application và chờ phê duyệt trước khi đặt quảng cáo hoặc sử dụng chiến dịch.";
+        };
+        throw new InvalidStateTransitionException(message);
     }
     public void requireEditable(Map<String,Object> campaign) {
         if(!List.of("DRAFT","NEEDS_REVISION").contains(campaign.get("status"))) throw new InvalidStateTransitionException("Chỉ chiến dịch nháp/cần chỉnh sửa mới được sửa. Bản gửi duyệt đã khóa.");
