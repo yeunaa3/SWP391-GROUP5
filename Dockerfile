@@ -10,10 +10,12 @@ RUN pnpm build
 FROM maven:3.9-eclipse-temurin-21 AS backend-build
 WORKDIR /build/backend
 COPY backend/pom.xml ./
-RUN mvn -B dependency:go-offline
+COPY scripts/maven-build.sh /build/maven-build.sh
+# Normalize Windows line endings before running this script in Linux.
+RUN sed -i 's/\r$//' /build/maven-build.sh && sh /build/maven-build.sh dependency:go-offline
 COPY backend/src ./src
 COPY --from=frontend-build /build/frontend/dist ./src/main/resources/static
-RUN mvn -B package -DskipTests
+RUN sh /build/maven-build.sh package -DskipTests
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
