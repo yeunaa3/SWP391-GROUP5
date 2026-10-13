@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+// UC-05: DTO nhận JSON. @Valid ở controller kích hoạt kiểm tra các annotation bên dưới.
 public record RegistrationRequest(
         @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[A-Za-z0-9@.]+$", message = "Chỉ dùng chữ không dấu, số, @ và dấu chấm") String username,
         @NotBlank @Email @Size(max = 254) @Pattern(regexp = "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$", message = "Email không đúng định dạng") String email,
@@ -16,5 +17,6 @@ public record RegistrationRequest(
         @NotBlank @Size(min = 8, max = 72) String confirmPassword,
         @NotNull @jakarta.validation.constraints.AssertTrue(message = "Bạn cần đồng ý điều khoản để đăng ký") Boolean acceptedTerms) {
     @jakarta.validation.constraints.AssertTrue(message = "Mật khẩu xác nhận không khớp")
+    // Kiểm tra liên trường: cả hai mật khẩu phải giống nhau, không chỉ hợp lệ riêng lẻ.
     public boolean isPasswordConfirmed() { return password != null && password.equals(confirmPassword); }
 }

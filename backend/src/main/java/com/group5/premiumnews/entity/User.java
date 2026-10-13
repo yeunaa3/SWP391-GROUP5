@@ -63,6 +63,7 @@ public class User {
     }
 
     public User(String username, String email, String hashedPassword, String fullName, String phoneNumber) {
+        // UC-05: nhận mật khẩu đã băm từ service; status mặc định ACTIVE, chưa gắn công ty.
         this.username = username;
         this.email = email;
         this.hashedPassword = hashedPassword;
@@ -79,5 +80,6 @@ public class User {
     public Long getCompanyId() { return companyId; }
     public UserStatus getStatus() { return status; }
     public Set<Role> getRoles() { return roles; }
+    // Thêm role vào tập quan hệ; khi lưu User, JPA ghi liên kết vào bảng user_roles.
     public void addRole(Role role) { roles.add(role); }
 }

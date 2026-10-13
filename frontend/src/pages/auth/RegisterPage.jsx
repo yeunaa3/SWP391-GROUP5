@@ -8,13 +8,16 @@ import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 const initial = { username: "", email: "", password: "", fullName: "", phoneNumber: "", accountType: "READER", confirmPassword: "", acceptedTerms: false };
 
 export default function RegisterPage() {
+  // UC-05: form giữ giá trị nhập; error giữ lỗi chung, duplicateErrors giữ lỗi trùng từng trường.
   const [form, setForm] = useState(initial);
   const [error, setError] = useState("");
   const [duplicateErrors,setDuplicateErrors]=useState({});
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const detectedPhone=form.phoneNumber?parsePhoneNumberFromString(form.phoneNumber.startsWith("0")?form.phoneNumber:"+"+form.phoneNumber,"VN"):null;
+  // Cập nhật trường theo name; checkbox đọc checked, các input khác đọc value. Xóa lỗi trường đang sửa.
   function update(event) { setError(""); setDuplicateErrors(previous=>({...previous,[event.target.name]:undefined})); setForm({ ...form, [event.target.name]: event.target.type === "checkbox" ? event.target.checked : event.target.value }); }
+  // Ngăn reload trang, chuẩn hóa/kiểm tra dữ liệu rồi gọi API. Thành công chuyển sang trang đăng nhập.
   async function submit(event) {
     event.preventDefault(); setError("");setDuplicateErrors({});
     const payload={...form,fullName:form.fullName.trim().replace(/\s+/g," "),email:form.email.trim().toLowerCase()};
@@ -30,6 +33,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try { await registerAccount(payload); navigate("/login", { replace: true }); }
     catch (requestError) {
+      // Lỗi trùng do backend trả về được đặt ngay dưới username/email, thay vì chỉ hiện lỗi chung.
       const message=requestError.message;
       const duplicates={};
       if(message.includes("Username đã được sử dụng") || message==="Username is already in use") duplicates.username="Username đã được sử dụng. Vui lòng đặt username khác.";

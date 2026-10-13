@@ -9,6 +9,7 @@ public record AuthenticatedUserResponse(
         Long id, String username, String email, String fullName, Long companyId, Set<String> roles) {
 
     public static AuthenticatedUserResponse from(AuthenticatedUserPrincipal principal) {
+        // Chuyển dữ liệu nội bộ sang response JSON: bỏ tiền tố ROLE_ và không trả mật khẩu/hash.
         Set<String> roles = principal.authorities().stream()
                 .map(authority -> authority.getAuthority().replaceFirst("^ROLE_", ""))
                 .collect(Collectors.toUnmodifiableSet());

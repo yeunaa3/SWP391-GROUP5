@@ -1,6 +1,7 @@
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 async function ensureCsrfToken() {
+  // Lấy token chống giả mạo yêu cầu; trả token để gắn vào header của POST đăng ký.
   // Spring's default XOR handler expects the masked response token, not the
   // raw cookie value. Refresh it for every mutation, including after login/restart.
     const response = await fetch(`${apiBaseUrl}/api/auth/csrf`, {
@@ -12,6 +13,7 @@ async function ensureCsrfToken() {
 }
 
 export async function apiRequest(path, options = {}) {
+  // Hàm HTTP dùng chung: gửi JSON/cookie/token, trả dữ liệu hoặc ném Error chứa message từ backend.
   const method = (options.method || "GET").toUpperCase();
   const csrfHeader = ["POST", "PUT", "PATCH", "DELETE"].includes(method)
     ? { "X-XSRF-TOKEN": await ensureCsrfToken() }

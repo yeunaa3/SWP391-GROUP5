@@ -46,6 +46,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/register")
+    // UC-05: kiểm tra DTO, gọi service tạo tài khoản và trả HTTP 201. Không tạo phiên đăng nhập tại đây.
     public ResponseEntity<AuthenticatedUserResponse> register(@Valid @RequestBody RegistrationRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authenticationService.register(request));
     }

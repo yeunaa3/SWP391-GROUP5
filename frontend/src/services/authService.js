@@ -9,6 +9,7 @@ export function login(credentials) {
 }
 
 export function registerAccount(account) {
+  // UC-05: chuyển dữ liệu form thành JSON và gửi POST; apiRequest xử lý CSRF, cookie và lỗi HTTP.
   return apiRequest("/api/auth/register", { method: "POST", body: JSON.stringify(account) });
 }
 

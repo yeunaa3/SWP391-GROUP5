@@ -23,12 +23,14 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
 
     public AuthenticationService(UserRepository userRepository, RoleRepository roleRepository, PasswordEncoder passwordEncoder) {
+        // Spring truyền các dependency: truy cập users/roles và bộ băm mật khẩu.
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
+    // UC-05: tạo user và liên kết role trong một transaction; lỗi giữa chừng sẽ rollback.
     public AuthenticatedUserResponse register(RegistrationRequest request) {
         if(!Boolean.TRUE.equals(request.acceptedTerms()) || !request.isPasswordConfirmed())
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
@@ -37,6 +39,7 @@ public class AuthenticationService {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         boolean usernameTaken=userRepository.existsByUsernameIgnoreCase(username);
+        // Kiểm tra duy nhất trên toàn bộ tài khoản, không chia riêng Reader và Business.
         boolean emailTaken=userRepository.existsByEmailIgnoreCase(email);
         if(usernameTaken || emailTaken) {
             String message=(usernameTaken?"Username đã được sử dụng. Vui lòng đặt username khác.":"")
@@ -46,18 +49,22 @@ public class AuthenticationService {
         }
 
         String roleName = request.accountType() == AccountType.BUSINESS ? "BUSINESS" : "READER";
+        // Chỉ lấy role mặc định đang ACTIVE; người đăng ký không được tự chọn quyền quản trị.
         Role role = roleRepository.findByNameAndStatus(roleName, "ACTIVE")
                 .orElseThrow(() -> new IllegalStateException("Required role is not configured: " + roleName));
         User user = new User(username, email, passwordEncoder.encode(request.password()),
                 request.fullName().trim(), phone);
         user.addRole(role);
+        // Lưu mật khẩu đã băm và role; response chỉ chứa thông tin công khai, không trả mật khẩu.
         return AuthenticatedUserResponse.from(AuthenticatedUserPrincipal.from(userRepository.save(user)));
     }
 
     private String normalizeOptional(String value) {
+        // Hàm tiện ích cũ; luồng register hiện tại không gọi hàm này.
         return value == null || value.isBlank() ? null : value.trim();
     }
     static String validatePhone(String value) {
+        // Số điện thoại tùy chọn. Số bắt đầu 0 được hiểu là Việt Nam; số khác phải có mã quốc gia.
         if(value==null || value.isEmpty()) return null;
         try {
             if(!value.matches("[0-9]{8,15}")) throw new IllegalArgumentException();
