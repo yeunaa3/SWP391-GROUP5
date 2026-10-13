@@ -25,6 +25,7 @@ import SearchPage from "../pages/public/SearchPage.jsx";
 import AdvertisingDemoPage from "../pages/public/AdvertisingDemoPage.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import { screens } from "./screenCatalog.js";
+import { BrowseNewsPage } from "../pages/public/SearchPage.jsx";
 
 const specialPages = {
   "ACC-01": <ProfilePage />,
@@ -61,6 +62,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route element={<PublicLayout />}>
+        <Route path="/news" element={<BrowseNewsPage />} />
         <Route path="/advertising-demo" element={<AdvertisingDemoPage />} />
         {screens.filter((screen) => publicAreas.has(screen.area)).map((screen) => <Route key={screen.id} path={screen.path} element={screenElement(screen)} />)}
       </Route>

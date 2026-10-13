@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { usePreferences } from "../store/PreferencesContext.jsx";
 import { useAuth } from "../store/AuthContext.jsx";
 import QuickSearch from "../components/QuickSearch.jsx";
+import CategoryNavigation from "../components/CategoryNavigation.jsx";
 import "../assets/news-navigation.css";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import AdBanner from "../components/AdBanner.jsx";
@@ -16,11 +17,7 @@ export default function PublicLayout() {
     const { t, language } = usePreferences();
     const { adFreeActive, remainingSeconds, allowanceError, allowanceLoading } =
         useAdAllowance();
-    const { pathname, search } = useLocation();
-    const [topicsOpen, setTopicsOpen] = useState(false);
-    useEffect(() => {
-        setTopicsOpen(false);
-    }, [pathname, search]);
+    const { pathname } = useLocation();
     const [previewEnabled, setPreviewEnabled] = useState(false);
     useEffect(() => {
         refreshPremium();
@@ -29,6 +26,7 @@ export default function PublicLayout() {
     const newsPage =
         pathname === "/" ||
         pathname === "/search" ||
+        pathname === "/news" ||
         pathname.startsWith("/articles/");
     const showPlacements =
         newsPage && !subscriber && !premiumLoading && !loading;
@@ -60,9 +58,9 @@ export default function PublicLayout() {
                         </span>
                     </Link>
                     <nav aria-label="Primary navigation">
-                        <NavLink end to="/">
+                        <Link to="/" className={pathname === "/" || pathname === "/news" || pathname.startsWith("/articles/") ? "active" : undefined}>
                             {t("Tin tức", "News")}
-                        </NavLink>
+                        </Link>
                         <NavLink to="/premium/packages">Premium</NavLink>
                         <NavLink
                             to={
@@ -105,98 +103,7 @@ export default function PublicLayout() {
                         )}
                     </div>
                 </header>
-                <nav
-                    className="category-nav"
-                    aria-label={t("Chuyên mục tin tức", "News categories")}
-                >
-                    <Link
-                        to="/search?sort=newest"
-                        aria-current={
-                            pathname === "/search" && search === "?sort=newest"
-                                ? "page"
-                                : undefined
-                        }
-                    >
-                        {t("Mới nhất", "Latest")}
-                    </Link>
-                    <Link to="/search?category=society">
-                        {t("Thời sự", "Society")}
-                    </Link>
-                    <Link to="/search?category=business">
-                        {t("Kinh doanh", "Business")}
-                    </Link>
-                    <Link to="/search?category=technology">
-                        {t("Công nghệ", "Technology")}
-                    </Link>
-                    <Link to="/search?category=agriculture">
-                        {t("Nông nghiệp", "Agriculture")}
-                    </Link>
-                    <button
-                        type="button"
-                        className="all-topics-toggle"
-                        aria-expanded={topicsOpen}
-                        aria-controls="all-news-topics"
-                        onClick={() => setTopicsOpen((value) => !value)}
-                        onKeyDown={(event) => {
-                            if (event.key === "Escape") setTopicsOpen(false);
-                        }}
-                    >
-                        {t("Tất cả chuyên mục", "All topics")}{" "}
-                        {topicsOpen ? "▴" : "▾"}
-                    </button>
-                </nav>
-                {topicsOpen && (
-                    <section
-                        id="all-news-topics"
-                        className="all-topics-panel"
-                        aria-label={t("Tất cả chuyên mục", "All topics")}
-                        onKeyDown={(event) => {
-                            if (event.key === "Escape") setTopicsOpen(false);
-                        }}
-                    >
-                        <div>
-                            <strong>
-                                {t(
-                                    "Bạn muốn đọc chuyên mục nào?",
-                                    "Choose a news category",
-                                )}
-                            </strong>
-                            <button
-                                type="button"
-                                className="secondary-button"
-                                onClick={() => setTopicsOpen(false)}
-                            >
-                                {t("Đóng", "Close")}
-                            </button>
-                        </div>
-                        <ul>
-                            {[
-                                ["society", t("Thời sự", "Society")],
-                                ["business", t("Kinh doanh", "Business")],
-                                ["technology", t("Công nghệ", "Technology")],
-                                [
-                                    "agriculture",
-                                    t("Nông nghiệp", "Agriculture"),
-                                ],
-                            ].map(([slug, label]) => (
-                                <li key={slug}>
-                                    <Link
-                                        to={`/search?category=${slug}`}
-                                        onClick={() => setTopicsOpen(false)}
-                                    >
-                                        {label} →
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
-                        <Link to="/search" onClick={() => setTopicsOpen(false)}>
-                            {t(
-                                "Tìm kiếm bài viết theo từ khóa →",
-                                "Search articles by keyword →",
-                            )}
-                        </Link>
-                    </section>
-                )}
+                {pathname !== "/search" && <CategoryNavigation />}
                 {import.meta.env.DEV && newsPage && !subscriber && (
                     <div className="ad-preview-switch">
                         <span>

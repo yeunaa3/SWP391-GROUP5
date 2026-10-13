@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**").permitAll()
                         // Public HTML shell/assets only. Data stays behind /api authorization above/below.
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
-                                "/favicon.ico", "/search", "/login", "/register", "/forgot-password", "/reset-password",
+                                "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
                                 "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
                                 "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo").permitAll()
                         .anyRequest().authenticated())

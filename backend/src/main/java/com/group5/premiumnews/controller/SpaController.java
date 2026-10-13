@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 @Profile("render")
 public class SpaController {
-    @GetMapping({"/", "/search", "/login", "/register", "/forgot-password", "/reset-password",
+    @GetMapping({"/", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
             "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
             "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo"})
     public String index() {

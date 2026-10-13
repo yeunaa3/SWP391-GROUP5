@@ -7,21 +7,11 @@ import { getArticles } from "../../services/contentService.js";
 import ArticleSearchPage from "./ArticleSearchPage.jsx";
 
 export default function SearchPage() {
-    const [params] = useSearchParams();
-    return !params.has("q") &&
-        (params.has("category") || params.get("sort") === "newest") ? (
-        <BrowseNewsPage />
-    ) : (
-        <ArticleSearchPage />
-    );
+    return <ArticleSearchPage />;
 }
 
-function BrowseNewsPage() {
+export function BrowseNewsPage() {
     const [params, setParams] = useSearchParams();
-    const [keyword, setKeyword] = useState(params.get("q") || "");
-    useEffect(() => {
-        setKeyword(params.get("q") || "");
-    }, [params]);
     const [state, setState] = useState({
         articles: [],
         demo: false,
@@ -63,38 +53,8 @@ function BrowseNewsPage() {
                           ? `Tin ${categoryNames[category] || category}`
                           : params.get("sort") === "newest"
                             ? "Tin mới nhất"
-                            : "Tìm kiếm bài viết"}
+                            : "Tin mới nhất"}
                 </h1>
-                <form
-                    className="news-keyword-form"
-                    onSubmit={(event) => {
-                        event.preventDefault();
-                        setParams({
-                            ...(keyword.trim() && { q: keyword.trim() }),
-                            ...(category && { category }),
-                        });
-                    }}
-                >
-                    <label htmlFor="article-search-keyword">
-                        Tìm theo tiêu đề hoặc từ khóa
-                    </label>
-                    <div>
-                        <input
-                            id="article-search-keyword"
-                            type="search"
-                            maxLength={200}
-                            value={keyword}
-                            onChange={(event) => setKeyword(event.target.value)}
-                            placeholder="Nhập từ khóa bài viết…"
-                        />
-                        <button type="submit">Tìm kiếm</button>
-                    </div>
-                </form>
-                <p className="result-count">
-                    {state.loading
-                        ? "Đang tìm…"
-                        : `${state.articles.length} kết quả`}
-                </p>
                 {query && (
                     <div className="search-refinements">
                         <span>Lọc kết quả:</span>
