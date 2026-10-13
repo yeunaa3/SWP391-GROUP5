@@ -42,11 +42,3 @@ Errors use the shared `ApiError` structure: timestamp, status, error, message an
 ## Endpoint ownership by flow
 
 The proposed endpoint groups and acceptance conditions are in `docs/planning/CODING_PLAN.md`. Add exact request/response examples here before frontend and backend implementations are merged.
-
-## PUB-02 article search
-
-Public `GET /api/articles/search` accepts `query` (title/summary, max 200 characters), `category` (active slug), `access=all|public|premium`, ISO dates `from`/`to` (Vietnam time, inclusive end), `sort=newest|oldest|popular`, zero-based `page` (default 0) and `size` (default 12, maximum 50). Popular uses the existing views_count. Invalid parameters return 400; no matches return an empty page.
-
-Response contains `content` (article summaries), `page`, `size`, `totalElements`, `totalPages`, `first`, `last`. Only published articles are returned; filtering Premium does not grant full-content access. Literal `%` and `_` in keywords are escaped.
-
-Public `GET /api/articles/categories` returns active categories as `{slug,name}` records. Existing `/api/articles` feed API remains unchanged. `/search` opens the filter form; latest/category browsing without a keyword uses the news-card view. No database migration is required.
