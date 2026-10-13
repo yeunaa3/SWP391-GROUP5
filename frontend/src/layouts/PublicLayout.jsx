@@ -26,6 +26,7 @@ export default function PublicLayout() {
     const newsPage =
         pathname === "/" ||
         pathname === "/search" ||
+        pathname === "/news" ||
         pathname.startsWith("/articles/");
     const showPlacements =
         newsPage && !subscriber && !premiumLoading && !loading;
@@ -57,9 +58,9 @@ export default function PublicLayout() {
                         </span>
                     </Link>
                     <nav aria-label="Primary navigation">
-                        <NavLink end to="/">
+                        <Link to="/" className={pathname === "/" || pathname === "/news" || pathname.startsWith("/articles/") ? "active" : undefined}>
                             {t("Tin tức", "News")}
-                        </NavLink>
+                        </Link>
                         <NavLink to="/premium/packages">Premium</NavLink>
                         <NavLink
                             to={
@@ -102,7 +103,7 @@ export default function PublicLayout() {
                         )}
                     </div>
                 </header>
-                <CategoryNavigation />
+                {pathname !== "/search" && <CategoryNavigation />}
                 {import.meta.env.DEV && newsPage && !subscriber && (
                     <div className="ad-preview-switch">
                         <span>

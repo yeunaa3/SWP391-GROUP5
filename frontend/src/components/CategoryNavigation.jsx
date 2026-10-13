@@ -23,10 +23,10 @@ export default function CategoryNavigation() {
 
     return <div onKeyDown={closeOnEscape}>
         <nav className="category-nav" aria-label={t("Chuyên mục tin tức", "News categories")}>
-            <Link to="/search?sort=newest" aria-current={pathname === "/search" && search === "?sort=newest" ? "page" : undefined}>
+            <Link to="/news?sort=newest" aria-current={pathname === "/news" && search === "?sort=newest" ? "page" : undefined}>
                 {t("Mới nhất", "Latest")}
             </Link>
-            {categories.map(category => <Link key={category.slug} to={`/search?category=${category.slug}`}>
+            {categories.map(category => <Link key={category.slug} to={`/news?category=${category.slug}`}>
                 {t(category.vi, category.en)}
             </Link>)}
             <button type="button" className="all-topics-toggle" aria-expanded={isOpen}
@@ -40,7 +40,7 @@ export default function CategoryNavigation() {
                 <button type="button" className="secondary-button" onClick={() => setIsOpen(false)}>{t("Đóng", "Close")}</button>
             </div>
             <ul>{categories.map(category => <li key={category.slug}>
-                <Link to={`/search?category=${category.slug}`} onClick={() => setIsOpen(false)}>{t(category.vi, category.en)} →</Link>
+                <Link to={`/news?category=${category.slug}`} onClick={() => setIsOpen(false)}>{t(category.vi, category.en)} →</Link>
             </li>)}</ul>
             <Link to="/search" onClick={() => setIsOpen(false)}>{t("Tìm kiếm bài viết theo từ khóa →", "Search articles by keyword →")}</Link>
         </section>}
