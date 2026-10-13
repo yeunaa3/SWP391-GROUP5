@@ -111,8 +111,25 @@ public class BusinessWorkspaceService {
         if (count == null || count == 0) {
             throw new InvalidStateTransitionException("Cần tải ít nhất một tài liệu doanh nghiệp trước khi gửi.");
         }
-        jdbc.update("UPDATE companies SET application_status=?,submitted_at=CURRENT_TIMESTAMP,review_note=NULL WHERE company_id=?",
-                "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW", id);
+        int nextVersion = ((Number) c.get("application_version")).intValue() + 1;
+        String nextStatus = "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW";
+        String priority = "NEEDS_REVISION".equals(state) ? "HIGH" : "NORMAL";
+        jdbc.update("""
+                UPDATE companies SET application_status=?,application_version=?,review_priority=?,
+                    submitted_at=CURRENT_TIMESTAMP(6),review_note=NULL,reviewed_by=NULL,reviewed_at=NULL
+                WHERE company_id=?
+                """, nextStatus, nextVersion, priority, id);
+        jdbc.update("""
+                INSERT INTO company_application_versions(company_id,application_version,company_name,
+                    tax_code,email,phone,address,billing_address,submitted_at)
+                SELECT company_id,application_version,company_name,tax_code,email,phone,address,
+                    billing_address,submitted_at FROM companies WHERE company_id=?
+                """, id);
+        jdbc.update("""
+                INSERT INTO company_application_version_documents(company_id,application_version,document_id)
+                SELECT company_id,?,document_id FROM company_documents
+                WHERE company_id=? AND status='ACTIVE'
+                """, nextVersion, id);
         audit(user, "SUBMIT_APPLICATION", "COMPANY", id);
         return overview(user);
     }

@@ -1,17 +1,22 @@
 -- Fictional fixtures for The Pluse, NOT real legal entities, money or analytics.
 -- Never overwrite test actions on restart; no deletes and no broad updates.
-INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,submitted_at,review_note)
-SELECT 'TEST-PLUSE-APPROVED','[TEST] The Pluse Education','0000000001','education@example.com','0000000001','Du lieu gia lap - Ha Noi','TEST-APP-001','APPROVED',CURRENT_TIMESTAMP,'[TEST] Ho so mau da duyet'
+INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,application_version,review_priority,submitted_at,review_note)
+SELECT 'TEST-PLUSE-APPROVED','[TEST] The Pluse Education','0000000001','education@example.com','0000000001','Du lieu gia lap - Ha Noi','TEST-APP-001','APPROVED',1,'NORMAL',CURRENT_TIMESTAMP,'[TEST] Ho so mau da duyet'
 WHERE NOT EXISTS(SELECT 1 FROM companies WHERE company_code='TEST-PLUSE-APPROVED');
-INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,submitted_at,review_note)
-SELECT 'TEST-PLUSE-PENDING','[TEST] The Pluse Agriculture','0000000002','agriculture@example.com','0000000002','Du lieu gia lap - Ha Tinh','TEST-APP-002','PENDING_REVIEW',CURRENT_TIMESTAMP,'[TEST] Ho so mau cho duyet; tai lieu can tai len thu'
+INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,application_version,review_priority,submitted_at,review_note)
+SELECT 'TEST-PLUSE-PENDING','[TEST] The Pluse Agriculture','0000000002','agriculture@example.com','0000000002','Du lieu gia lap - Ha Tinh','TEST-APP-002','PENDING_REVIEW',1,'NORMAL',CURRENT_TIMESTAMP,'[TEST] Ho so mau cho duyet; tai lieu can tai len thu'
 WHERE NOT EXISTS(SELECT 1 FROM companies WHERE company_code='TEST-PLUSE-PENDING');
-INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,submitted_at,review_note)
-SELECT 'TEST-PLUSE-REVISION','[TEST] The Pluse Technology','0000000003','technology@example.com','0000000003','Du lieu gia lap - Da Nang','TEST-APP-003','NEEDS_REVISION',CURRENT_TIMESTAMP,'[TEST] Bo sung giay dang ky kinh doanh va dia chi thanh toan'
+INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,application_version,review_priority,submitted_at,review_note)
+SELECT 'TEST-PLUSE-REVISION','[TEST] The Pluse Technology','0000000003','technology@example.com','0000000003','Du lieu gia lap - Da Nang','TEST-APP-003','NEEDS_REVISION',1,'HIGH',CURRENT_TIMESTAMP,'[TEST] Bo sung giay dang ky kinh doanh va dia chi thanh toan'
 WHERE NOT EXISTS(SELECT 1 FROM companies WHERE company_code='TEST-PLUSE-REVISION');
-INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,submitted_at,review_note)
-SELECT 'TEST-PLUSE-REJECTED','[TEST] The Pluse Retail','0000000004','retail@example.com','0000000004','Du lieu gia lap - TP HCM','TEST-APP-004','REJECTED',CURRENT_TIMESTAMP,'[TEST] Ho so mau bi tu choi: thong tin chua hop le'
+INSERT INTO companies(company_code,company_name,tax_code,email,phone,address,application_code,application_status,application_version,review_priority,submitted_at,review_note)
+SELECT 'TEST-PLUSE-REJECTED','[TEST] The Pluse Retail','0000000004','retail@example.com','0000000004','Du lieu gia lap - TP HCM','TEST-APP-004','REJECTED',1,'NORMAL',CURRENT_TIMESTAMP,'[TEST] Ho so mau bi tu choi: thong tin chua hop le'
 WHERE NOT EXISTS(SELECT 1 FROM companies WHERE company_code='TEST-PLUSE-REJECTED');
+
+INSERT IGNORE INTO company_application_versions(company_id,application_version,company_name,
+    tax_code,email,phone,address,billing_address,submitted_at)
+SELECT company_id,application_version,company_name,tax_code,email,phone,address,billing_address,submitted_at
+FROM companies WHERE company_code LIKE 'TEST-PLUSE-%' AND application_version > 0;
 
 UPDATE users u JOIN companies c ON c.company_code=CASE u.username
     WHEN 'business.demo' THEN 'TEST-PLUSE-APPROVED'
@@ -20,6 +25,14 @@ UPDATE users u JOIN companies c ON c.company_code=CASE u.username
     WHEN 'business.rejected.demo' THEN 'TEST-PLUSE-REJECTED' END
 SET u.company_id=c.company_id
 WHERE u.company_id IS NULL AND u.email=CONCAT(u.username,'@thepluse.example');
+
+INSERT INTO partnership_reviews(company_id,application_version,reviewer_id,decision,review_note)
+SELECT c.company_id,c.application_version,u.user_id,c.application_status,c.review_note
+FROM companies c JOIN users u ON u.username='manager.demo'
+WHERE c.company_code IN ('TEST-PLUSE-APPROVED','TEST-PLUSE-REVISION','TEST-PLUSE-REJECTED')
+  AND NOT EXISTS(SELECT 1 FROM partnership_reviews r
+      WHERE r.company_id=c.company_id AND r.application_version=c.application_version
+        AND r.decision=c.application_status);
 
 -- Five contract states; the first allows creating campaigns without real payment.
 INSERT INTO contracts(contract_code,contract_name,company_id,b2b_package_id,slot_id,

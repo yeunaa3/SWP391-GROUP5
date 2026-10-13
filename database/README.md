@@ -13,6 +13,8 @@ Current migrations:
 - `V2__create_application_schema.sql`: MySQL application schema.
 - `V3__seed_reference_data.sql`: required roles and approved default settings.
 - `V4__seed_local_demo_content.sql`: local articles, categories, packages, and advertising placements.
+- `V5`–`V9`: article source data, manual Premium requests, article blocks, booking status, and Premium ad allowance.
+- `V10__partnership_review_workflow.sql`: immutable partnership application versions, captured documents, priorities, and review history for ADM-01/02/03.
 
 `PremiumNewsAdDB.mysql.sql` and the desktop file `MySQL DB.txt` are standalone copies of the reviewed MySQL V2 schema. The conceptual ERD may omit technical tables for readability; the physical schema includes junction tables plus `company_documents`, `payment_webhook_events`, and `ad_events` to satisfy the SRS.
 

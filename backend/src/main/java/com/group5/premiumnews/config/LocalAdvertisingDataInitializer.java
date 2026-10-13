@@ -21,9 +21,25 @@ public class LocalAdvertisingDataInitializer {
         transactions.executeWithoutResult(status -> {
             jdbc.update("""
                 INSERT IGNORE INTO companies(company_code,company_name,tax_code,email,phone,address,
-                    application_code,application_status,status)
+                    application_code,application_status,application_version,review_priority,submitted_at,status)
                 VALUES ('DEMO-PARTNER','Pulse Partners — dữ liệu thử nghiệm','DEMO-NOT-A-TAX-ID',
-                    'demo@example.com','0000000000','Demo local','DEMO-APP-001','APPROVED','ACTIVE')
+                    'demo@example.com','0000000000','Demo local','DEMO-APP-001','APPROVED',1,'NORMAL',CURRENT_TIMESTAMP(6),'ACTIVE')
+                """);
+            jdbc.update("""
+                INSERT IGNORE INTO companies(company_code,company_name,tax_code,email,phone,address,
+                    application_code,application_status,application_version,review_priority,submitted_at,status)
+                VALUES
+                    ('DEMO-PENDING','Công ty Nông nghiệp Xanh','0000000002','pending@example.com','0900000002',
+                     'Hà Nội','DEMO-APP-002','PENDING_REVIEW',1,'NORMAL',CURRENT_TIMESTAMP(6) - INTERVAL 2 DAY,'ACTIVE'),
+                    ('DEMO-RESUBMITTED','Công ty Công nghệ Việt','0000000003','resubmitted@example.com','0900000003',
+                     'Đà Nẵng','DEMO-APP-003','RESUBMITTED',2,'HIGH',CURRENT_TIMESTAMP(6) - INTERVAL 1 DAY,'ACTIVE')
+                """);
+            jdbc.update("""
+                INSERT IGNORE INTO company_application_versions(company_id,application_version,company_name,
+                    tax_code,email,phone,address,billing_address,submitted_at)
+                SELECT company_id,application_version,company_name,tax_code,email,phone,address,
+                    billing_address,submitted_at FROM companies
+                WHERE company_code IN ('DEMO-PARTNER','DEMO-PENDING','DEMO-RESUBMITTED')
                 """);
             Long company = jdbc.queryForObject("SELECT company_id FROM companies WHERE company_code='DEMO-PARTNER'", Long.class);
             Long business = jdbc.queryForObject("SELECT user_id FROM users WHERE username='business.demo'", Long.class);

@@ -26,8 +26,14 @@ import AdvertisingDemoPage from "../pages/public/AdvertisingDemoPage.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import { screens } from "./screenCatalog.js";
 import { BrowseNewsPage } from "../pages/public/SearchPage.jsx";
+import AdManagerDashboardPage from "../pages/adManager/AdManagerDashboardPage.jsx";
+import PartnershipQueuePage from "../pages/adManager/PartnershipQueuePage.jsx";
+import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx";
 
 const specialPages = {
+  "ADM-01": <AdManagerDashboardPage />,
+  "ADM-02": <PartnershipQueuePage />,
+  "ADM-03": <PartnershipDetailPage />,
   "ACC-01": <ProfilePage />,
   "ACC-02": <NotificationsPage />,
   "PUB-01": <HomePage />,

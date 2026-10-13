@@ -50,3 +50,9 @@ Public `GET /api/articles/search` accepts `query` (title/summary, max 200 charac
 Response contains `content` (article summaries), `page`, `size`, `totalElements`, `totalPages`, `first`, `last`. Only published articles are returned; filtering Premium does not grant full-content access. Literal `%` and `_` in keywords are escaped.
 
 Public `GET /api/articles/categories` returns active categories as `{slug,name}` records. Existing `/api/articles` feed API remains unchanged. `/search` opens the filter form; latest/category browsing without a keyword uses the news-card view. No database migration is required.
+
+## ADM-01, ADM-02 and ADM-03 partnership review
+
+The Ad Manager dashboard and partnership workflow use `/api/ad-manager/dashboard` and `/api/ad-manager/partnerships/**`. They require the `AD_MANAGER` role. Every submitted Business application receives an immutable version; notes and decisions carry that expected version to reject stale or duplicate actions.
+
+ADM-02 lists only `PENDING_REVIEW` and `RESUBMITTED`. ADM-03 saves a version-specific review note before allowing `APPROVED`, `REJECTED`, or `NEEDS_REVISION`. Approval additionally requires all captured legal documents to remain available. See `ADM_PARTNERSHIP_REVIEW.md` for the endpoint list, test data, and current email-delivery boundary.
