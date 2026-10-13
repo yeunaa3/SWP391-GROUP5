@@ -16,9 +16,6 @@ function Find-IntelliJTool {
 $javaExecutable = Find-IntelliJTool "jbr\bin\java.exe"
 $mavenExecutable = (Get-Command mvn -ErrorAction SilentlyContinue).Source
 if (-not $mavenExecutable) {
-    $mavenExecutable = Find-IntelliJTool "plugins\maven\lib\maven3\bin\mvn.cmd"
-}
-if (-not $mavenExecutable) {
     $mavenExecutable = Find-IntelliJTool "plugins\maven-plugin\lib\maven3\bin\mvn.cmd"
 }
 

@@ -32,7 +32,6 @@ backend/storage/
 logs/
 *.log
 mysql-data/
-/.local-runtime/
 
 # OS files
 .DS_Store
