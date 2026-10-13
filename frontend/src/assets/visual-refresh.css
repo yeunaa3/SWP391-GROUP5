@@ -113,7 +113,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible { outline:3px solid #
 .workspace-shell .section-kicker { font-size:9px; letter-spacing:.13em; color:var(--ws-muted); margin:0 0 8px; }
 .workspace-shell button:not(.mobile-workspace-toggle,.workspace-scrim),.workspace-shell .button-link { font-size:12px; border-radius:9px; }
 .workspace-shell .business-live button:not(.secondary-button) { background:var(--refresh-red); }
-.workspace-shell .business-live .button-link { background:var(--refresh-red); padding:11px 16px; display:inline-flex; align-items:center; }
+.workspace-shell .business-live .button-link { background:var(--refresh-red); color:#fff; padding:11px 16px; display:inline-flex; align-items:center; }
 .workspace-shell .secondary-button,.workspace-shell .outline-button { background:var(--ws-surface); color:var(--ws-ink); border:1px solid var(--ws-border); padding:10px 15px; border-radius:9px; font-size:12px; }
 .business-field { color:var(--ws-ink); font-size:12px; gap:9px; }
 .business-field input,.business-field select,.business-field textarea { background:var(--ws-surface); color:var(--ws-ink); border-color:#dce2eb; padding:13px 14px; font-weight:400; transition:border-color .2s,box-shadow .2s; }
