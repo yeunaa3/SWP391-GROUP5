@@ -18,6 +18,7 @@ import PremiumRequestsPage from "../pages/premium/PremiumRequestsPage.jsx";
 import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 import NotificationsPage from "../pages/account/NotificationsPage.jsx";
+import ProfilePage from "../pages/account/ProfilePage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
 import SearchPage from "../pages/public/SearchPage.jsx";
@@ -26,6 +27,7 @@ import ProtectedRoute from "./ProtectedRoute.jsx";
 import { screens } from "./screenCatalog.js";
 
 const specialPages = {
+  "ACC-01": <ProfilePage />,
   "ACC-02": <NotificationsPage />,
   "PUB-01": <HomePage />,
   "PUB-02": <SearchPage />,
