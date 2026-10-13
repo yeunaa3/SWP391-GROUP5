@@ -7,10 +7,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RegistrationRequest(
-        @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[A-Za-z0-9._-]+$") String username,
-        @NotBlank @Email @Size(max = 254) String email,
+        @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[A-Za-z0-9@]+$", message = "Chỉ dùng chữ không dấu, số và @") String username,
+        @NotBlank @Email @Size(max = 254) @Pattern(regexp = "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)+[A-Za-z]{2,63}$", message = "Email không đúng định dạng") String email,
         @NotBlank @Size(min = 8, max = 72) String password,
-        @NotBlank @Size(max = 100) String fullName,
-        @Size(max = 30) String phoneNumber,
+        @NotBlank @Size(max = 100) @Pattern(regexp = "^[\\p{L}\\p{M}]+(?: [\\p{L}\\p{M}]+)*$", message = "Họ tên chỉ được chứa chữ và khoảng trắng") String fullName,
+        @Size(max = 15) @Pattern(regexp = "^$|^[0-9]{8,15}$", message = "Số điện thoại chỉ được chứa 8–15 chữ số") String phoneNumber,
         @NotNull AccountType accountType) {
 }

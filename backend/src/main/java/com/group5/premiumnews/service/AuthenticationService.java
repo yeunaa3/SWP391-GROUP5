@@ -30,6 +30,7 @@ public class AuthenticationService {
 
     @Transactional
     public AuthenticatedUserResponse register(RegistrationRequest request) {
+        String phone = validatePhone(request.phoneNumber());
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsernameIgnoreCase(username)) {
@@ -43,12 +44,25 @@ public class AuthenticationService {
         Role role = roleRepository.findByNameAndStatus(roleName, "ACTIVE")
                 .orElseThrow(() -> new IllegalStateException("Required role is not configured: " + roleName));
         User user = new User(username, email, passwordEncoder.encode(request.password()),
-                request.fullName().trim(), normalizeOptional(request.phoneNumber()));
+                request.fullName().trim(), phone);
         user.addRole(role);
         return AuthenticatedUserResponse.from(AuthenticatedUserPrincipal.from(userRepository.save(user)));
     }
 
     private String normalizeOptional(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+    static String validatePhone(String value) {
+        if(value==null || value.isEmpty()) return null;
+        try {
+            if(!value.matches("[0-9]{8,15}")) throw new IllegalArgumentException();
+            var util=com.google.i18n.phonenumbers.PhoneNumberUtil.getInstance();
+            var number=util.parse(value.startsWith("0")?value:"+"+value,"VN");
+            if(!util.isValidNumber(number)) throw new IllegalArgumentException();
+            return util.format(number,com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat.E164);
+        } catch(Exception e) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
+                "Số điện thoại không hợp lệ theo đầu số quốc gia. Dùng 0 cho Việt Nam hoặc mã quốc gia (84, 1, 44…).");
+        }
     }
 }
