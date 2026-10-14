@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { login } from "../../services/authService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
 import AuthShell from "../../components/AuthShell.jsx";
-import { safeReturnTo } from "../../utils/sessionRouting.js";
+import { LOGIN_SUCCESS_PATH } from "../../utils/sessionRouting.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 
 export default function LoginPage() {
@@ -14,10 +14,9 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const { refresh } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
   async function submit(event) {
-    // UC-06: gửi thông tin đăng nhập, kiểm tra lại session rồi điều hướng theo quyền tài khoản.
+    // UC-06: verify the new session, then always open the public news homepage.
     event.preventDefault();
     setError("");
     setSubmitting(true);
@@ -25,7 +24,7 @@ export default function LoginPage() {
       await login(form);
       const current = await refresh();
       if (!current) throw new Error(t("Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.", "Unable to verify your session. Please try again."));
-      navigate(safeReturnTo(location.state?.returnTo, current), { replace: true });
+      navigate(LOGIN_SUCCESS_PATH, { replace: true });
     } catch (requestError) {
       setError(requestError.message === "Invalid username/email or password"
         ? t("Tên đăng nhập hoặc mật khẩu chưa đúng. Vui lòng kiểm tra và thử lại.", "Incorrect username or password. Please check and try again.")

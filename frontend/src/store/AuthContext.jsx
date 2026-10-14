@@ -34,6 +34,11 @@ export function AuthProvider({ children }) {
   async function refresh() {
     // UC-06: gọi /me để xác nhận session, cập nhật user/loading và trả tài khoản hoặc null khi lỗi.
     const generation = ++sessionGeneration.current;
+    // Invalidate the previous account while /me verifies the new session.
+    premiumGeneration.current++;
+    setUser(null);
+    setAccess(null);
+    setPremiumError(false);
     setLoading(true);
     try {
       const current = await getCurrentUser();

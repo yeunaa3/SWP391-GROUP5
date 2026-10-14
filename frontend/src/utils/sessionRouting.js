@@ -1,6 +1,10 @@
 import { matchPath } from "react-router-dom";
 import { screens } from "../routes/screenCatalog.js";
 
+// UC-06: all roles land on the news homepage after a verified login.
+// Never reuse returnTo from a previous account as the post-login destination.
+export const LOGIN_SUCCESS_PATH = "/";
+
 export function workspaceHome(user) {
   // UC-06: chọn trang mặc định theo role; tài khoản nhiều role ưu tiên Admin, Manager rồi Business.
   const roles = user?.roles || [];

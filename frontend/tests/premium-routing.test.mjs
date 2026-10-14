@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { safeReturnTo, workspaceHome } from "../src/utils/sessionRouting.js";
+import { safeReturnTo, workspaceHome, LOGIN_SUCCESS_PATH } from "../src/utils/sessionRouting.js";
+import { readFileSync } from "node:fs";
 import { packageBenefits, projectedExpiry, money } from "../src/utils/premium.js";
 
 test("new role cannot return to the previous role's workspace", () => {
@@ -11,9 +12,19 @@ test("new role cannot return to the previous role's workspace", () => {
     assert.equal(safeReturnTo(oldPath, user), home);
   }
 });
-test("authorized plan paths and safe query strings survive login", () => {
+test("internal navigation helper permits authorized plan paths and safe query strings", () => {
   assert.equal(safeReturnTo("/premium/checkout/2?source=detail", { roles: ["READER"] }), "/premium/checkout/2?source=detail");
   assert.equal(safeReturnTo("/premium/packages/2", { roles: ["SUBSCRIBER"] }), "/premium/packages/2");
+});
+
+test("login always opens the news homepage and ignores stale returnTo", () => {
+  assert.equal(LOGIN_SUCCESS_PATH, "/");
+  const source = readFileSync(new URL("../src/pages/auth/LoginPage.jsx",import.meta.url),"utf8");
+  assert.match(source,/navigate\(LOGIN_SUCCESS_PATH,\s*\{ replace: true \}\)/);
+  assert.doesNotMatch(source,/safeReturnTo|location\.state|useLocation/);
+  for (const role of ["READER","SUBSCRIBER","BUSINESS","AD_MANAGER","ADMINISTRATOR"]) {
+    assert.notEqual(workspaceHome({roles:[role]}),LOGIN_SUCCESS_PATH);
+  }
 });
 test("external, login and unknown return targets are rejected", () => {
   for (const path of ["//example.com", "https://example.com", "/login", "/not-a-screen", null]) {
