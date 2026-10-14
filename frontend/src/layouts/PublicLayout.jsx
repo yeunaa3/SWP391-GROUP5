@@ -71,9 +71,6 @@ export default function PublicLayout() {
                         >
                             {t("Quảng cáo", "Advertise")}
                         </NavLink>
-                        <NavLink to="/search">
-                            {t("Tìm kiếm", "Search")}
-                        </NavLink>
                     </nav>
                     <div className="public-actions">
                         <QuickSearch />
