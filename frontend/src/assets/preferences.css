@@ -1,4 +1,10 @@
-.reader-settings-trigger { position:fixed; left:20px; bottom:22px; z-index:50; display:flex; align-items:center; gap:9px; padding:12px 16px; border:1px solid #d9d7d2; background:var(--surface); color:var(--ink); box-shadow:0 6px 28px #0002; border-radius:30px; font-size:17px; }
+.reader-settings-dock { position:fixed; left:8px; bottom:18px; z-index:50; padding:8px; }
+.reader-settings-dock .reader-settings-trigger { position:static; display:grid; place-items:center; width:30px; height:30px; padding:0; border:1px solid var(--line,#d9d7d2); background:var(--surface); color:var(--muted); box-shadow:0 3px 12px #0001; border-radius:50%; font-size:16px; opacity:.6; transition:opacity .2s; }
+.reader-settings-dock:hover .reader-settings-trigger,.reader-settings-dock:focus-within .reader-settings-trigger { opacity:1; }
+.reader-settings-peek { position:absolute; bottom:0; left:100%; width:245px; padding:16px; border:1px solid var(--line); border-radius:16px; background:var(--surface,#fff); color:var(--ink); box-shadow:0 12px 40px #0002; }
+.reader-settings-peek strong { font-size:12px; }.reader-settings-peek > div { display:flex; gap:6px; margin:12px 0; }.reader-settings-peek button { background:transparent; color:var(--ink); border:1px solid var(--line); padding:9px 10px; border-radius:8px; font-size:11px; }.reader-settings-peek button[aria-pressed="true"] { color:#25624d; border-color:#789b86; background:#769c8112; }.reader-settings-peek .reader-settings-more { width:100%; text-align:left; font-size:10px; }
+@media(max-width:600px){.reader-settings-dock{left:0;bottom:10px;}.reader-settings-peek{width:min(245px,calc(100vw - 64px));}}
+@media(prefers-reduced-motion:reduce){.reader-settings-dock .reader-settings-trigger{transition:none;}}
 .reader-settings-trigger span { font-size:11px; font-weight:700; letter-spacing:.08em; }
 .support-chat-trigger { position:fixed; right:22px; bottom:22px; z-index:50; display:flex; align-items:center; gap:9px; border-radius:30px; background:#b61d38; box-shadow:0 8px 30px #a81a3e35; padding:14px 19px; font-size:13px; }
 .back-to-top { bottom:88px; }

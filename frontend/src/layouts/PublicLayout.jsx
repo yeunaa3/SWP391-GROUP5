@@ -8,29 +8,29 @@ import "../assets/news-navigation.css";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import AdBanner from "../components/AdBanner.jsx";
 import { AdPreviewContext } from "../store/AdPreviewContext.jsx";
-import { useAdAllowance } from "../store/AdAllowanceContext.jsx";
+import useReaderPolicy from "../hooks/useReaderPolicy.js";
 import { workspaceHome } from "../utils/sessionRouting.js";
+import AccountMenu from "../components/AccountMenu.jsx";
+import NotificationBell from "../components/NotificationBell.jsx";
 
 export default function PublicLayout() {
-    const { user, premiumActive, premiumLoading, loading, refreshPremium } =
+    const { user, premiumActive, refreshPremium } =
         useAuth();
     const { t, language } = usePreferences();
-    const { adFreeActive, remainingSeconds, allowanceError, allowanceLoading } =
-        useAdAllowance();
+    const { readerNavigation, showAdvertising } = useReaderPolicy();
     const { pathname } = useLocation();
     const [previewEnabled, setPreviewEnabled] = useState(false);
     useEffect(() => {
         refreshPremium();
     }, [pathname, refreshPremium]);
-    const subscriber = adFreeActive;
     const newsPage =
         pathname === "/" ||
         pathname === "/search" ||
         pathname === "/news" ||
         pathname.startsWith("/articles/");
     const showPlacements =
-        newsPage && !subscriber && !premiumLoading && !loading;
-    const preview = previewEnabled && !subscriber && newsPage;
+        newsPage && showAdvertising;
+    const preview = previewEnabled && showAdvertising && newsPage;
     const workspace = workspaceHome(user);
     return (
         <AdPreviewContext.Provider value={preview}>
@@ -61,21 +61,14 @@ export default function PublicLayout() {
                         <Link to="/" className={pathname === "/" || pathname === "/news" || pathname.startsWith("/articles/") ? "active" : undefined}>
                             {t("Tin tức", "News")}
                         </Link>
-                        <NavLink to="/premium/packages">Premium</NavLink>
-                        <NavLink
-                            to={
-                                user?.roles?.includes("BUSINESS")
-                                    ? "/business"
-                                    : "/register"
-                            }
-                        >
-                            {t("Quảng cáo", "Advertise")}
-                        </NavLink>
+                        {readerNavigation && <NavLink to="/premium/packages">Premium</NavLink>}
                     </nav>
                     <div className="public-actions">
                         <QuickSearch />
                         <ThemeToggle />
-                        {premiumActive && (
+                        {user && <NotificationBell />}
+                        {user && <AccountMenu />}
+                        {readerNavigation && premiumActive && (
                             <Link
                                 className="premium-header-badge"
                                 to="/premium/packages"
@@ -101,7 +94,7 @@ export default function PublicLayout() {
                     </div>
                 </header>
                 {pathname !== "/search" && <CategoryNavigation />}
-                {import.meta.env.DEV && newsPage && !subscriber && (
+                {import.meta.env.DEV && newsPage && showAdvertising && (
                     <div className="ad-preview-switch">
                         <span>
                             {preview
@@ -158,26 +151,6 @@ export default function PublicLayout() {
                         </div>
                     </>
                 )}
-                {newsPage && premiumActive && (
-                    <div className="premium-ad-clock" role="status">
-                        {allowanceError
-                            ? t(
-                                  "Chưa kiểm tra được hạn mức miễn quảng cáo. Quảng cáo vẫn hiển thị.",
-                                  "Ad-free allowance unavailable. Ads remain visible.",
-                              )
-                            : allowanceLoading
-                              ? t(
-                                    "Đang kiểm tra 5 phút miễn quảng cáo hôm nay…",
-                                    "Checking today’s ad-free allowance…",
-                                )
-                              : adFreeActive
-                                ? `${t("Miễn quảng cáo hôm nay còn", "Today's ad-free time remaining")}: ${Math.floor(remainingSeconds / 60)}:${String(remainingSeconds % 60).padStart(2, "0")}`
-                                : t(
-                                      "Đã dùng hết 5 phút miễn quảng cáo hôm nay. Tiện ích Premium vẫn sử dụng được.",
-                                      "Today's 5 ad-free minutes are used. Premium reading tools remain available.",
-                                  )}
-                    </div>
-                )}
                 <Outlet />
                 <footer className="public-footer">
                     <div>
@@ -185,10 +158,7 @@ export default function PublicLayout() {
                         <Link to="/search">
                             {t("Khám phá tin tức", "Explore news")}
                         </Link>
-                        <Link to="/premium/packages">Premium</Link>
-                        <Link to="/register">
-                            {t("Hợp tác quảng cáo", "Advertising partnership")}
-                        </Link>
+                        {readerNavigation && <Link to="/premium/packages">Premium</Link>}
                     </div>
                     <span>© 2026 The Pulse</span>
                 </footer>

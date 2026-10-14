@@ -46,6 +46,7 @@ export default function NotificationsPage() {
     setBusy(true); setFeedback("");
     try { await apiRequest(`/api/notifications/${item.id}/read`,{method:"PATCH",body:JSON.stringify({read})}); if(account.current!==owner) return;
       setInbox(prev=>({...prev,items:prev.items.map(n=>n.id===item.id?{...n,read}:n),unreadCount:Math.max(0,prev.unreadCount+(item.read===read?0:read?-1:1))}));
+      window.dispatchEvent(new Event("notifications-updated"));
       setFeedback(read?t("Đã đánh dấu là đã đọc.","Marked as read."):t("Đã đánh dấu là chưa đọc.","Marked as unread."));
     } catch { if(account.current===owner) setFeedback(t("Chưa lưu được trạng thái. Hãy thử lại.","Unable to save read status. Retry.")); }
     finally { if(account.current===owner) setBusy(false); }
@@ -53,7 +54,7 @@ export default function NotificationsPage() {
   async function allRead() {
     const owner = user.id;
     setBusy(true);
-    try { await apiRequest("/api/notifications/read-all",{method:"POST"}); if(account.current!==owner) return; setInbox(prev=>({...prev,unreadCount:0,items:prev.items.map(n=>({...n,read:true}))})); setFeedback(t("Đã đánh dấu tất cả là đã đọc.","All notifications marked as read.")); }
+    try { await apiRequest("/api/notifications/read-all",{method:"POST"}); if(account.current!==owner) return; setInbox(prev=>({...prev,unreadCount:0,items:prev.items.map(n=>({...n,read:true}))})); window.dispatchEvent(new Event("notifications-updated")); setFeedback(t("Đã đánh dấu tất cả là đã đọc.","All notifications marked as read.")); }
     catch { if(account.current===owner) setFeedback(t("Chưa cập nhật được. Vui lòng thử lại.","Update failed. Please retry.")); }
     finally { if(account.current===owner) setBusy(false); }
   }

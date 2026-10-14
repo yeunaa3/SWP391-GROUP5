@@ -7,12 +7,12 @@ import ModalShell from "../../components/ModalShell.jsx";
 import ArticleAudio from "../../components/ArticleAudio.jsx";
 import { getArticle, getArticles } from "../../services/contentService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
-import { useAdAllowance } from "../../store/AdAllowanceContext.jsx";
+import useReaderPolicy from "../../hooks/useReaderPolicy.js";
 
 export default function ArticlePage() {
   const { slug } = useParams();
   const { user, premiumActive, premiumLoading } = useAuth();
-  const { adFreeActive } = useAdAllowance();
+  const { showAdvertising } = useReaderPolicy();
   const [state, setState] = useState({ article: null, demo: false });
   const [related, setRelated] = useState([]);
   const [notice, setNotice] = useState("");
@@ -31,7 +31,7 @@ export default function ArticlePage() {
   }, [accessKey]);
   if (!state.article || state.accessKey !== accessKey || premiumLoading) return <main className="route-state">Đang tải tin…</main>;
   const article = state.article;
-  const subscriber = adFreeActive;
+  const subscriber = !showAdvertising;
   const locked = article.premium && !premiumActive;
   const blocks = articleBlocks(article, locked);
   return <main className={focus && premiumActive ? "reader-focus" : ""}><DemoNotice show={state.demo} /><div className="public-content">

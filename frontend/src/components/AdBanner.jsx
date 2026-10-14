@@ -5,7 +5,7 @@ import { previewBanners, useAdPreview } from "../store/AdPreviewContext.jsx";
 import { adsForPosition } from "../data/houseAds.js";
 import { adFormat } from "../utils/adFormats.js";
 import { useAuth } from "../store/AuthContext.jsx";
-import { useAdAllowance } from "../store/AdAllowanceContext.jsx";
+import useReaderPolicy from "../hooks/useReaderPolicy.js";
 import { usePreferences } from "../store/PreferencesContext.jsx";
 import "../assets/house-ads.css";
 
@@ -15,22 +15,22 @@ export default function AdBanner({ position = "HOME_HERO", compact = false }) {
   const [paused, setPaused] = useState(false);
   const preview = useAdPreview();
   const { premiumLoading, loading } = useAuth();
-  const { adFreeActive } = useAdAllowance();
+  const { showAdvertising } = useReaderPolicy();
   const { t } = usePreferences();
   const format = adFormat(position);
   const house = !preview && !banners.length;
   const displayBanners = preview ? previewBanners : house ? adsForPosition(position) : banners;
-  useEffect(() => { let alive = true; apiRequest(`/api/advertising/banners?position=${encodeURIComponent(position)}`)
+  useEffect(() => { if (!showAdvertising) return; let alive = true; apiRequest(`/api/advertising/banners?position=${encodeURIComponent(position)}`)
     .then(data => { if (alive) setBanners(data); }).catch(() => { if (alive) setBanners([]); });
-    return () => { alive = false; }; }, [position]);
+    return () => { alive = false; }; }, [position, showAdvertising]);
   useEffect(() => { setIndex(0); }, [position, preview]);
   useEffect(() => {
-    if (paused || displayBanners.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!showAdvertising || paused || displayBanners.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const timer = setInterval(() => setIndex(current => (current + 1) % displayBanners.length), preview ? 4000 : 6500);
     return () => clearInterval(timer);
-  }, [displayBanners.length, paused, preview]);
+  }, [displayBanners.length, paused, preview, showAdvertising]);
   const banner = displayBanners[index % Math.max(1, displayBanners.length)];
-  if (!banner || adFreeActive || premiumLoading || loading) return null;
+  if (!banner || !showAdvertising || premiumLoading || loading) return null;
   const brandDetails = {
     "preview-nova": ["NOVA LEARN", "Kỹ năng mới. Cơ hội mới.", "Học công nghệ, dữ liệu và tư duy sáng tạo mỗi ngày.", "LEARN"],
     "preview-farm": ["GREEN FARM", "Công nghệ xanh. Mùa vụ tốt hơn.", "Giải pháp thông minh cho một tương lai bền vững.", "GROW"],

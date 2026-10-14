@@ -7,17 +7,17 @@ import NewsPhoto from "../../components/NewsPhoto.jsx";
 import { getArticles } from "../../services/contentService.js";
 import { useAdPreview } from "../../store/AdPreviewContext.jsx";
 import { useAuth } from "../../store/AuthContext.jsx";
-import { useAdAllowance } from "../../store/AdAllowanceContext.jsx";
+import useReaderPolicy from "../../hooks/useReaderPolicy.js";
 
 export default function HomePage() {
   const preview = useAdPreview();
   const { premiumActive, premiumLoading } = useAuth();
-  const { adFreeActive } = useAdAllowance();
+  const { showAdvertising } = useReaderPolicy();
   const [state, setState] = useState({ articles: [], demo: false, loading: true });
   const [source, setSource] = useState("");
   useEffect(() => { getArticles({ limit: 40 }).then(({ data, demo }) => setState({ articles: [...data].sort((a, b) => Number(Boolean(b.sourceUrl)) - Number(Boolean(a.sourceUrl))), demo, loading: false })); }, []);
   const [lead, ...more] = state.articles;
-  return <main data-hide-promotions={adFreeActive || premiumLoading}><DemoNotice show={state.demo} /><div className="public-content">
+  return <main data-hide-promotions={!showAdvertising || premiumLoading}><DemoNotice show={state.demo} /><div className="public-content">
     {!preview && <AdBanner position="HOME_HERO" />}
     {state.loading ? <div className="loading-card">Đang tải tin…</div> : lead ? <>
       <NewsTicker articles={state.articles}/><div className="edition-heading"><div><p className="eyebrow">GÓC NHÌN MỖI NGÀY</p><h2>Thế giới đang chuyển động.</h2></div><span>Đọc tin. Hiểu sâu. Kết nối.</span></div>
@@ -31,7 +31,7 @@ export default function HomePage() {
       <section className="headline-grid">{more.filter(article => !source || article.sourceName === source).slice(0, 6).map(article => <article key={article.id}>
         {article.thumbnailUrl && <Link to={`/articles/${article.slug}`}><img className="news-card-photo" src={article.thumbnailUrl} alt="" loading="lazy" referrerPolicy="no-referrer" onError={e => { e.currentTarget.style.display = "none"; }} /></Link>}
         <p className="eyebrow">{article.premium ? "PREMIUM · DEMO" : article.category}</p><h2><Link to={`/articles/${article.slug}`}>{article.title}</Link></h2><p>{article.summary}</p><span className="source-credit">{article.sourceName || "The Pulse · Nội dung mẫu"}</span>
-      </article>)}</section><section className="premium-experience"><div><p className="eyebrow">THE PULSE PREMIUM</p><h2>Một góc nhìn sâu hơn.<br/>Một trải nghiệm riêng bạn.</h2><p>Khám phá nội dung Premium mẫu, quản lý gói đọc báo và tận hưởng không gian đọc miễn quảng cáo 5 phút mỗi ngày với Premium.</p><Link className="button-link" to="/premium/packages">Khám phá các gói →</Link></div><div className="premium-orbit" aria-hidden="true"><span>P</span><small>READ BEYOND<br/>THE HEADLINES</small></div></section><AdBanner position="ARTICLE_TOP" />
+      </article>)}</section><section className="premium-experience"><div><p className="eyebrow">THE PULSE PREMIUM</p><h2>Một góc nhìn sâu hơn.<br/>Một trải nghiệm riêng bạn.</h2><p>Khám phá nội dung Premium mẫu, quản lý gói đọc báo và tận hưởng không gian đọc không quảng cáo khi Premium còn hiệu lực.</p><Link className="button-link" to="/premium/packages">Khám phá các gói →</Link></div><div className="premium-orbit" aria-hidden="true"><span>P</span><small>READ BEYOND<br/>THE HEADLINES</small></div></section><AdBanner position="ARTICLE_TOP" />
       {["business", "technology", "society"].map(category => <section className="news-category-block" key={category}>
         <div className="section-heading"><h2>{({ business: "Kinh doanh", technology: "Công nghệ", society: "Thời sự" })[category]}</h2><Link to={`/news?category=${category}`}>Xem thêm →</Link></div>
         <div className="headline-grid">{state.articles.filter(a => category === "business" ? /Business|Kinh doanh/.test(a.category) : category === "technology" ? /Technology|Công nghệ/.test(a.category) : /Society|Thời sự/.test(a.category)).slice(0, 3).map(article => <article key={article.id}><Link to={`/articles/${article.slug}`}><NewsPhoto article={article}/></Link><h3><Link to={`/articles/${article.slug}`}>{article.title}</Link></h3><p>{article.summary}</p><small>{article.sourceName || "The Pulse"}</small></article>)}</div>

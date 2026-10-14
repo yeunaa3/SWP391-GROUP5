@@ -35,7 +35,7 @@ export default function PackagesPage() {
     <section className="premium-panel"><h2>{t("Premium khác gì tài khoản thường?", "What changes with Premium?")}</h2><div className="premium-comparison-wrap"><table className="premium-comparison"><thead><tr><th>{t("Quyền lợi", "Feature")}</th><th>{t("Chưa có Premium", "Without Premium")}</th><th>Premium {t("còn hiệu lực", "active")}</th></tr></thead><tbody>{[
       [t("Tin công khai / RSS", "Public news / RSS"), t("Đọc phần có sẵn", "Read available content"), t("Giống tài khoản thường", "Same public content")],
       [t("Bài Premium của The Pluse", "The Pluse Premium articles"), t("Chỉ xem trước · Có paywall", "Preview only · Paywall"), t("Mở toàn bộ nội dung", "Full content unlocked")],
-      [t("Quảng cáo trên trang tin", "Ads on news pages"), t("Banner & quảng bá website", "Banners & house promotions"), t("Miễn 5 phút/ngày; hết thời gian quảng cáo hiện lại", "5 ad-free minutes/day; ads return afterwards")],
+      [t("Quảng cáo trên trang tin", "Ads on news pages"), t("Banner & quảng bá website", "Banners & house promotions"), t("Không quảng cáo khi gói còn hiệu lực", "Ad-free while membership is active")],
       [t("Đọc tập trung", "Focus reading"), t("Không có", "Unavailable"), t("Có, khi gói còn hạn", "Available while subscribed")],
       [t("Đọc thành tiếng", "Read aloud"), t("Không có", "Unavailable"), t("Có · Cần giọng tiếng Việt trên trình duyệt", "Available · Vietnamese browser voice required")],
       [t("Kích hoạt / hết hạn", "Activation / expiry"), t("Gửi yêu cầu chưa cấp quyền", "Requests do not grant access"), t("Admin duyệt → hiệu lực theo thời hạn đã cấp", "Approved → valid for the granted period")],
