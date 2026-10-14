@@ -27,6 +27,7 @@ public class AuthenticationService {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        //cần thêm lớp bảo vệ
     }
 
     @Transactional
@@ -39,7 +40,9 @@ public class AuthenticationService {
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         boolean usernameTaken=userRepository.existsByUsernameIgnoreCase(username);
+        
         // Kiểm tra duy nhất trên toàn bộ tài khoản, không chia riêng Reader và Business.
+        
         boolean emailTaken=userRepository.existsByEmailIgnoreCase(email);
         if(usernameTaken || emailTaken) {
             String message=(usernameTaken?"Username đã được sử dụng. Vui lòng đặt username khác.":"")
@@ -64,7 +67,8 @@ public class AuthenticationService {
         return value == null || value.isBlank() ? null : value.trim();
     }
     static String validatePhone(String value) {
-        // Số điện thoại tùy chọn. Số bắt đầu 0 được hiểu là Việt Nam; số khác phải có mã quốc gia.
+        // Số điện thoại tùy chọn. Số bắt đầu 0 được hiểu là Việt Nam; số khác phải có mã quốc gia. chưa giới hạn độ dài sđt, 
+        //cần thêm tự xác định các loại định dạng đầu số điện thaoij của từng quốc gia
         if(value==null || value.isEmpty()) return null;
         try {
             if(!value.matches("[0-9]{8,15}")) throw new IllegalArgumentException();

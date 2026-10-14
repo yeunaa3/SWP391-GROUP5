@@ -57,7 +57,7 @@ public class AuthenticationController {
         // UC-06: provider đọc user từ DB và so mật khẩu; chỉ tiếp tục khi xác thực thành công.
         Authentication authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login(), request.password()));
-        // Lưu người đã xác thực vào context của request hiện tại và session cho request tiếp theo.
+        // Lưu người đã xác thực vào context của request hiện tại và session cho request tiếp theo.---để ko query lại database 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
         SecurityContextHolder.setContext(context);
