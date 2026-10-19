@@ -15,6 +15,9 @@ import PackagesPage from "../pages/premium/PackagesPage.jsx";
 import PackageDetailPage from "../pages/premium/PackageDetailPage.jsx";
 import PremiumCheckoutPage from "../pages/premium/PremiumCheckoutPage.jsx";
 import PremiumRequestsPage from "../pages/premium/PremiumRequestsPage.jsx";
+import MySubscriptionPage from "../pages/premium/MySubscriptionPage.jsx";
+import TransactionHistoryPage from "../pages/premium/TransactionHistoryPage.jsx";
+import ReceiptDetailPage from "../pages/premium/ReceiptDetailPage.jsx";
 import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 import NotificationsPage from "../pages/account/NotificationsPage.jsx";
@@ -47,7 +50,9 @@ const specialPages = {
   "PRE-02": <PackageDetailPage />,
   "PRE-03": <PremiumCheckoutPage />,
   "PRE-04": <PremiumRequestsPage />,
-  "PRE-05": <PremiumRequestsPage />,
+  "PRE-05": <MySubscriptionPage />,
+  "PRE-06": <TransactionHistoryPage />,
+  "PRE-07": <ReceiptDetailPage />,
   "CFG-03": <PremiumReviewPage />,
   "CFG-01": <AdminDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,

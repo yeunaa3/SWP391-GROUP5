@@ -57,5 +57,16 @@ public class ManualPremiumService {
         repository.review(id, adminId, approve ? "APPROVED" : "REJECTED", note, subscription);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listTransactions(long userId) {
+        return repository.transactions(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTransactionDetail(long userId, long transactionId) {
+        return repository.transactionDetail(userId, transactionId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy biên lai giao dịch."));
+    }
+
     private ResponseStatusException error(HttpStatus status, String message) { return new ResponseStatusException(status, message); }
 }

@@ -9,5 +9,7 @@ export function getActivePremiumPlans() {
 
 export const submitPremiumRequest = packageId => apiRequest("/api/premium/requests", { method: "POST", body: JSON.stringify({ packageId: Number(packageId) }) });
 export const getMyPremiumRequests = () => apiRequest("/api/premium/requests");
+export const getMyTransactions = () => apiRequest("/api/premium/transactions");
+export const getTransactionDetail = id => apiRequest(`/api/premium/transactions/${id}`);
 export const getPremiumReviewQueue = () => apiRequest("/api/admin/premium-requests");
 export const reviewPremiumRequest = (id, decision) => apiRequest(`/api/admin/premium-requests/${id}/review`, { method: "POST", body: JSON.stringify(decision) });

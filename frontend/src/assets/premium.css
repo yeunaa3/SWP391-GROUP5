@@ -93,3 +93,29 @@ html[data-theme="dark"] .premium-page .button-link,html[data-theme="dark"] .prem
 @media(max-width:1000px) { .premium-detail-grid { grid-template-columns:1fr; } .premium-purchase-card { position:static; } }
 @media(max-width:600px) { .premium-panel,.premium-plan,.premium-purchase-card,.premium-detail-hero { padding:22px; } .premium-facts { grid-template-columns:1fr; } .premium-method { flex-wrap:wrap; padding:14px; } .premium-steps { gap:12px; font-size:.73rem; } }
 @media(prefers-reduced-motion:reduce) { .premium-plan { transition:none; } .premium-plan:hover { transform:none; } }
+
+/* Transaction history and receipt styles */
+.premium-nav-tabs { display:flex; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
+.premium-nav-tab { padding:10px 18px; border-radius:10px; border:1px solid var(--premium-line); text-decoration:none; font-weight:600; color:var(--premium-ink); background:#fff; }
+.premium-nav-tab.is-active { background:var(--premium-green); color:#fff; border-color:var(--premium-green); }
+.premium-table-wrap { overflow-x:auto; }
+.premium-table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.9rem; }
+.premium-table th, .premium-table td { padding:14px 16px; border-bottom:1px solid var(--premium-line); text-align:left; }
+.premium-table th { background:#f5f8f6; font-weight:700; color:#315a4e; }
+.premium-receipt-card { max-width:680px; margin:0 auto 32px; background:#fff; border:2px solid var(--premium-line); border-radius:20px; padding:36px; box-shadow:0 15px 40px #192b2d08; }
+.premium-receipt-header { text-align:center; padding-bottom:20px; border-bottom:2px dashed var(--premium-line); margin-bottom:24px; }
+.premium-receipt-brand { font-size:1.6rem; font-weight:800; color:var(--premium-green); letter-spacing:-.03em; }
+.premium-receipt-badge { display:inline-block; margin-top:10px; padding:6px 14px; background:#e2f3e9; color:#176354; border-radius:30px; font-weight:700; font-size:.85rem; }
+.premium-receipt-lines { margin:24px 0; }
+.premium-receipt-total { display:flex; justify-content:space-between; align-items:center; padding-top:20px; border-top:2px dashed var(--premium-line); margin-top:20px; font-size:1.3rem; font-weight:700; }
+.premium-receipt-footer { margin-top:32px; text-align:center; font-size:.85rem; color:#607069; }
+.premium-receipt-actions { display:flex; gap:12px; justify-content:center; margin-top:28px; flex-wrap:wrap; }
+.highlight-text { color:var(--premium-green); font-size:1.05rem; }
+.premium-hint { margin-top:12px; padding:12px 14px; background:#eef6f2; border-left:3px solid var(--premium-green); border-radius:6px; font-size:.85rem; color:#235242; }
+
+@media print {
+  body * { visibility:hidden; }
+  .premium-receipt-card, .premium-receipt-card * { visibility:visible; }
+  .premium-receipt-card { position:absolute; left:0; top:0; width:100%; max-width:none; border:none; box-shadow:none; padding:20px; }
+  .premium-receipt-actions, .premium-back, header, nav, footer { display:none!important; }
+}

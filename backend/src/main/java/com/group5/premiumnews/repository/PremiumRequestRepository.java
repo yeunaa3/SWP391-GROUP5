@@ -123,6 +123,64 @@ public class PremiumRequestRepository {
             "APPROVED".equals(status)?"Admin đã xác minh yêu cầu. Mở gói của tôi để xem thời gian có hiệu lực và các quyền lợi.":"Admin đã từ chối yêu cầu. Mở lịch sử đăng ký để xem lý do trước khi gửi lại.",String.valueOf(id),id);
     }
 
+    public List<Map<String, Object>> transactions(long userId) {
+        String sql = """
+                SELECT t.transaction_id AS id,
+                       t.txn_ref AS txnRef,
+                       t.transaction_type AS transactionType,
+                       t.amount,
+                       t.currency,
+                       t.payment_gateway AS paymentGateway,
+                       t.status,
+                       t.paid_at AS paidAt,
+                       t.subscription_id AS subscriptionId,
+                       s.package_id AS packageId,
+                       s.package_name_snapshot AS packageName,
+                       s.package_code_snapshot AS packageCode,
+                       s.duration_days_snapshot AS durationDays,
+                       s.start_at AS startAt,
+                       s.end_at AS endAt,
+                       u.full_name AS fullName,
+                       u.username,
+                       u.email
+                FROM transactions t
+                JOIN users u ON u.user_id = t.user_id
+                LEFT JOIN subscriptions s ON s.subscription_id = t.subscription_id
+                WHERE t.user_id = ?
+                ORDER BY t.paid_at DESC, t.transaction_id DESC
+                """;
+        return jdbc.queryForList(sql, userId);
+    }
+
+    public Optional<Map<String, Object>> transactionDetail(long userId, long transactionId) {
+        String sql = """
+                SELECT t.transaction_id AS id,
+                       t.txn_ref AS txnRef,
+                       t.transaction_type AS transactionType,
+                       t.amount,
+                       t.currency,
+                       t.payment_gateway AS paymentGateway,
+                       t.status,
+                       t.paid_at AS paidAt,
+                       t.subscription_id AS subscriptionId,
+                       s.package_id AS packageId,
+                       s.package_name_snapshot AS packageName,
+                       s.package_code_snapshot AS packageCode,
+                       s.duration_days_snapshot AS durationDays,
+                       s.start_at AS startAt,
+                       s.end_at AS endAt,
+                       u.full_name AS fullName,
+                       u.username,
+                       u.email
+                FROM transactions t
+                JOIN users u ON u.user_id = t.user_id
+                LEFT JOIN subscriptions s ON s.subscription_id = t.subscription_id
+                WHERE t.user_id = ? AND t.transaction_id = ?
+                """;
+        List<Map<String, Object>> list = jdbc.queryForList(sql, userId, transactionId);
+        return list.stream().findFirst();
+    }
+
     private long insert(String sql, Object... values) {
         GeneratedKeyHolder key = new GeneratedKeyHolder();
         jdbc.update(connection -> {

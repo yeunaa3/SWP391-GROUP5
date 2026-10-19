@@ -26,7 +26,17 @@ export default function PremiumRequestsPage() {
     {!loading && !error && !rows.length && <section className="premium-panel"><p>{t("Chưa có yêu cầu duyệt thủ công. Gói mẫu đã cấp trước đó không nằm trong lịch sử yêu cầu này.", "No manual requests. Pre-existing demo subscriptions are not listed here.")}</p><Link to="/premium/packages">{t("Chọn gói", "Choose plan")}</Link></section>}
     {rows.map(row => <article className="premium-panel" key={row.id}><div className="premium-request-heading"><div><span className="premium-kicker">PRE-{row.id}</span><h2>{row.packageName}</h2></div><span className={`premium-request-status is-${row.status.toLowerCase()}`}>{row.status === "PENDING" ? t("Chờ admin duyệt", "Pending review") : row.status === "APPROVED" ? t("Đã duyệt", "Approved") : t("Bị từ chối", "Rejected")}</span></div>
       <dl className="premium-order-lines"><div><dt>{t("Số tiền", "Amount")}</dt><dd>{money(row.amount, row.currency)}</dd></div><div><dt>{t("Thời hạn", "Duration")}</dt><dd>{row.durationDays} {t("ngày", "days")}</dd></div><div><dt>{t("Gửi lúc", "Submitted")}</dt><dd>{date(row.submittedAt)}</dd></div></dl>
-      {row.status === "PENDING" && <div className="premium-manual-transfer"><img className="premium-bank-qr" src={paymentConfig.qrImage} alt={t("QR chuyển khoản", "Bank transfer QR")} /><div><h3>{t("Thông tin chuyển khoản", "Transfer instructions")}</h3><p>{paymentConfig.accountName} · {paymentConfig.accountNumber}</p><p>{t("Nội dung", "Reference")}: <strong>PLUSE PRE {row.id}</strong></p><p>{t("Số tiền", "Amount")}: <strong>{money(row.amount, row.currency)}</strong></p><p>{t("QR tĩnh: tự nhập đúng số tiền và nội dung. Kiểm tra người nhận; liên hệ admin trước khi chuyển tiền thật trong giai đoạn thử nghiệm. Nếu đã chuyển, không chuyển lại — hãy đợi đối soát.", "Static QR: enter the exact amount and reference. Verify the recipient and contact the administrator before real test payments. Do not pay twice while awaiting review.")}</p></div></div>}
+      {row.status === "PENDING" && <div className="premium-manual-transfer">
+        <img className="premium-bank-qr" src={paymentConfig.getDynamicQrUrl(row.amount, `PLUSE PRE ${row.id}`)} onError={e => { e.currentTarget.src = paymentConfig.qrImage; }} alt={t("QR chuyển khoản", "Bank transfer QR")} />
+        <div>
+          <h3>{t("Quét mã thanh toán tự động (VietQR)", "Scan VietQR to Pay")}</h3>
+          <p><strong>{paymentConfig.bankName}</strong></p>
+          <p>{paymentConfig.accountName} · <strong>{paymentConfig.accountNumber}</strong></p>
+          <p>{t("Nội dung chuyển khoản", "Reference")}: <strong className="highlight-text">PLUSE PRE {row.id}</strong></p>
+          <p>{t("Số tiền", "Amount")}: <strong className="highlight-text">{money(row.amount, row.currency)}</strong></p>
+          <p className="premium-hint">{t("⚡ Mã QR đã tự động điền sẵn số tiền và nội dung chuyển khoản. Khi quét bằng ứng dụng ngân hàng bất kỳ, bạn chỉ cần nhập mã OTP để xác nhận thanh toán.", "⚡ The QR code automatically includes the exact amount and reference. Scan with any banking app and confirm with OTP.")}</p>
+        </div>
+      </div>}
       {row.status === "APPROVED" && <><p>{t("Thời gian được cấp", "Granted period")}: <strong>{date(row.startAt)} → {date(row.endAt)}</strong></p><Link to="/">{t("Về trang báo", "Read news")} →</Link></>}
       {row.reviewNote && <p>{t("Ghi chú admin", "Administrator note")}: {row.reviewNote}</p>}{row.status === "REJECTED" && <Link to="/premium/packages">{t("Đăng ký lại", "Resubmit")}</Link>}
     </article>)}</main>;

@@ -34,6 +34,18 @@ public class ManualPremiumController {
     @PreAuthorize("hasAnyRole('READER','SUBSCRIBER')")
     public List<Map<String,Object>> mine(@AuthenticationPrincipal AuthenticatedUserPrincipal user) { return service.list(user.id()); }
 
+    @GetMapping("/premium/transactions")
+    @PreAuthorize("hasAnyRole('READER','SUBSCRIBER')")
+    public List<Map<String,Object>> myTransactions(@AuthenticationPrincipal AuthenticatedUserPrincipal user) {
+        return service.listTransactions(user.id());
+    }
+
+    @GetMapping("/premium/transactions/{id}")
+    @PreAuthorize("hasAnyRole('READER','SUBSCRIBER')")
+    public Map<String,Object> transactionDetail(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        return service.getTransactionDetail(user.id(), id);
+    }
+
     @GetMapping("/admin/premium-requests")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
     public List<Map<String,Object>> queue() { return service.list(null); }
