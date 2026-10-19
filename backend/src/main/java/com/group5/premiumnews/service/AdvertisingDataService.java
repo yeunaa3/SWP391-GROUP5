@@ -15,10 +15,15 @@ public class AdvertisingDataService {
 
     @PreAuthorize("hasAnyRole('BUSINESS','AD_MANAGER','ADMINISTRATOR')")
     public List<Map<String, Object>> availability() {
-        // Only expose occupied slot/time windows, not another company's contract data.
+        // Trả về các khoảng thời gian đã có hợp đồng Active đã thanh toán hoặc đang giữ chỗ chưa hết hạn
         return jdbc.queryForList("""
-            SELECT slot_id AS slotId,start_at AS startAt,end_at AS endAt
-            FROM contracts WHERE status='ACTIVE' AND payment_status='PAID' AND end_at>CURRENT_TIMESTAMP
+            SELECT slot_id AS slotId, start_at AS startAt, end_at AS endAt
+            FROM contracts 
+            WHERE end_at > CURRENT_TIMESTAMP
+              AND (
+                  (status = 'ACTIVE' AND payment_status = 'PAID')
+                  OR (status IN ('ACCEPTED', 'PENDING_PAYMENT') AND reservation_expires_at > CURRENT_TIMESTAMP)
+              )
             ORDER BY start_at
             """);
     }

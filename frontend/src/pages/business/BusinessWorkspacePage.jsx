@@ -4,6 +4,7 @@ import { apiRequest } from "../../services/apiClient.js";
 import { getAdvertisingCatalog } from "../../services/contentService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import UiIcon from "../../components/UiIcon.jsx";
+import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
 
 const statusLabels={DRAFT:"Bản nháp",PENDING_REVIEW:"Chờ xét duyệt",RESUBMITTED:"Đã gửi lại",NEEDS_REVISION:"Cần chỉnh sửa",APPROVED:"Đã duyệt",REJECTED:"Bị từ chối",ACTIVE:"Đang hiệu lực",PAID:"Đã thanh toán",UNPAID:"Chưa thanh toán",PROPOSED:"Đã có đề xuất",SCHEDULED:"Đã lên lịch",COMPLETED:"Đã hoàn thành",CANCELLED:"Đã hủy",EXPIRED:"Hết hạn"};
 const status=value=>statusLabels[value] || value || "Chưa có";
@@ -31,6 +32,7 @@ export default function BusinessWorkspacePage({screen}) {
   // UC-38/BUS-02: dữ liệu đang chỉnh sửa của hồ sơ công ty, độc lập với hồ sơ cá nhân ở UC-08.
   const [companyForm,setCompanyForm]=useState({name:"",taxCode:"",email:"",phone:"",address:"",billingAddress:""});
   const [booking,setBooking]=useState({name:"",slotId:query.get("slotId") || "",packageId:query.get("packageId") || "",startDate:query.get("startDate") || "",endDate:query.get("endDate") || ""});
+  const [calendarError,setCalendarError]=useState("");
   const [editingBooking,setEditingBooking]=useState(false);const [deleteConfirm,setDeleteConfirm]=useState(false);
   const [campaignForm,setCampaignForm]=useState({name:"",description:"",contractId:"",startTime:"",endTime:""});
   const [file,setFile]=useState(null);const [targetUrl,setTargetUrl]=useState("");
@@ -75,7 +77,215 @@ export default function BusinessWorkspacePage({screen}) {
       <h3>Tài liệu pháp lý</h3>{data.documents.length?<ul className="business-document-list">{data.documents.map(doc=><li key={doc.document_id}><a href={`/api/media/document/${doc.document_id}`} target="_blank" rel="noreferrer">{doc.original_file_name} ↗</a><small>Phiên bản {doc.version_no} · {time(doc.uploaded_at)}</small></li>)}</ul>:<p>Chưa tải tài liệu.</p>}
       {!data.company.company_id?<Link className="button-link" to="/business/company">Lưu hồ sơ doanh nghiệp trước →</Link>:editable(data.company.application_status)?<><form onSubmit={e=>{e.preventDefault();const body=new FormData();body.append("file",file);action(()=>apiRequest("/api/business/documents",{method:"POST",body}),"Đã tải tài liệu và lưu thông tin vào MySQL.",()=>setFile(null));}}><Field label="PDF, PNG hoặc JPEG · tối đa 8 MB"><input type="file" accept="application/pdf,image/png,image/jpeg" required disabled={busy} onChange={e=>setFile(e.target.files?.[0] || null)}/></Field><button className="secondary-button" disabled={busy || !file}>Tải tài liệu lên</button></form><button disabled={busy || !data.documents.length} onClick={()=>action(()=>apiRequest("/api/business/application/submit",{method:"POST"}),"Đã gửi hồ sơ chờ quản lý xét duyệt.")}>Gửi đăng ký hợp tác</button></>:<p className="info-note">{data.company.application_status==="APPROVED"?"Doanh nghiệp đã được duyệt, có thể đặt quảng cáo.":"Hồ sơ đã khóa. Chờ quản lý xét duyệt hoặc yêu cầu chỉnh sửa."}</p>}
     </section>}
-    {screen.id==="BUS-07" && <form className="dashboard-section" onSubmit={e=>{e.preventDefault();const saveDraft=e.nativeEvent.submitter?.value==="draft";action(()=>json(saveDraft?"/api/business/bookings/drafts":"/api/business/bookings",{...booking,slotId:Number(booking.slotId),packageId:Number(booking.packageId)}),saveDraft?"Đã lưu bản nháp.":"Đã ghi nhận yêu cầu đặt quảng cáo. Chờ quản lý chuẩn bị đề xuất hợp đồng.",result=>navigate(saveDraft?`/business/contracts/${result.id}`:"/business/contracts"));}}><h2>Yêu cầu đặt quảng cáo</h2>{data.company.application_status!=="APPROVED" && <p className="info-note">Hợp tác chưa được duyệt. <Link to="/business/partnership/status">Xem hồ sơ →</Link></p>}<div className="business-form-grid"><Field label="Tên yêu cầu"><input required maxLength={200} value={booking.name} onChange={e=>setBooking({...booking,name:e.target.value})}/></Field><Field label="Vị trí quảng cáo"><select required value={booking.slotId} onChange={e=>setBooking({...booking,slotId:e.target.value})}><option value="">Chọn vị trí</option>{catalog?.slots.map(slot=><option key={slot.id} value={slot.id}>{slot.name} · {slot.width} × {slot.height}</option>)}</select></Field><Field label="Gói quảng cáo"><select required value={booking.packageId} onChange={e=>setBooking({...booking,packageId:e.target.value})}><option value="">Chọn gói</option>{catalog?.offers.map(pack=><option key={pack.id} value={pack.id}>{pack.name} · {currency(pack.price)} · {pack.durationDays} ngày</option>)}</select></Field>{[["startDate","Ngày bắt đầu"],["endDate","Ngày kết thúc (bao gồm)"]].map(([key,label])=><Field key={key} label={label}><input type="date" required value={booking[key]} onChange={e=>setBooking({...booking,[key]:e.target.value})}/></Field>)}</div><p className="info-note">Giá dự kiến = giá gói + giá vị trí × số ngày / 30. Server tính lại và kiểm tra lịch. Gửi yêu cầu chưa giữ chỗ và chưa thanh toán.</p><div className="form-actions"><button type="submit" value="draft" className="secondary-button" disabled={busy || data.company.application_status!=="APPROVED" || catalog?.demo}>Lưu bản nháp</button><button type="submit" value="submit" disabled={busy || data.company.application_status!=="APPROVED" || catalog?.demo}>Gửi yêu cầu đặt quảng cáo</button><Link className="outline-button" to="/business/advertising/calendar">Xem lịch vị trí</Link></div></form>}
+    {screen.id==="BUS-07" && (() => {
+      // Tìm thông tin vị trí và gói đã chọn để tính toán và validate
+      const selectedSlotObj = catalog?.slots?.find(s => String(s.id) === String(booking.slotId));
+      const selectedPackObj = catalog?.offers?.find(p => String(p.id) === String(booking.packageId));
+      
+      // Tính số ngày khách chọn trên lịch
+      const bookingDays = booking.startDate && booking.endDate
+        ? Math.max(0, Math.round((new Date(`${booking.endDate}T12:00:00`) - new Date(`${booking.startDate}T12:00:00`)) / 86400000) + 1)
+        : 0;
+
+      // Tính giá dự kiến theo công thức: Giá gói + (Giá vị trí * Số ngày / 30)
+      const estimatedPrice = (selectedSlotObj && selectedPackObj && bookingDays > 0)
+        ? Number(selectedPackObj.price) + (Number(selectedSlotObj.base_price || selectedSlotObj.basePrice || 0) * bookingDays / 30)
+        : 0;
+
+      // ĐIỀU KIỆN HỢP LỆ ĐỂ MỞ NÚT "LƯU BẢN NHÁP" VÀ "GỬI YÊU CẦU ĐẶT QUẢNG CÁO":
+      // 1. Hồ sơ doanh nghiệp phải được duyệt (APPROVED)
+      // 2. Tên yêu cầu không để trống
+      // 3. Đã chọn vị trí và gói quảng cáo
+      // 4. Đã chọn ngày bắt đầu và ngày kết thúc
+      // 5. Khoảng ngày không bị lỗi xung đột lịch (calendarError trống)
+      // 6. Số ngày không vượt quá thời hạn gói
+      const isBookingValid = 
+        data.company.application_status === "APPROVED" &&
+        Boolean(booking.name?.trim()) &&
+        Boolean(booking.slotId) &&
+        Boolean(booking.packageId) &&
+        Boolean(booking.startDate) &&
+        Boolean(booking.endDate) &&
+        bookingDays > 0 &&
+        (!selectedPackObj?.durationDays || bookingDays <= Number(selectedPackObj.durationDays)) &&
+        !calendarError;
+
+      return (
+        <form
+          className="dashboard-section"
+          onSubmit={e => {
+            e.preventDefault();
+            const saveDraft = e.nativeEvent.submitter?.value === "draft";
+            action(
+              () => json(
+                saveDraft ? "/api/business/bookings/drafts" : "/api/business/bookings",
+                { ...booking, slotId: Number(booking.slotId), packageId: Number(booking.packageId) }
+              ),
+              saveDraft ? "Đã lưu bản nháp." : "Đã ghi nhận yêu cầu đặt quảng cáo. Chờ quản lý chuẩn bị đề xuất hợp đồng.",
+              result => navigate(saveDraft ? `/business/contracts/${result.id}` : "/business/contracts")
+            );
+          }}
+        >
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">ĐẶT QUẢNG CÁO · BUS-07</p>
+              <h2>Yêu cầu đặt quảng cáo</h2>
+            </div>
+            <Link className="outline-button" to="/business/advertising/calendar">Xem toàn bộ lịch (BUS-06) ↗</Link>
+          </div>
+
+          {data.company.application_status !== "APPROVED" && (
+            <p className="info-note" role="status">
+              Hồ sơ hợp tác chưa được duyệt. Bạn cần được phê duyệt hợp tác trước khi gửi yêu cầu đặt quảng cáo.{" "}
+              <Link to="/business/partnership/status">Xem hồ sơ →</Link>
+            </p>
+          )}
+
+          {/* Form chọn thông tin ban đầu: Tên, Vị trí, Gói */}
+          <div className="business-form-grid">
+            <Field label="Tên yêu cầu đặt quảng cáo">
+              <input
+                required
+                maxLength={200}
+                placeholder="Ví dụ: Chiến dịch mùa hè - ACME 2026"
+                value={booking.name}
+                onChange={e => setBooking({ ...booking, name: e.target.value })}
+              />
+            </Field>
+
+            <Field label="Vị trí quảng cáo">
+              <select
+                required
+                value={booking.slotId}
+                onChange={e => {
+                  setBooking({ ...booking, slotId: e.target.value, startDate: "", endDate: "" });
+                  setCalendarError("");
+                }}
+              >
+                <option value="">-- Chọn vị trí quảng cáo --</option>
+                {catalog?.slots?.map(slot => (
+                  <option key={slot.id} value={slot.id}>
+                    {slot.name} · {slot.width} × {slot.height} px
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Gói quảng cáo B2B">
+              <select
+                required
+                value={booking.packageId}
+                onChange={e => {
+                  setBooking({ ...booking, packageId: e.target.value, startDate: "", endDate: "" });
+                  setCalendarError("");
+                }}
+              >
+                <option value="">-- Chọn gói quảng cáo --</option>
+                {catalog?.offers?.map(pack => (
+                  <option key={pack.id} value={pack.id}>
+                    {pack.name} · {currency(pack.price)} · Thời hạn: {pack.durationDays} ngày
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Ước tính thời lượng & Giá">
+              <div style={{ padding: "12px", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "13px" }}>
+                <strong>{bookingDays > 0 ? `${bookingDays} ngày` : "Chưa chọn lịch"}</strong>
+                {estimatedPrice > 0 && (
+                  <span style={{ color: "#059669", fontWeight: "bold", marginLeft: "8px" }}>
+                    · Giá dự kiến: {currency(estimatedPrice)}
+                  </span>
+                )}
+              </div>
+            </Field>
+          </div>
+
+          {/* BẢNG LỊCH KIỂM TRA NGÀY KHẢ DỤNG:
+              - Tự động hiển thị khi khách chọn Vị trí và Gói
+              - Hiển thị ngày xám (đã qua), xanh (được phép đặt), đỏ (đã có người đặt)
+              - Khách click chọn ngày bắt đầu và kết thúc trực tiếp trên bảng lịch
+          */}
+          <SlotBookingCalendar
+            slotId={booking.slotId}
+            packageId={booking.packageId}
+            slots={catalog?.slots || []}
+            packages={catalog?.offers || []}
+            startDate={booking.startDate}
+            endDate={booking.endDate}
+            onSelectRange={({ startDate, endDate, isValid, errorMessage }) => {
+              setBooking(prev => ({ ...prev, startDate, endDate }));
+              setCalendarError(errorMessage || "");
+            }}
+          />
+
+          {/* Đồng bộ 2 ô ngày bắt đầu và kết thúc */}
+          <div className="business-form-grid" style={{ marginTop: "12px" }}>
+            <Field label="Ngày bắt đầu (từ lịch)">
+              <input
+                type="date"
+                required
+                value={booking.startDate}
+                onChange={e => {
+                  setBooking({ ...booking, startDate: e.target.value });
+                  setCalendarError("");
+                }}
+              />
+            </Field>
+            <Field label="Ngày kết thúc (từ lịch)">
+              <input
+                type="date"
+                required
+                value={booking.endDate}
+                onChange={e => {
+                  setBooking({ ...booking, endDate: e.target.value });
+                  setCalendarError("");
+                }}
+              />
+            </Field>
+          </div>
+
+          {/* Thông báo điều kiện hợp lệ */}
+          <div style={{ marginBlock: "16px" }}>
+            {calendarError ? (
+              <div className="form-error" role="alert" style={{ color: "#dc2626", background: "#fee2e2", padding: "12px", borderRadius: "8px", border: "1px solid #fca5a5" }}>
+                ⚠️ <strong>Lịch không hợp lệ:</strong> {calendarError}
+              </div>
+            ) : !isBookingValid ? (
+              <p className="info-note">
+                ℹ️ <strong>Điều kiện bắt buộc:</strong> Vui lòng nhập Tên yêu cầu, chọn Vị trí, Gói và chọn khoảng ngày trống (màu xanh) trên lịch không bị trùng để kích hoạt <strong>Lưu bản nháp</strong> và <strong>Gửi yêu cầu</strong>.
+              </p>
+            ) : (
+              <p className="info-note" style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46" }}>
+                ✓ <strong>Mọi điều kiện đều hợp lệ:</strong> Khoảng chạy {bookingDays} ngày phù hợp với gói "{selectedPackObj?.name}". Giá dự kiến: {currency(estimatedPrice)}. Bạn có thể lưu nháp hoặc gửi yêu cầu ngay.
+              </p>
+            )}
+          </div>
+
+          {/* Nút hành động: Chỉ Enabled khi mọi điều kiện đều phù hợp (isBookingValid === true) */}
+          <div className="form-actions">
+            <button
+              type="submit"
+              value="draft"
+              className="secondary-button"
+              disabled={busy || !isBookingValid || catalog?.demo}
+              title={!isBookingValid ? "Vui lòng chọn khoảng ngày hợp lệ trên bảng lịch để lưu nháp" : "Lưu bản nháp"}
+            >
+              Lưu bản nháp
+            </button>
+            <button
+              type="submit"
+              value="submit"
+              disabled={busy || !isBookingValid || catalog?.demo}
+              title={!isBookingValid ? "Vui lòng chọn khoảng ngày hợp lệ trên bảng lịch để gửi yêu cầu" : "Gửi yêu cầu đặt quảng cáo"}
+            >
+              Gửi yêu cầu đặt quảng cáo
+            </button>
+            <Link className="outline-button" to="/business/contracts">Xem danh sách hợp đồng</Link>
+          </div>
+        </form>
+      );
+    })()}
     {screen.id==="BUS-11" && <section className="dashboard-section"><div className="section-heading"><h2>Hợp đồng và yêu cầu đã gửi</h2><Link className="button-link" to="/business/bookings/new">Yêu cầu đặt quảng cáo</Link></div><div className="business-table-wrap"><table><thead><tr><th>Mã / tên</th><th>Vị trí</th><th>Khoảng chạy</th><th>Giá trị</th><th>Trạng thái</th><th/></tr></thead><tbody>{data.contracts.map(c=><tr key={c.contract_id}><td><strong>{c.contract_code}</strong><br/>{c.contract_name}</td><td>{c.slot_name_snapshot}</td><td>{time(c.start_at)}<br/>{time(c.end_at)} (kết thúc)</td><td>{currency(c.total_value)}</td><td><Badge value={c.status}/><br/>{status(c.payment_status)}</td><td><Link to={`/business/contracts/${c.contract_id}`}>Chi tiết →</Link></td></tr>)}</tbody></table></div>{!data.contracts.length && <p>Chưa có yêu cầu/hợp đồng. Hãy gửi yêu cầu đặt quảng cáo.</p>}</section>}
     {["BUS-08","BUS-09","BUS-10","BUS-12"].includes(screen.id) && <section className="dashboard-section"><h2>Thông tin hợp đồng</h2>{contract?<><Badge value={contract.status}/><dl className="business-details">{[["Mã hợp đồng",contract.contract_code],["Tên",contract.contract_name],["Vị trí",contract.slot_name_snapshot],["Gói",contract.package_name_snapshot],["Giá trị",currency(contract.total_value)],["Thanh toán",status(contract.payment_status)],["Bắt đầu",time(contract.start_at)],["Kết thúc",time(contract.end_at)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>{contract.status==="DRAFT"?<><div className="form-actions"><button type="button" className="secondary-button" disabled={busy} onClick={()=>setEditingBooking(true)}>Sửa bản nháp</button><button type="button" className="outline-button" disabled={busy} onClick={()=>setDeleteConfirm(true)}>Xóa bản nháp</button></div>{deleteConfirm && <div role="alert" className="info-note"><p>Xóa bản nháp “{contract.contract_name}”? Thao tác này không thể hoàn tác.</p><div className="form-actions"><button disabled={busy} onClick={()=>action(()=>apiRequest(`/api/business/bookings/${contract.contract_id}`,{method:"DELETE"}),"Đã xóa bản nháp.",()=>navigate("/business/contracts"))}>Xác nhận xóa</button><button className="outline-button" disabled={busy} onClick={()=>setDeleteConfirm(false)}>Giữ bản nháp</button></div></div>}{editingBooking && <form onSubmit={e=>{e.preventDefault();action(()=>json(`/api/business/bookings/${contract.contract_id}`,{...booking,slotId:Number(booking.slotId),packageId:Number(booking.packageId)},"PUT"),"Đã lưu bản nháp.",()=>setEditingBooking(false));}}><div className="business-form-grid"><Field label="Tên yêu cầu"><input required maxLength={200} value={booking.name} onChange={e=>setBooking({...booking,name:e.target.value})}/></Field><Field label="Vị trí"><select required value={booking.slotId} onChange={e=>setBooking({...booking,slotId:e.target.value})}>{catalog?.slots.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></Field><Field label="Gói quảng cáo"><select required value={booking.packageId} onChange={e=>setBooking({...booking,packageId:e.target.value})}>{catalog?.offers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></Field>{[["startDate","Ngày bắt đầu"],["endDate","Ngày kết thúc (bao gồm)"]].map(([key,label])=><Field key={key} label={label}><input required type="date" value={booking[key]} onChange={e=>setBooking({...booking,[key]:e.target.value})}/></Field>)}</div><p className="info-note">Giá trị được tính lại khi lưu. Lưu bản nháp chưa gửi yêu cầu.</p><div className="form-actions"><button disabled={busy}>Lưu bản nháp</button><button type="button" className="outline-button" disabled={busy} onClick={()=>setEditingBooking(false)}>Đóng chỉnh sửa</button></div></form>}<p className="info-note">Bản nháp chưa được gửi. Gửi yêu cầu để quản lý xét duyệt và chuẩn bị đề xuất hợp đồng. Thao tác này chưa giữ chỗ hoặc thanh toán.</p><button disabled={busy || editingBooking || data.company.application_status!=="APPROVED"} onClick={()=>action(()=>apiRequest(`/api/business/bookings/${contract.contract_id}/submit`,{method:"POST"}),"Đã gửi yêu cầu đặt quảng cáo. Chờ quản lý xét duyệt và chuẩn bị đề xuất hợp đồng.")}>{busy?"Đang gửi…":"Gửi yêu cầu đặt quảng cáo"}</button>{data.company.application_status!=="APPROVED" && <p className="info-note">Doanh nghiệp cần được duyệt hợp tác trước khi gửi yêu cầu.</p>}</>:contract.status==="PENDING_REVIEW"?<p role="status" className="info-note">Yêu cầu đã gửi, đang chờ quản lý xét duyệt và chuẩn bị đề xuất hợp đồng. Chưa giữ chỗ hoặc thanh toán.</p>:contract.status==="ACTIVE" && contract.payment_status==="PAID"?<Link className="button-link" to="/business/campaigns/edit">Tạo chiến dịch →</Link>:<p className="info-note">Yêu cầu đã lưu thật. Quản lý chuẩn bị đề xuất, thương lượng và thanh toán chưa được nối API; chưa thể kích hoạt hợp đồng này. Không có hóa đơn giả.</p>}</>:<p>Chọn một hợp đồng từ <Link to="/business/contracts">danh sách hợp đồng</Link>.</p>}</section>}
     {screen.id==="BUS-13" && <section className="dashboard-section"><div className="section-heading"><h2>Chiến dịch của doanh nghiệp</h2><Link className="button-link" to="/business/campaigns/edit">Tạo chiến dịch</Link></div><div className="business-campaign-grid">{data.campaigns.map(c=><article key={c.campaign_id}>{c.media_url && <img src={c.media_url} alt={c.campaign_name}/>}<h3>{c.campaign_name}</h3><p>{c.contract_code}</p><Badge value={c.status}/><p>{time(c.scheduled_start_time)} → {time(c.scheduled_end_time)}</p><div className="record-actions"><Link to={`/business/campaigns/${c.campaign_id}`}>Chi tiết</Link>{editable(c.status) && <Link to={`/business/campaigns/edit/${c.campaign_id}`}>Chỉnh sửa</Link>}<Link to={`/business/performance/${c.campaign_id}`}>Báo cáo</Link></div></article>)}</div>{!data.campaigns.length && <p>Chưa có chiến dịch.</p>}</section>}
