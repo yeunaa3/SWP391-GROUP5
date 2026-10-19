@@ -32,11 +32,13 @@ import { BrowseNewsPage } from "../pages/public/SearchPage.jsx";
 import AdManagerDashboardPage from "../pages/adManager/AdManagerDashboardPage.jsx";
 import PartnershipQueuePage from "../pages/adManager/PartnershipQueuePage.jsx";
 import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx";
+import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorPage.jsx";
 
 const specialPages = {
   "ADM-01": <AdManagerDashboardPage />,
   "ADM-02": <PartnershipQueuePage />,
   "ADM-03": <PartnershipDetailPage />,
+  "ADM-09": <ActiveCampaignMonitorPage />,
   "ACC-01": <ProfilePage />,
   "ACC-02": <NotificationsPage />,
   "PUB-01": <HomePage />,

@@ -32,15 +32,15 @@ public class SecurityConfig {
                 .cors(cors -> { })
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfRepository)
-                        .ignoringRequestMatchers("/api/payments/webhooks/**"))
+                        .ignoringRequestMatchers("/api/payments/webhooks/**", "/api/advertising/events/**"))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/articles/**",
-                                "/api/subscription-packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/media/creative/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**").permitAll()
+                                "/api/subscription-packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/advertising/click/**", "/api/media/creative/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**", "/api/advertising/events/**").permitAll()
                         // Public HTML shell/assets only. Data stays behind /api authorization above/below.
                         .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
                                 "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
