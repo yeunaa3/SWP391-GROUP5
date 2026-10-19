@@ -76,14 +76,15 @@ public class PublicContentService {
             throw new IllegalArgumentException("Article not found");
         }
         ArticleDetailResponse article = results.getFirst();
-        if (!article.premium() || hasPremiumAccess(viewerId)) {
+        if (hasPremiumAccess(viewerId)) {
             return article;
         }
         return new ArticleDetailResponse(
                 article.id(), article.title(), article.slug(), article.summary(),
                 preview(article.content(), article.previewPercentage()), article.thumbnailUrl(),
                 true, article.previewPercentage(), article.views(), article.publishedAt(),
-                article.categories(), article.tags(), article.sourceName(), article.sourceUrl());
+                article.categories(), article.tags(), article.sourceName(), article.sourceUrl(),
+                null, "SUMMARY_ONLY", article.sourceAuthor());
     }
 
     private boolean hasPremiumAccess(Long viewerId) {
