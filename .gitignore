@@ -31,6 +31,8 @@ uploads/
 backend/storage/
 logs/
 *.log
+__pycache__/
+*.py[cod]
 mysql-data/
 .runtime/
 

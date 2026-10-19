@@ -2,18 +2,19 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getAdvertisingCatalog } from "../../services/contentService.js";
 import { apiRequest } from "../../services/apiClient.js";
+import { occupiedDay, freeRanges } from "../../utils/bookingCalendar.js";
 
 const iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 export default function SlotCalendarPage() {
   const [slots,setSlots] = useState([]); const [windows,setWindows] = useState([]);
   const [slot,setSlot] = useState(""); const [month,setMonth] = useState(() => new Date(new Date().getFullYear(),new Date().getMonth(),1));
   const [start,setStart] = useState(""); const [end,setEnd] = useState("");
-  const [state,setState] = useState("loading"); const [error,setError] = useState("");
+  const [state,setState] = useState("loading"); const [error,setError] = useState("");const [retry,setRetry]=useState(0);
   useEffect(() => { let alive=true;
     Promise.all([getAdvertisingCatalog(),apiRequest("/api/advertising/availability")]).then(([catalog,reserved]) => { if(alive) { setSlots(catalog.slots); setSlot(String(catalog.slots[0]?.id || "")); setWindows(reserved); setState("ready"); } }).catch(e => { if(alive) { setError(e.message); setState("error"); } });
     return () => { alive=false; };
-  },[]);
-  const occupied = day => windows.some(item => String(item.slotId)===slot && day >= String(item.startAt).slice(0,10) && day <= String(item.endAt).slice(0,10));
+  },[retry]);
+  const occupied = day => occupiedDay(windows,slot,day);
   const today=iso(new Date());
   function choose(day) {
     if(!start || end || day<start) { setStart(day); setEnd(""); return; }
@@ -24,6 +25,7 @@ export default function SlotCalendarPage() {
   const offset=(month.getDay()+6)%7; const count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
   const chosenSlot=slots.find(item => String(item.id)===slot);
   const duration=start && end ? Math.round((new Date(`${end}T12:00:00`)-new Date(`${start}T12:00:00`))/86400000)+1 : 0;
+  if(state==="error")return <main className="page-content"><h1>Lịch vị trí quảng cáo</h1><p role="alert" className="form-error">Không tải được lịch: {error}. Chưa xác định được khoảng trống.</p><button onClick={()=>{setState("loading");setRetry(x=>x+1);}}>Thử lại</button></main>;
   return <main className="page-content"><div className="page-heading"><div><p className="eyebrow">ĐẶT QUẢNG CÁO</p><h1>Lịch vị trí quảng cáo</h1><p className="page-subtitle">Chọn vị trí, ngày bắt đầu và ngày kết thúc để tiếp tục đặt chỗ.</p></div><Link className="outline-button" to="/business/advertising/prices">Xem báo giá</Link></div>
     {state==="loading" ? <p className="loading-card">Đang tải lịch từ MySQL…</p> : <div className="calendar-layout"><section className="dashboard-section"><label className="calendar-slot">Vị trí quảng cáo<select value={slot} onChange={e=>{setSlot(e.target.value);setStart("");setEnd("");setError("");}}>{slots.map(item=><option key={item.id} value={item.id}>{item.name} · {item.width} × {item.height}</option>)}</select></label>
       <div className="calendar-month"><button className="secondary-button" aria-label="Tháng trước" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()-1,1))}>←</button><h2>{month.toLocaleDateString("vi-VN",{month:"long",year:"numeric"})}</h2><button className="secondary-button" aria-label="Tháng sau" onClick={()=>setMonth(new Date(month.getFullYear(),month.getMonth()+1,1))}>→</button></div>

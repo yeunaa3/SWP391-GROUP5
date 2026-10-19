@@ -91,3 +91,4 @@ main[data-hide-promotions="true"] .premium-experience { display: none; }
   .live-ad[data-format="native"] .house-ad-art { padding:22px; }
   .live-ad[data-format="native"] .house-ad-art > b { display:none; }
 }
+.live-ad video{display:block;width:100%;height:100%;object-fit:contain;background:#111}

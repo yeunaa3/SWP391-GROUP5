@@ -31,8 +31,9 @@ export function getSubscriptionPackages() {
 }
 
 export function getAdvertisingCatalog() {
+  // Form booking phải dùng catalog thật; lỗi API không được thay bằng giá/ID demo.
   return Promise.all([
-    withFallback(() => apiRequest("/api/advertising/offers"), demoAdOffers),
-    withFallback(() => apiRequest("/api/advertising/slots"), demoAdSlots),
-  ]).then(([offers, slots]) => ({ offers: offers.data, slots: slots.data, demo: offers.demo || slots.demo }));
+    apiRequest("/api/advertising/offers"),
+    apiRequest("/api/advertising/slots"),
+  ]).then(([offers, slots]) => ({ offers, slots, demo: false }));
 }

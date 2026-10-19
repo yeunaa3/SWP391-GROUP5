@@ -89,16 +89,21 @@ public class BusinessWorkspaceService {
                 throw new InvalidStateTransitionException("Hồ sơ đang được duyệt; chưa thể chỉnh sửa.");
             }
             if ("APPROVED".equals(state) && (!request.taxCode().equals(company.get("tax_code")) || !request.name().trim().equals(company.get("company_name")))) {
-                throw new InvalidStateTransitionException("Doanh nghiệp đã duyệt: không được tự đổi tên pháp lý/mã số thuế. Bạn vẫn có thể sửa thông tin liên hệ.");
+                // UC-38: giữ snapshot đã duyệt, mở bản sửa và khóa booking/campaign cho đến khi duyệt lại.
+                jdbc.update("UPDATE companies SET application_status='NEEDS_REVISION',review_note=? WHERE company_id=?",
+                        "Doanh nghiệp thay đổi thông tin pháp lý; vui lòng kiểm tra tài liệu và gửi xét duyệt lại.",id);
+                audit(user,"REQUEST_LEGAL_REVIEW","COMPANY",id);
             }
             jdbc.update("UPDATE companies SET company_name=?,tax_code=?,email=?,phone=?,address=?,billing_address=? WHERE company_id=?",
                     request.name().trim(), request.taxCode(), request.email().trim(), request.phone().trim(), request.address().trim(), request.billingAddress(), id);
         }
+        jdbc.update("UPDATE companies SET industry=?,contact_person=? WHERE company_id=?",request.industry().trim(),request.contactPerson().trim(),id);
         audit(user, "SAVE_COMPANY", "COMPANY", id);
         // Trả workspace mới sau khi lưu; frontend còn gọi refresh để đồng bộ dữ liệu đang hiển thị.
         return overview(user);
     }
 
+    /** Chốt hồ sơ và các ID tài liệu vào một application version; bản đã nộp không bị sửa theo profile mới. */
     @Transactional
     public Map<String, Object> submitApplication(AuthenticatedUserPrincipal user) {
         Long id = requireCompany(user);
@@ -106,6 +111,10 @@ public class BusinessWorkspaceService {
         String state = (String) c.get("application_status");
         if (!List.of("DRAFT", "NEEDS_REVISION").contains(state)) {
             throw new InvalidStateTransitionException("Chỉ hồ sơ nháp hoặc cần chỉnh sửa mới được gửi duyệt.");
+        }
+        // Gửi duyệt không được bỏ qua các field bắt buộc bằng cách gọi API trực tiếp.
+        for(String field:List.of("company_name","tax_code","email","phone","address","billing_address","industry","contact_person")) {
+            if(c.get(field)==null || String.valueOf(c.get(field)).isBlank())throw new InvalidStateTransitionException("Hãy hoàn thiện thông tin doanh nghiệp, ngành nghề và người liên hệ trước khi gửi.");
         }
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM company_documents WHERE company_id=? AND status='ACTIVE'", Integer.class, id);
         if (count == null || count == 0) {
@@ -130,7 +139,20 @@ public class BusinessWorkspaceService {
                 SELECT company_id,?,document_id FROM company_documents
                 WHERE company_id=? AND status='ACTIVE'
                 """, nextVersion, id);
+        jdbc.update("UPDATE company_application_versions v JOIN companies c ON c.company_id=v.company_id SET v.industry=c.industry,v.contact_person=c.contact_person WHERE v.company_id=? AND v.application_version=?",id,nextVersion);
         audit(user, "SUBMIT_APPLICATION", "COMPANY", id);
+        return overview(user);
+    }
+
+    /** Hồ sơ bị từ chối mở vòng đăng ký mới; giữ snapshot/review cũ, yêu cầu tải lại giấy tờ. */
+    @Transactional
+    public Map<String,Object> newApplication(AuthenticatedUserPrincipal user) {
+        Long id=requireCompany(user);
+        var company=jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE",id);
+        if(!"REJECTED".equals(company.get("application_status")))throw new InvalidStateTransitionException("Chỉ hồ sơ bị từ chối mới tạo vòng đăng ký mới.");
+        jdbc.update("UPDATE companies SET application_status='DRAFT',application_code=?,review_note=NULL,reviewed_at=NULL,reviewed_by=NULL,submitted_at=NULL,review_priority='NORMAL' WHERE company_id=?",code("APP"),id);
+        jdbc.update("UPDATE company_documents SET status='REPLACED' WHERE company_id=? AND status='ACTIVE'",id);
+        audit(user,"NEW_PARTNERSHIP_APPLICATION","COMPANY",id);
         return overview(user);
     }
 
@@ -139,6 +161,7 @@ public class BusinessWorkspaceService {
         return saveBooking(user, null, request, true);
     }
 
+    /** Khóa slot/company, kiểm lịch [start,end), tính lại giá và lưu snapshot báo giá; draft không giữ chỗ. */
     @Transactional
     public Map<String, Object> saveBooking(AuthenticatedUserPrincipal user, Long bookingId, BusinessRequests.Booking request, boolean submit) {
         Long id = requireCompany(user);
@@ -156,6 +179,9 @@ public class BusinessWorkspaceService {
         LocalDateTime start = request.startDate().atStartOfDay(), end = request.endDate().plusDays(1).atStartOfDay();
         requireAvailable(request.slotId(), start, end);
         BigDecimal price = ((BigDecimal) pack.get("price")).add(((BigDecimal) slot.get("base_price")).multiply(BigDecimal.valueOf(days)).divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP));
+        // Báo giá UI không có quyền quyết định giá; nếu giá catalog đổi thì yêu cầu xác nhận lại.
+        if(request.quotedAmount()!=null && price.subtract(request.quotedAmount()).abs().compareTo(new BigDecimal("0.01"))>0)
+            throw new ConflictException("Giá đã thay đổi. Hãy tải lại báo giá và xác nhận số tiền mới trước khi lưu.");
         if (bookingId != null) {
             requireDraftBooking(user, bookingId);
         }
@@ -173,6 +199,8 @@ public class BusinessWorkspaceService {
                     request.name().trim(), request.packageId(), request.slotId(), pack.get("code"), pack.get("name"), pack.get("price"), pack.get("duration_days"), pack.get("impressions_quota"), slot.get("slot_name"), slot.get("position_code"), price, start, end, contract);
         }
         audit(user, "SAVE_BOOKING_DRAFT", "CONTRACT", contract);
+        jdbc.update("UPDATE contracts SET quote_snapshot=JSON_OBJECT('packagePrice',?,'slotMonthlyPrice',?,'days',?,'total',?,'currency',?,'quotedAt',CURRENT_TIMESTAMP(6)) WHERE contract_id=?",
+                pack.get("price"),slot.get("base_price"),days,price,slot.get("currency"),contract);
         if (submit) {
             submitBooking(user, contract);
         }
@@ -220,52 +248,8 @@ public class BusinessWorkspaceService {
         return Map.of("id", id);
     }
 
-    @Transactional
-    public Map<String, Object> saveCampaign(AuthenticatedUserPrincipal user, Long campaignId, BusinessRequests.Campaign request) {
-        Long company = requireApprovedPartnership(user);
-        Map<String, Object> contract = one("SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE", request.contractId(), company);
-        if (!"ACTIVE".equals(contract.get("status")) || !"PAID".equals(contract.get("payment_status"))) {
-            throw new InvalidStateTransitionException("Cần hợp đồng đang hiệu lực và đã thanh toán.");
-        }
-        LocalDateTime contractStart = dateTime(contract.get("start_at")), contractEnd = dateTime(contract.get("end_at"));
-        validateCampaignDates(request.startTime(), request.endTime(), contractStart, contractEnd);
-        Long id = campaignId;
-        if (id == null) {
-            id = insert("INSERT INTO ad_campaigns(contract_id,campaign_name,description,scheduled_start_time,scheduled_end_time,created_by,impression_limit) VALUES(?,?,?,?,?,?,?)",
-                    request.contractId(), request.name().trim(), request.description(), request.startTime(), request.endTime(), user.id(), contract.get("impressions_quota_snapshot"));
-        } else {
-            Map<String, Object> current = ownedCampaign(user, id, true);
-            requireEditable(current);
-            if (((Number) current.get("contract_id")).longValue() != request.contractId()) {
-                throw new InvalidStateTransitionException("Không được đổi hợp đồng của chiến dịch đã tạo.");
-            }
-            jdbc.update("UPDATE ad_campaigns SET campaign_name=?,description=?,scheduled_start_time=?,scheduled_end_time=? WHERE campaign_id=?",
-                    request.name().trim(), request.description(), request.startTime(), request.endTime(), id);
-        }
-        audit(user, "SAVE_CAMPAIGN", "CAMPAIGN", id);
-        return Map.of("id", id);
-    }
-
-    @Transactional
-    public Map<String, Object> submitCampaign(AuthenticatedUserPrincipal user, Long id) {
-        Map<String, Object> c = ownedCampaign(user, id, true);
-        requireEditable(c);
-        Map<String, Object> ct = one("SELECT * FROM contracts WHERE contract_id=? FOR UPDATE", c.get("contract_id"));
-        if (!"ACTIVE".equals(ct.get("status")) || !"PAID".equals(ct.get("payment_status"))) {
-            throw new InvalidStateTransitionException("Hợp đồng không còn hợp lệ.");
-        }
-        validateCampaignDates(dateTime(c.get("scheduled_start_time")), dateTime(c.get("scheduled_end_time")),
-                dateTime(ct.get("start_at")), dateTime(ct.get("end_at")));
-        List<Map<String, Object>> creatives = jdbc.queryForList("SELECT * FROM ad_creatives WHERE campaign_id=? ORDER BY version_no DESC LIMIT 1 FOR UPDATE", id);
-        if (creatives.isEmpty() || !"DRAFT".equals(creatives.getFirst().get("status"))) {
-            throw new InvalidStateTransitionException("Cần tải phiên bản banner mới trước khi gửi duyệt.");
-        }
-        jdbc.update("UPDATE ad_creatives SET status='PENDING_REVIEW',submitted_at=CURRENT_TIMESTAMP WHERE creative_id=?", creatives.getFirst().get("creative_id"));
-        jdbc.update("UPDATE ad_campaigns SET status='PENDING_REVIEW',submitted_at=CURRENT_TIMESTAMP WHERE campaign_id=?", id);
-        audit(user, "SUBMIT_CAMPAIGN", "CAMPAIGN", id);
-        return Map.of("id", id, "status", "PENDING_REVIEW");
-    }
-
+    // Toàn bộ mutation campaign chuyển sang CampaignWorkflowService để dùng chung checklist/snapshot/version.
+    /** Đọc company membership mới nhất từ users; không tin companyId đã cũ trong session hoặc client. */
     public Long requireCompany(AuthenticatedUserPrincipal user) {
         Long id = companyId(user);
         if (id == null) {
@@ -274,6 +258,7 @@ public class BusinessWorkspaceService {
         return id;
     }
 
+    /** Ownership cho upload creative: company phải APPROVED và sở hữu contract của campaign. */
     public Map<String, Object> ownedCampaign(AuthenticatedUserPrincipal user, Long id, boolean lock) {
         return one("SELECT c.* FROM ad_campaigns c JOIN contracts ct ON ct.contract_id=c.contract_id WHERE c.campaign_id=? AND ct.company_id=?" + (lock ? " FOR UPDATE" : ""), id, requireApprovedPartnership(user));
     }

@@ -6,7 +6,6 @@ import java.time.Instant;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +14,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     private static final org.slf4j.Logger log=org.slf4j.LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    /** JSON/file/form thiếu hoặc không đọc được là lỗi đầu vào, không phải lỗi server. */
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+        org.springframework.web.bind.MissingServletRequestParameterException.class,
+        org.springframework.web.multipart.support.MissingServletRequestPartException.class})
+    ResponseEntity<ApiError> handleUnreadable(Exception exception,HttpServletRequest request){return build(HttpStatus.BAD_REQUEST,"Dữ liệu gửi lên bị thiếu hoặc không đúng định dạng.",request.getRequestURI());}
 
     @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
     ResponseEntity<ApiError> handleResponseStatus(org.springframework.web.server.ResponseStatusException exception,HttpServletRequest request) {
@@ -37,8 +42,9 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, "You do not have permission to perform this action", request.getRequestURI());
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
-    ResponseEntity<ApiError> handleBadCredentials(BadCredentialsException exception, HttpServletRequest request) {
+    // UC-06: mật khẩu sai, tài khoản khóa/inactive cùng dùng lỗi trung tính; không tiết lộ account tồn tại.
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    ResponseEntity<ApiError> handleBadCredentials(org.springframework.security.core.AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.UNAUTHORIZED, "Invalid username/email or password", request.getRequestURI());
     }
 

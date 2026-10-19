@@ -92,6 +92,8 @@ export default function PartnershipDetailPage() {
                         <div><dt>Email</dt><dd>{company.email}</dd></div>
                         <div><dt>Điện thoại</dt><dd>{company.phone}</dd></div>
                         <div><dt>Địa chỉ</dt><dd>{company.address}</dd></div>
+                        <div><dt>Ngành nghề</dt><dd>{company.industry || "Chưa cung cấp trong phiên bản cũ"}</dd></div>
+                        <div><dt>Người liên hệ</dt><dd>{company.contactPerson || "Chưa cung cấp trong phiên bản cũ"}</dd></div>
                         <div><dt>Địa chỉ thanh toán</dt><dd>{company.billingAddress || "Chưa cung cấp"}</dd></div>
                     </dl>
                 </section>

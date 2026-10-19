@@ -1,4 +1,4 @@
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const apiBaseUrl = (import.meta.env?.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
 async function ensureCsrfToken() {
   // Lấy token chống giả mạo yêu cầu; trả token để gắn vào header của POST đăng ký.
@@ -12,7 +12,7 @@ async function ensureCsrfToken() {
     return (await response.json()).token;
 }
 
-export async function apiRequest(path, options = {}) {
+export async function apiRequest(path, options = {}, retryCsrf = true) {
   // Hàm HTTP dùng chung: gửi JSON/cookie/token, trả dữ liệu hoặc ném Error chứa message từ backend.
   const method = (options.method || "GET").toUpperCase();
   const csrfHeader = ["POST", "PUT", "PATCH", "DELETE"].includes(method)
@@ -31,8 +31,13 @@ export async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new Error(body?.message || `Request failed with status ${response.status}`);
+    // Chỉ retry khi filter xác nhận request chưa vào nghiệp vụ vì CSRF; không retry POST khi lỗi mạng/save không rõ kết quả.
+    if(response.status===403 && body?.code==="CSRF_INVALID" && retryCsrf) return apiRequest(path,options,false);
+    const error=new Error(body?.message || `Request failed with status ${response.status}`);
+    error.status=response.status;error.code=body?.code;throw error;
   }
 
-  return response.status === 204 ? null : response.json();
+  // DELETE/review có thể trả 200 không có body; thao tác vẫn thành công, không cố parse JSON rỗng.
+  const content = await response.text();
+  return content ? JSON.parse(content) : null;
 }

@@ -39,6 +39,9 @@ management:
         include: health,info
 
 app:
+  storage:
+    provider: ${ASSET_STORAGE_PROVIDER:local}
+  upload-directory: ${UPLOAD_DIRECTORY:storage/business}
   news-import:
     enabled: ${NEWS_IMPORT_ENABLED:false}
   cors:

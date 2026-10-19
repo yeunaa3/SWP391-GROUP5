@@ -11,6 +11,7 @@ import AdvertisingCatalogPage from "../pages/business/AdvertisingCatalogPage.jsx
 import SlotCalendarPage from "../pages/business/SlotCalendarPage.jsx";
 import PerformancePage from "../pages/business/PerformancePage.jsx";
 import BusinessWorkspacePage from "../pages/business/BusinessWorkspacePage.jsx";
+import BusinessCampaignPage from "../pages/business/BusinessCampaignPage.jsx";
 import PackagesPage from "../pages/premium/PackagesPage.jsx";
 import PackageDetailPage from "../pages/premium/PackageDetailPage.jsx";
 import PremiumCheckoutPage from "../pages/premium/PremiumCheckoutPage.jsx";
@@ -33,11 +34,14 @@ import AdManagerDashboardPage from "../pages/adManager/AdManagerDashboardPage.js
 import PartnershipQueuePage from "../pages/adManager/PartnershipQueuePage.jsx";
 import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx";
 import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorPage.jsx";
+import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
 
 const specialPages = {
   "ADM-01": <AdManagerDashboardPage />,
   "ADM-02": <PartnershipQueuePage />,
   "ADM-03": <PartnershipDetailPage />,
+  "ADM-07": <CampaignReviewPage />,
+  "ADM-08": <CampaignReviewPage />,
   "ADM-09": <ActiveCampaignMonitorPage />,
   "ACC-01": <ProfilePage />,
   "ACC-02": <NotificationsPage />,
@@ -66,7 +70,7 @@ const specialPages = {
 const publicAreas = new Set(["public"]);
 
 function screenElement(screen) {
-  const page = specialPages[screen.id] || (screen.area === "business" ? <BusinessWorkspacePage screen={screen}/> : <ScreenWorkspacePage screen={screen} />);
+  const page = specialPages[screen.id] || (["BUS-01","BUS-02","BUS-13","BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id)?<BusinessCampaignPage screen={screen}/>:screen.area === "business" ? <BusinessWorkspacePage screen={screen}/> : <ScreenWorkspacePage screen={screen} />);
   return screen.roles?.length ? <ProtectedRoute roles={screen.roles}>{page}</ProtectedRoute> : page;
 }
 

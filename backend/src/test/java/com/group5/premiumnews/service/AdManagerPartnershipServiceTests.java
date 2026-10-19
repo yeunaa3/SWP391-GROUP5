@@ -19,7 +19,7 @@ class AdManagerPartnershipServiceTests {
     @Test
     void rejectsInvalidQueueFiltersBeforeQueryingDatabase() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        AdManagerPartnershipService service = new AdManagerPartnershipService(jdbc, "storage/test");
+        AdManagerPartnershipService service = new AdManagerPartnershipService(jdbc, mock(BusinessAssetStorage.class));
 
         assertBadRequest(service, new AdManagerDtos.QueueFilter("", "APPROVED", "", null, null, 0, 20));
         assertBadRequest(service, new AdManagerDtos.QueueFilter("", "", "LOW", null, null, 0, 20));
@@ -34,7 +34,7 @@ class AdManagerPartnershipServiceTests {
     @Test
     void blocksStaleAndDuplicateDecisions() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        AdManagerPartnershipService service = new AdManagerPartnershipService(jdbc, "storage/test");
+        AdManagerPartnershipService service = new AdManagerPartnershipService(jdbc, mock(BusinessAssetStorage.class));
 
         when(jdbc.queryForList(org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.eq(12L)))

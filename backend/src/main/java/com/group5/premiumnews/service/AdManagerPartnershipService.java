@@ -4,8 +4,6 @@ import com.group5.premiumnews.dto.AdManagerDtos;
 import com.group5.premiumnews.exception.ConflictException;
 import com.group5.premiumnews.exception.InvalidStateTransitionException;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -13,7 +11,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,13 +25,13 @@ public class AdManagerPartnershipService {
     private static final List<String> REVIEWABLE = List.of("PENDING_REVIEW", "RESUBMITTED");
 
     private final JdbcTemplate jdbc;
-    private final Path uploadRoot;
+    private final BusinessAssetStorage storage;
 
     public AdManagerPartnershipService(
             JdbcTemplate jdbc,
-            @Value("${app.upload-directory:storage/business}") String uploadDirectory) {
+            BusinessAssetStorage storage) {
         this.jdbc = jdbc;
-        this.uploadRoot = Path.of(uploadDirectory).toAbsolutePath().normalize();
+        this.storage = storage;
     }
 
     @Transactional(readOnly = true)
@@ -137,7 +134,7 @@ public class AdManagerPartnershipService {
                 SELECT c.company_id, c.application_code, c.application_version,
                        c.application_status, c.review_priority,
                        v.company_name, v.tax_code, v.email, v.phone, v.address,
-                       v.billing_address, v.submitted_at
+                       v.billing_address, v.submitted_at,v.industry,v.contact_person
                 FROM companies c
                 JOIN company_application_versions v
                   ON v.company_id=c.company_id AND v.application_version=c.application_version
@@ -148,7 +145,7 @@ public class AdManagerPartnershipService {
                 rs.getString("review_priority"), rs.getString("company_name"),
                 rs.getString("tax_code"), rs.getString("email"), rs.getString("phone"),
                 rs.getString("address"), rs.getString("billing_address"),
-                instant(rs.getTimestamp("submitted_at"))), companyId);
+                instant(rs.getTimestamp("submitted_at")),rs.getString("industry"),rs.getString("contact_person")), companyId);
         if (companies.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phiên bản hồ sơ đã gửi.");
         }
@@ -278,9 +275,8 @@ public class AdManagerPartnershipService {
     }
 
     private boolean fileAvailable(String objectKey) {
-        if (objectKey == null || !objectKey.matches("[a-f0-9-]+\\.(png|jpg|pdf)")) return false;
-        Path file = uploadRoot.resolve(objectKey).normalize();
-        return file.startsWith(uploadRoot) && Files.isRegularFile(file);
+        // Cùng storage adapter với Business: tài liệu cloud authenticated vẫn được kiểm tra và mở qua API quyền hạn.
+        return storage.available(objectKey);
     }
 
     private String latestNote(long companyId, int version) {

@@ -607,3 +607,4 @@
     transition-duration: .01ms !important;
   }
 }
+.bus05-placement-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px}.bus05-placement-sketch{background:#f1f4f8;border:1px solid #dae0e8;border-radius:8px;padding:12px;display:grid;gap:10px;min-height:140px}.bus05-placement-sketch span{font-weight:900}.bus05-placement-sketch i{height:12px;background:#d5dce7;border-radius:4px}.bus05-placement-sketch b{background:#c52241;color:white;text-align:center;padding:8px}.bus05-placement-sketch.sidebar{grid-template-columns:2fr 1fr}.bus05-placement-sketch.sidebar span{grid-column:1/3}.bus05-placement-sketch.sidebar b{grid-column:2;grid-row:2/4}

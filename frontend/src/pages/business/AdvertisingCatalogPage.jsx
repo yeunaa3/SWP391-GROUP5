@@ -68,6 +68,7 @@ export default function AdvertisingCatalogPage() {
   });
 
   const [offerQuery, setOfferQuery] = useState("");
+  const [compare,setCompare]=useState([]);
   const [offerSort, setOfferSort] = useState("price-asc");
   const [slotQuery, setSlotQuery] = useState("");
   const [slotScope, setSlotScope] = useState("ALL");
@@ -246,6 +247,7 @@ export default function AdvertisingCatalogPage() {
                         </span>
                       </div>
                       <h3>{offer.name || "Gói chưa có tên"}</h3>
+                      <label><input type="checkbox" checked={compare.includes(offer.id)} disabled={!compare.includes(offer.id)&&compare.length>=3} onChange={()=>setCompare(ids=>ids.includes(offer.id)?ids.filter(id=>id!==offer.id):[...ids,offer.id])}/> So sánh gói (tối đa 3)</label>
                       <p className={`bus05-description${expanded ? " is-expanded" : ""}`}>
                         {offer.description || "Chưa có mô tả cho gói quảng cáo này."}
                       </p>
@@ -293,6 +295,7 @@ export default function AdvertisingCatalogPage() {
           Giá hiển thị là giá tham khảo do hệ thống cung cấp; hãy xác nhận
           thông tin trước khi gửi yêu cầu đặt quảng cáo.
         </p>
+        {compare.length>0&&<div className="bus05-table-wrap"><h3>So sánh gói đã chọn</h3><table className="bus05-table"><thead><tr><th>Gói</th><th>Giá gói</th><th>Thời hạn tối đa</th><th>Quota</th></tr></thead><tbody>{offers.items.filter(x=>compare.includes(x.id)).map(x=><tr key={x.id}><td>{x.name}</td><td>{money(x.price,x.currency)}</td><td>{x.durationDays} ngày</td><td>{number(x.impressionsQuota)}</td></tr>)}</tbody></table><p>Chưa gồm giá vị trí phân bổ theo số ngày. Quota là chỉ tiêu gói, không phải dự báo lưu lượng.</p></div>}
       </section>
 
       <section className="dashboard-section bus05-section">
@@ -352,6 +355,9 @@ export default function AdvertisingCatalogPage() {
               <CatalogState empty />
             )}
             {!slots.loading && !slots.error && visibleSlots.length > 0 && (
+              <div className="bus05-placement-grid">{visibleSlots.map(slot=><article className="bus05-offer-card" key={slot.id}><div className={`bus05-placement-sketch ${slot.positionCode?.includes("SIDEBAR")?"sidebar":"banner"}`} aria-label={`Sơ đồ vị trí ${slot.name}`}><span>THE PULSE</span><i/><b>{slot.positionCode?.includes("SIDEBAR")?"▥":"▰"}</b><i/></div><h3>{slot.name}</h3><p>{slot.width} × {slot.height} px · PNG/JPEG/MP4 ≤ 60 giây · tối đa 8 MB</p><p>{money(slot.basePrice,slot.currency)} / 30 ngày, cộng giá gói.</p><Link className="bus05-row-link" to={`/business/bookings/new?slotId=${slot.id}`}>Chọn vị trí →</Link><small>Sơ đồ minh họa, chưa xác nhận lịch trống.</small></article>)}</div>
+            )}
+            {!slots.loading && !slots.error && visibleSlots.length > 0 && (
               <div className="bus05-table-wrap">
                 <table className="bus05-table">
                   <thead>
@@ -395,8 +401,8 @@ export default function AdvertisingCatalogPage() {
         )}
 
         <p className="bus05-footnote">
-          Giá vị trí là giá cơ sở tham khảo cho một chiến dịch, không phải
-          đơn giá theo ngày. Vị trí đang hoạt động không đồng nghĩa với việc
+          Giá vị trí là giá cơ sở theo 30 ngày, phân bổ theo số ngày thực tế và cộng giá gói.
+          Vị trí đang hoạt động không đồng nghĩa với việc
           vị trí đó chắc chắn còn trống trong lịch.
         </p>
       </section>

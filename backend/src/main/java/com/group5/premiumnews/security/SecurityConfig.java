@@ -33,6 +33,17 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(csrfRepository)
                         .ignoringRequestMatchers("/api/payments/webhooks/**", "/api/advertising/events/**"))
+                // Phân biệt token hết hạn và thiếu quyền, giúp client không phải đoán mọi lỗi 403 là CSRF.
+                .exceptionHandling(errors -> errors
+                    .authenticationEntryPoint((request,response,error)->{
+                        response.setStatus(401);response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write("{\"code\":\"AUTH_REQUIRED\",\"message\":\"Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\"}");
+                    })
+                    .accessDeniedHandler((request,response,error)->{
+                        boolean csrf=error instanceof org.springframework.security.web.csrf.CsrfException;
+                        response.setStatus(403);response.setContentType("application/json;charset=UTF-8");
+                        response.getWriter().write(csrf?"{\"code\":\"CSRF_INVALID\",\"message\":\"Phiên bảo mật đã thay đổi. Vui lòng thử lại.\"}":"{\"code\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
+                    }))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider)

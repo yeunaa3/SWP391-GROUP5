@@ -21,6 +21,10 @@
   </properties>
 
   <dependencies>
+    <!-- UC-26: đọc metadata MP4 ở server, không tin dimension/duration do trình duyệt gửi. -->
+    <dependency>
+      <groupId>org.jcodec</groupId><artifactId>jcodec</artifactId><version>0.2.5</version>
+    </dependency>
     <dependency>
       <groupId>com.googlecode.libphonenumber</groupId>
       <artifactId>libphonenumber</artifactId>

@@ -42,7 +42,8 @@ public final class AdManagerDtos {
 
     public record CompanySnapshot(long companyId, String applicationCode, int applicationVersion,
             String status, String priority, String companyName, String taxCode, String email,
-            String phone, String address, String billingAddress, Instant submittedAt) {}
+            String phone, String address, String billingAddress, Instant submittedAt,
+            String industry, String contactPerson) {}
 
     public record DocumentItem(long documentId, String fileName, String documentType,
             int version, String status, Instant uploadedAt, boolean available, String viewUrl) {}

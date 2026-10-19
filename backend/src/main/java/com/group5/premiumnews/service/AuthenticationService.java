@@ -27,7 +27,6 @@ public class AuthenticationService {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
-        //cần thêm lớp bảo vệ
     }
 
     @Transactional
@@ -67,8 +66,8 @@ public class AuthenticationService {
         return value == null || value.isBlank() ? null : value.trim();
     }
     static String validatePhone(String value) {
-        // Số điện thoại tùy chọn. Số bắt đầu 0 được hiểu là Việt Nam; số khác phải có mã quốc gia. chưa giới hạn độ dài sđt, 
-        //cần thêm tự xác định các loại định dạng đầu số điện thaoij của từng quốc gia
+        // Số tùy chọn có 8–15 chữ số. Đầu 0 dùng vùng VN; mã quốc gia khác do libphonenumber kiểm tra
+        // độ dài/đầu số thực tế, sau đó chuẩn hóa E.164 để DB không lưu nhiều dạng khác nhau.
         if(value==null || value.isEmpty()) return null;
         try {
             if(!value.matches("[0-9]{8,15}")) throw new IllegalArgumentException();

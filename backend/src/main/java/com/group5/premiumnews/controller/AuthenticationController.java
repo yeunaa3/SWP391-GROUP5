@@ -57,6 +57,8 @@ public class AuthenticationController {
         // UC-06: provider đọc user từ DB và so mật khẩu; chỉ tiếp tục khi xác thực thành công.
         Authentication authentication = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login(), request.password()));
+        // Đổi session ID sau login để chống session fixation; không tái sử dụng identity tài khoản trước.
+        if(httpRequest.getSession(false)!=null) httpRequest.changeSessionId();
         // Lưu người đã xác thực vào context của request hiện tại và session cho request tiếp theo.---để ko query lại database 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);

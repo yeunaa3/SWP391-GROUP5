@@ -67,7 +67,7 @@ export default function ArticlePage() {
         </div>
 
         {/* Top Banner: Only visible for Free Readers */}
-        {!subscriber && <AdBanner position="ARTICLE_TOP" />}
+        {!subscriber && <AdBanner articleId={article.id} position="ARTICLE_TOP" />}
 
         <section className="srs-article-grid">
           <article className="srs-article">
@@ -160,7 +160,7 @@ export default function ArticlePage() {
             </section>
 
             {/* In-Article Banner (Under Summary for Free Readers) */}
-            {!subscriber && <AdBanner position="IN_ARTICLE" />}
+            {!subscriber && <AdBanner articleId={article.id} position="IN_ARTICLE" />}
 
             {/* Audio Reader Component */}
             <ArticleAudio key={article.slug} article={article} locked={locked} />
@@ -250,7 +250,7 @@ export default function ArticlePage() {
             )}
 
             {/* End of Article Banner: Only visible for Free Readers */}
-            {!subscriber && <AdBanner position="END_OF_ARTICLE" />}
+            {!subscriber && <AdBanner articleId={article.id} position="END_OF_ARTICLE" />}
 
             {/* Original Source Credit */}
             {article.sourceUrl && (
@@ -282,7 +282,7 @@ export default function ArticlePage() {
                 <small className="source-credit">{a.sourceName || "The Pulse"}</small>
               </Link>
             ))}
-            {!subscriber && <AdBanner position="ARTICLE_SIDEBAR" compact />}
+            {!subscriber && <AdBanner articleId={article.id} position="ARTICLE_SIDEBAR" compact />}
           </aside>
         </section>
       </div>
