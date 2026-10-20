@@ -1,3 +1,4 @@
+import CampaignQueueDemoPage from "../pages/adManager/CampaignQueueDemoPage.jsx";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import PublicLayout from "../layouts/PublicLayout.jsx";
@@ -80,6 +81,7 @@ export default function AppRoutes() {
   const workspaceAreas = ["account", "premium", "business", "adManager", "admin"];
   return (
     <Routes>
+      {import.meta.env.DEV && <Route path="/demo/adm-07" element={<CampaignQueueDemoPage />} />}
       <Route element={<PublicLayout />}>
         <Route path="/news" element={<BrowseNewsPage />} />
         <Route path="/advertising-demo" element={<AdvertisingDemoPage />} />

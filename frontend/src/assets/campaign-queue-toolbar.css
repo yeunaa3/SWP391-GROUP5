@@ -1,0 +1,78 @@
+.queue-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  align-items: start;
+  gap: 20px;
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid var(--border-color, #dce3ea);
+  border-radius: 14px;
+  background: var(--surface-color, #f8fafc);
+}
+.queue-toolbar__field { display: grid; gap: 8px; min-width: 0; }
+.queue-toolbar__field > label { margin: 0; font-size: 14px; font-weight: 650; }
+.queue-toolbar__field > small { color: var(--text-muted, #64748b); font-size: 12px; }
+.queue-toolbar__search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  transition: border-color .15s, box-shadow .15s;
+}
+.queue-toolbar__search > svg { width: 20px; height: 20px; flex-shrink: 0; color: #64748b; }
+.queue-toolbar .queue-toolbar__search > input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  box-shadow: none;
+  outline: none;
+}
+.queue-toolbar__search > input::-webkit-search-cancel-button { display: none; }
+.queue-toolbar__search:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 14%);
+}
+.queue-toolbar .queue-toolbar__clear {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #64748b;
+  font-size: 24px;
+  cursor: pointer;
+}
+.queue-toolbar .queue-toolbar__clear:hover { background: #e2e8f0; color: #0f172a; }
+.queue-toolbar__clear:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+.queue-toolbar__field > select {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  border-radius: 10px;
+  background: var(--card-bg, #fff);
+  color: inherit;
+  font: inherit;
+}
+.queue-toolbar__field > select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .queue-toolbar { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px; }
+}
