@@ -3,6 +3,20 @@ import { Link } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient.js";
 import "../../assets/analytics.css";
 
+/**
+ * ============================================================================
+ * [BF-08][ADM-09] ACTIVE CAMPAIGN MONITOR & REAL-TIME OPERATIONAL CONTROL
+ * Phụ trách: Cường (Màn hình giám sát chiến dịch, Biểu đồ SVG, Xuất CSV & Tạm dừng/Mở lại)
+ * 
+ * Tính năng cốt lõi:
+ * 1. [BF-08][UC-39] Nút Thao tác Tạm dừng (PAUSE) / Kích hoạt lại (RESUME) chiến dịch tức thì
+ * 2. [BF-08][UC-32] Bảng điều khiển KPI: Tổng chiến dịch, Active, Paused, Views, Clicks, CTR, Doanh thu
+ * 3. [BF-08][ADM-09] Biểu đồ xu hướng SVG tương tác theo ngày (Line Chart & Bar Chart)
+ * 4. [BF-08][ADM-09] Tìm kiếm, lọc theo Trạng thái (ACTIVE / PAUSED / COMPLETED) và Vị trí Slot
+ * 5. [BF-08][ADM-09] Live Preview modal xem thử banner thực tế
+ * 6. [BF-08][ADM-09] Xuất dữ liệu thống kê ra file CSV phục vụ kiểm toán
+ * ============================================================================
+ */
 const numberFormat = (val) => Number(val || 0).toLocaleString("vi-VN");
 const currencyFormat = (val) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(val || 0);

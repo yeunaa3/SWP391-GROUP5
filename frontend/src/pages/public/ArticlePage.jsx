@@ -9,6 +9,25 @@ import { getArticle, getArticles } from "../../services/contentService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
 import useReaderPolicy from "../../hooks/useReaderPolicy.js";
 
+/**
+ * ============================================================================
+ * [BF-01][BF-08] ARTICLE DETAIL & DUAL-TIER READING EXPERIENCE
+ * Phụ trách: Cường (Tóm tắt thông minh, Khóa bài gốc cho Free Reader, Mở khóa & Tắt quảng cáo cho Subscriber)
+ * 
+ * Luồng hoạt động chính:
+ * 1. [BF-01][Free Reader]:
+ *    - Hiển thị Khung Tóm Tắt Thông Minh (.smart-summary-box) lấy từ bài báo gốc
+ *    - Khóa nội dung bài viết gốc chi tiết với hiệu ứng mờ (.article-copy-locked)
+ *    - Hiển thị Thẻ Paywall Nâng cấp Premium (.premium-upsell-card) kèm nút Mua gói Premium
+ *    - [BF-08][UC-31] Hiển thị banner quảng cáo (ARTICLE_TOP, IN_ARTICLE, END_OF_ARTICLE, ARTICLE_SIDEBAR)
+ * 
+ * 2. [BF-01][Premium Subscriber]:
+ *    - Hiển thị Thanh Trạng Thái Độc Quyền Subscriber (.premium-status-banner)
+ *    - Mở khóa 100% nội dung bài báo gốc với trọn bộ ảnh chất lượng cao và các đoạn văn chi tiết
+ *    - [BF-01][Ad-Free] HOÀN TOÀN ẨN TẤT CẢ QUẢNG CÁO trên toàn bộ giao diện
+ *    - Mở khóa tính năng Đọc tập trung (Focus Mode) và Trình phát âm thanh AI
+ * ============================================================================
+ */
 export default function ArticlePage() {
   const { slug } = useParams();
   const { user, premiumActive, premiumLoading } = useAuth();

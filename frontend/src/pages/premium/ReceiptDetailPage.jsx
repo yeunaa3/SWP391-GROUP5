@@ -5,6 +5,12 @@ import { usePreferences } from "../../store/PreferencesContext.jsx";
 import { money } from "../../utils/premium.js";
 import "../../assets/premium.css";
 
+/**
+ * ============================================================================
+ * [BF-01][UC-13] PREMIUM TRANSACTION RECEIPT DETAIL PAGE
+ * Phụ trách: Cường (Chi tiết biên lai điện tử & Lịch sử giao dịch thanh toán)
+ * ============================================================================
+ */
 export default function ReceiptDetailPage() {
   const { transactionId } = useParams();
   const { t, language } = usePreferences();
