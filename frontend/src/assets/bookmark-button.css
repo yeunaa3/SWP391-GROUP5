@@ -1,0 +1,65 @@
+.reader-toolbar .reader-bookmark {
+  display:inline-flex;
+  align-items:center;
+  position:relative;
+  flex-shrink:0
+}
+
+.reader-toolbar .reader-bookmark-button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:36px;
+  height:34px;
+  padding:6px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:var(--surface);
+  color:var(--ink);
+  text-decoration:none;
+  vertical-align:middle
+}
+
+.reader-toolbar .reader-bookmark-button svg {
+  display:block;
+  flex-shrink:0
+}
+
+.reader-toolbar .reader-bookmark-button[aria-pressed=true] {
+  color:#b51e3c;
+  background:color-mix(in srgb,var(--surface) 92%,#b51e3c 8%);
+  border-color:#b51e3c
+}
+
+.reader-toolbar .reader-bookmark-button:focus-visible {
+  outline:2px solid currentColor;
+  outline-offset:3px
+}
+
+.reader-toolbar .reader-bookmark-button:disabled {
+  opacity:.5;
+  cursor:wait
+}
+
+.reader-toolbar .reader-bookmark-feedback {
+  position:absolute;
+  inset-block-start:calc(100% + 8px);
+  inset-inline-end:0;
+  z-index:10;
+  width:240px;
+  max-width:80vw;
+  padding:12px;
+  white-space:normal;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--ink);
+  box-shadow:0 6px 24px #0002;
+  font-size:13px;
+  line-height:1.5
+}
+
+.reader-toolbar .reader-bookmark-feedback button {
+  display:block;
+  margin-top:8px
+}
