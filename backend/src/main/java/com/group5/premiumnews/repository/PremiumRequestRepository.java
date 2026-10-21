@@ -110,6 +110,14 @@ public class PremiumRequestRepository {
         return subscription;
     }
 
+    public void cancel(long id, String note) {
+        jdbc.update("""
+                UPDATE premium_requests
+                SET status = 'REJECTED', review_note = ?, reviewed_at = CURRENT_TIMESTAMP(6)
+                WHERE request_id = ? AND status = 'PENDING'
+                """, note, id);
+    }
+
     public void review(long id, long adminId, String status, String note, Long subscription) {
         jdbc.update("""
                 UPDATE premium_requests SET status=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP(6),review_note=?,subscription_id=?

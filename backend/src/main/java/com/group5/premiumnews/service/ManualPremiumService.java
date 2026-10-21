@@ -48,9 +48,11 @@ public class ManualPremiumService {
         var pending = repository.pending(userId);
         if (pending.isPresent()) {
             if (pending.get().plan().id() != packageId) {
-                throw error(HttpStatus.CONFLICT, "Bạn đã có yêu cầu chờ duyệt. Vui lòng đợi admin xử lý trước khi đổi gói.");
+                // Tự động hủy đơn PENDING cũ để chuyển sang gói mới mà không bắt user chờ
+                repository.cancel(pending.get().id(), "Đã tự động hủy để chuyển sang gói cước mới");
+            } else {
+                return Map.of("id", pending.get().id(), "status", "PENDING");
             }
-            return Map.of("id", pending.get().id(), "status", "PENDING");
         }
 
         var plan = repository.activePlan(packageId)
@@ -58,6 +60,23 @@ public class ManualPremiumService {
 
         long requestId = repository.create(userId, plan);
         return Map.of("id", requestId, "status", "PENDING");
+    }
+
+    /**
+     * [BF-01][Swimlane Cancel] Người đọc chủ động hủy yêu cầu thanh toán đang PENDING.
+     */
+    @Transactional
+    public Map<String, Object> cancel(long userId, long requestId) {
+        var req = repository.lockRequest(requestId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu Premium ID: " + requestId));
+        if (req.userId() != userId) {
+            throw error(HttpStatus.FORBIDDEN, "Bạn không có quyền thao tác trên yêu cầu này.");
+        }
+        if (!"PENDING".equals(req.status())) {
+            throw error(HttpStatus.CONFLICT, "Chỉ có thể hủy yêu cầu đang ở trạng thái chờ thanh toán (PENDING).");
+        }
+        repository.cancel(requestId, "Đã hủy bởi người dùng để đổi gói");
+        return Map.of("success", true, "message", "Đã hủy yêu cầu thanh toán thành công.", "requestId", requestId);
     }
 
     /**

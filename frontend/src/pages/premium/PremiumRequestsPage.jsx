@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getMyPremiumRequests } from "../../services/premiumService.js";
+import { getMyPremiumRequests, cancelPremiumRequest } from "../../services/premiumService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import PremiumMembership from "../../components/PremiumMembership.jsx";
 import AutoPaymentTimerCard from "../../components/AutoPaymentTimerCard.jsx";
@@ -15,6 +15,23 @@ export default function PremiumRequestsPage() {
   const [error, setError] = useState("");
   const [autoSuccessMsg, setAutoSuccessMsg] = useState("");
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState(null);
+
+  async function handleCancel(id) {
+    if (!window.confirm(t("Bạn có chắc chắn muốn hủy yêu cầu này để chọn gói khác?", "Are you sure you want to cancel this request to choose another plan?"))) {
+      return;
+    }
+    setCancellingId(id);
+    try {
+      await cancelPremiumRequest(id);
+      await load();
+      await refreshPremium();
+    } catch (e) {
+      setError(e.message || "Không thể hủy yêu cầu.");
+    } finally {
+      setCancellingId(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -144,6 +161,32 @@ export default function PremiumRequestsPage() {
                 await load();
               }}
             />
+          )}
+
+          {row.status === "PENDING" && (
+            <div style={{ marginTop: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <button
+                type="button"
+                className="secondary-button"
+                style={{
+                  background: "#fef2f2",
+                  color: "#b91c1c",
+                  borderColor: "#fecaca",
+                  padding: "8px 16px",
+                  fontSize: "13px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "500"
+                }}
+                disabled={cancellingId === row.id}
+                onClick={() => handleCancel(row.id)}
+              >
+                {cancellingId === row.id ? t("Đang hủy…", "Cancelling…") : t("✕ Hủy yêu cầu để đổi gói khác", "✕ Cancel to choose another plan")}
+              </button>
+              <Link to="/premium/packages" style={{ fontSize: "13px", color: "var(--muted)", textDecoration: "none" }}>
+                {t("Xem bảng giá các gói khác →", "Explore other plans →")}
+              </Link>
+            </div>
           )}
 
           {row.status === "APPROVED" && (

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
  * REST API Endpoints:
  * - GET  /api/premium/access                 : [UC-12] Kiểm tra trạng thái gói cước đang sở hữu
  * - POST /api/premium/requests               : [UC-11] Gửi yêu cầu mua gói mới (chờ chuyển khoản)
+ * - POST /api/premium/requests/{id}/cancel   : [Swimlane Cancel] Hủy yêu cầu chờ thanh toán
  * - GET  /api/premium/requests               : [UC-11] Xem danh sách yêu cầu cá nhân
  * - GET  /api/premium/transactions           : [UC-13] Lịch sử thanh toán của người dùng
  * - GET  /api/premium/transactions/{id}      : [UC-13] Chi tiết biên lai giao dịch
@@ -58,6 +59,17 @@ public class ManualPremiumController {
             @AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @Valid @RequestBody Submit body) {
         return service.submit(user.id(), body.packageId());
+    }
+
+    /**
+     * [BF-01][Swimlane Cancel] Người đọc chủ động hủy yêu cầu thanh toán đang PENDING.
+     */
+    @PostMapping("/premium/requests/{id}/cancel")
+    @PreAuthorize("hasAnyRole('READER','SUBSCRIBER')")
+    public Map<String, Object> cancel(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable long id) {
+        return service.cancel(user.id(), id);
     }
 
     /**
