@@ -31,7 +31,7 @@ public class PaymentService {
 
     public record OrderMapping(String type, long referenceId, long orderCode, Instant createdAt) {}
     private final Map<Long, OrderMapping> orderCodeMap = new java.util.concurrent.ConcurrentHashMap<>();
-    private final Map<String, Long> referenceToOrderMap = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, java.util.Set<Long>> referenceToOrdersMap = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Value("${app.payment.bank-code:MB}")
     private String bankCode;
@@ -112,7 +112,7 @@ public class PaymentService {
 
             // Lưu mapping orderCode để phục vụ tra cứu Webhook và Auto-Polling
             orderCodeMap.put(orderCode, new OrderMapping("PREMIUM", referenceId, orderCode, Instant.now()));
-            referenceToOrderMap.put("PREMIUM:" + referenceId, orderCode);
+            referenceToOrdersMap.computeIfAbsent("PREMIUM:" + referenceId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
@@ -171,7 +171,7 @@ public class PaymentService {
 
             // Lưu mapping orderCode
             orderCodeMap.put(orderCode, new OrderMapping("CONTRACT", referenceId, orderCode, Instant.now()));
-            referenceToOrderMap.put("CONTRACT:" + referenceId, orderCode);
+            referenceToOrdersMap.computeIfAbsent("CONTRACT:" + referenceId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
@@ -222,10 +222,6 @@ public class PaymentService {
     @Transactional
     public Map<String, Object> checkStatus(String type, long referenceId, Long orderCode) {
         String paymentType = type.trim().toUpperCase();
-        Long effectiveOrderCode = orderCode;
-        if (effectiveOrderCode == null) {
-            effectiveOrderCode = referenceToOrderMap.get(paymentType + ":" + referenceId);
-        }
 
         if ("PREMIUM".equals(paymentType)) {
             var list = jdbc.queryForList("SELECT status FROM premium_requests WHERE request_id = ?", referenceId);
@@ -235,12 +231,23 @@ public class PaymentService {
             String st = String.valueOf(list.get(0).get("status"));
             boolean isPaid = "APPROVED".equalsIgnoreCase(st) || "ACTIVE".equalsIgnoreCase(st);
 
-            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, query PayOS trực tiếp
-            if (!isPaid && effectiveOrderCode != null && payOSService.isConfigured()) {
-                String payOsStatus = payOSService.getPaymentStatus(effectiveOrderCode);
-                if ("PAID".equalsIgnoreCase(payOsStatus)) {
-                    confirmPremium(referenceId, null);
-                    return Map.of("paid", true, "status", "ACTIVE", "source", "PAYOS_POLL");
+            // Nếu DB chưa cập nhật mà có PayOS, query PayOS trực tiếp
+            if (!isPaid && payOSService.isConfigured()) {
+                java.util.Set<Long> candidateOrders = new java.util.LinkedHashSet<>();
+                if (orderCode != null) candidateOrders.add(orderCode);
+                var stored = referenceToOrdersMap.get("PREMIUM:" + referenceId);
+                if (stored != null) candidateOrders.addAll(stored);
+
+                for (Long code : candidateOrders) {
+                    try {
+                        String payOsStatus = payOSService.getPaymentStatus(code);
+                        if ("PAID".equalsIgnoreCase(payOsStatus)) {
+                            confirmPremium(referenceId, null);
+                            return Map.of("paid", true, "status", "ACTIVE", "source", "PAYOS_POLL");
+                        }
+                    } catch (Exception ex) {
+                        log.warn("Lỗi kiểm tra trạng thái PayOS cho Premium orderCode {}: {}", code, ex.getMessage());
+                    }
                 }
             }
 
@@ -253,12 +260,22 @@ public class PaymentService {
             String pStatus = String.valueOf(list.get(0).get("payment_status"));
             boolean isPaid = "PAID".equalsIgnoreCase(pStatus);
 
-            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, query PayOS trực tiếp
-            if (!isPaid && effectiveOrderCode != null && payOSService.isConfigured()) {
-                String payOsStatus = payOSService.getPaymentStatus(effectiveOrderCode);
-                if ("PAID".equalsIgnoreCase(payOsStatus)) {
-                    confirmContract(referenceId, null);
-                    return Map.of("paid", true, "status", "PAID", "source", "PAYOS_POLL");
+            if (!isPaid && payOSService.isConfigured()) {
+                java.util.Set<Long> candidateOrders = new java.util.LinkedHashSet<>();
+                if (orderCode != null) candidateOrders.add(orderCode);
+                var stored = referenceToOrdersMap.get("CONTRACT:" + referenceId);
+                if (stored != null) candidateOrders.addAll(stored);
+
+                for (Long code : candidateOrders) {
+                    try {
+                        String payOsStatus = payOSService.getPaymentStatus(code);
+                        if ("PAID".equalsIgnoreCase(payOsStatus)) {
+                            confirmContract(referenceId, null);
+                            return Map.of("paid", true, "status", "PAID", "source", "PAYOS_POLL");
+                        }
+                    } catch (Exception ex) {
+                        log.warn("Lỗi kiểm tra trạng thái PayOS cho Contract orderCode {}: {}", code, ex.getMessage());
+                    }
                 }
             }
 
@@ -418,20 +435,21 @@ public class PaymentService {
         long subscriptionId = Objects.requireNonNull(subKey.getKey()).longValue();
 
         // 2. Cập nhật premium_requests
-        long adminId = user != null ? user.id() : 1L; // system/admin
+        Long adminId = user != null ? user.id() : null; // system/admin tự động duyệt
         jdbc.update("""
                 UPDATE premium_requests
                 SET status = 'APPROVED', reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP(6),
-                    review_note = 'Thanh toán tự động thành công qua Cổng VietQR Napas', subscription_id = ?
+                    review_note = 'Thanh toán tự động thành công qua Cổng PayOS VietQR', subscription_id = ?
                 WHERE request_id = ?
                 """, adminId, subscriptionId, requestId);
 
-        // 3. Ghi nhận transactions
-        String txnRef = "VIETQR-SUB-" + requestId + "-" + System.currentTimeMillis() % 100000;
+        // 3. Ghi nhận transactions (ck_transactions_type cho phép: PREMIUM_PURCHASE, PREMIUM_RENEWAL)
+        String txnType = start.isAfter(Instant.now()) ? "PREMIUM_RENEWAL" : "PREMIUM_PURCHASE";
+        String txnRef = "PAYOS-SUB-" + requestId + "-" + (System.currentTimeMillis() % 100000);
         jdbc.update("""
                 INSERT INTO transactions(txn_ref, transaction_type, user_id, subscription_id, amount, currency, payment_gateway, status, paid_at)
-                VALUES (?, 'SUBSCRIPTION', ?, ?, ?, 'VND', 'VIETQR_AUTOPAY', 'SUCCESS', CURRENT_TIMESTAMP(6))
-                """, txnRef, targetUserId, subscriptionId, amount);
+                VALUES (?, ?, ?, ?, ?, 'VND', 'PAYOS', 'SUCCESS', CURRENT_TIMESTAMP(6))
+                """, txnRef, txnType, targetUserId, subscriptionId, amount);
 
         // 4. Nâng quyền SUBSCRIBER cho user
         jdbc.update("""
@@ -447,17 +465,21 @@ public class PaymentService {
 
         // 6. Gửi EMAIL BIÊN LAI THẬT (Nếu có email)
         if (email != null && !email.isBlank() && email.contains("@")) {
-            Map<String, Object> emailData = Map.of(
-                    "title", "XÁC NHẬN KÍCH HOẠT GÓI PREMIUM",
-                    "customerName", customerName,
-                    "itemName", packageName,
-                    "itemType", "Thuê bao Premium Đọc báo Không giới hạn",
-                    "txnRef", txnRef,
-                    "amount", String.format("%,d VND", amount.longValue()),
-                    "effectiveDuration", durationDays + " ngày (Đến " + end.toString().substring(0, 10) + ")",
-                    "paymentGateway", "VietQR Napas 24/7 (Tự động)"
-            );
-            emailService.sendReceiptEmail(email, "The Pluse - Biên lai thanh toán gói " + packageName, emailData);
+            try {
+                Map<String, Object> emailData = Map.of(
+                        "title", "XÁC NHẬN KÍCH HOẠT GÓI PREMIUM",
+                        "customerName", customerName,
+                        "itemName", packageName,
+                        "itemType", "Thuê bao Premium Đọc báo Không giới hạn",
+                        "txnRef", txnRef,
+                        "amount", String.format("%,d VND", amount.longValue()),
+                        "effectiveDuration", durationDays + " ngày (Đến " + end.toString().substring(0, 10) + ")",
+                        "paymentGateway", "PayOS VietQR Napas (Tự động)"
+                );
+                emailService.sendReceiptEmail(email, "The Pluse - Biên lai thanh toán gói " + packageName, emailData);
+            } catch (Exception emailEx) {
+                log.warn("Không thể gửi email biên lai cho Premium requestId={}: {}", requestId, emailEx.getMessage());
+            }
         }
 
         return Map.of(
@@ -505,33 +527,47 @@ public class PaymentService {
                 WHERE contract_id = ?
                 """, contractId);
 
-        // 2. Ghi nhận giao dịch
-        long userId = user != null ? user.id() : 1L;
-        String txnRef = "VIETQR-CTR-" + contractId + "-" + System.currentTimeMillis() % 100000;
+        // 2. Ghi nhận giao dịch (ck_transactions_type cho phép: ADVERTISING_PAYMENT)
+        Long txUserId = user != null ? user.id() : null;
+        if (txUserId == null) {
+            txUserId = jdbc.query("SELECT user_id FROM users WHERE company_id = ? LIMIT 1",
+                    (rs, n) -> rs.getLong(1), companyId).stream().findFirst().orElse(null);
+            if (txUserId == null) {
+                txUserId = jdbc.query("SELECT user_id FROM users LIMIT 1",
+                        (rs, n) -> rs.getLong(1)).stream().findFirst().orElse(null);
+            }
+        }
+        String txnRef = "PAYOS-CTR-" + contractId + "-" + (System.currentTimeMillis() % 100000);
         jdbc.update("""
                 INSERT INTO transactions(txn_ref, transaction_type, user_id, contract_id, amount, currency, payment_gateway, status, paid_at)
-                VALUES (?, 'CONTRACT_PAYMENT', ?, ?, ?, 'VND', 'VIETQR_AUTOPAY', 'SUCCESS', CURRENT_TIMESTAMP(6))
-                """, txnRef, userId, contractId, totalValue);
+                VALUES (?, 'ADVERTISING_PAYMENT', ?, ?, ?, 'VND', 'PAYOS', 'SUCCESS', CURRENT_TIMESTAMP(6))
+                """, txnRef, txUserId, contractId, totalValue);
 
         // 3. Thông báo cho doanh nghiệp
-        jdbc.update("""
-                INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
-                VALUES (?, 'Hợp đồng quảng cáo đã kích hoạt', ?, 'CAMPAIGN', 'CONTRACT', ?, 'SENT', CURRENT_TIMESTAMP(6))
-                """, userId, "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.", String.valueOf(contractId));
+        if (txUserId != null) {
+            jdbc.update("""
+                    INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
+                    VALUES (?, 'Hợp đồng quảng cáo đã kích hoạt', ?, 'CAMPAIGN', 'CONTRACT', ?, 'SENT', CURRENT_TIMESTAMP(6))
+                    """, txUserId, "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.", String.valueOf(contractId));
+        }
 
         // 4. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
         if (companyEmail != null && !companyEmail.isBlank() && companyEmail.contains("@")) {
-            Map<String, Object> emailData = Map.of(
-                    "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
-                    "customerName", contactName + " (" + companyName + ")",
-                    "itemName", contractName + " (" + contractCode + ")",
-                    "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
-                    "txnRef", txnRef,
-                    "amount", String.format("%,d VND", totalValue.longValue()),
-                    "effectiveDuration", "Hợp đồng đã có hiệu lực (ACTIVE)",
-                    "paymentGateway", "VietQR Napas 24/7 (Tự động)"
-            );
-            emailService.sendReceiptEmail(companyEmail, "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode, emailData);
+            try {
+                Map<String, Object> emailData = Map.of(
+                        "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
+                        "customerName", contactName + " (" + companyName + ")",
+                        "itemName", contractName + " (" + contractCode + ")",
+                        "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
+                        "txnRef", txnRef,
+                        "amount", String.format("%,d VND", totalValue.longValue()),
+                        "effectiveDuration", "Hợp đồng đã có hiệu lực (ACTIVE)",
+                        "paymentGateway", "PayOS VietQR Napas (Tự động)"
+                );
+                emailService.sendReceiptEmail(companyEmail, "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode, emailData);
+            } catch (Exception ex) {
+                log.warn("Không thể gửi email biên lai cho hợp đồng contractId={}: {}", contractId, ex.getMessage());
+            }
         }
 
         return Map.of(
