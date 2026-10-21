@@ -412,8 +412,11 @@ public class PaymentService {
 
         Instant now = Instant.now();
         // Kiểm tra xem user có gói đang chạy không để cộng dồn ngày
-        var existingEnd = jdbc.query("SELECT MAX(end_at) FROM subscriptions WHERE user_id = ? AND status = 'ACTIVE' AND end_at > CURRENT_TIMESTAMP(6)",
-                (rs, n) -> rs.getTimestamp(1), targetUserId).stream().findFirst().orElse(null);
+        Timestamp existingEnd = jdbc.query(
+                "SELECT MAX(end_at) FROM subscriptions WHERE user_id = ? AND status = 'ACTIVE' AND end_at > CURRENT_TIMESTAMP(6)",
+                rs -> rs.next() ? rs.getTimestamp(1) : null,
+                targetUserId
+        );
 
         Instant start = (existingEnd != null && existingEnd.toInstant().isAfter(now)) ? existingEnd.toInstant() : now;
         Instant end = start.plus(durationDays, ChronoUnit.DAYS);
@@ -436,7 +439,11 @@ public class PaymentService {
             ps.setTimestamp(8, Timestamp.from(end));
             return ps;
         }, subKey);
-        long subscriptionId = Objects.requireNonNull(subKey.getKey()).longValue();
+        Number genKey = subKey.getKey();
+        long subscriptionId = genKey != null ? genKey.longValue()
+                : (subKey.getKeys() != null && subKey.getKeys().containsKey("GENERATED_KEY")
+                ? ((Number) subKey.getKeys().get("GENERATED_KEY")).longValue()
+                : jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class));
 
         // 2. Cập nhật premium_requests
         Long adminId = user != null ? user.id() : null; // system/admin tự động duyệt
@@ -535,10 +542,10 @@ public class PaymentService {
         Long txUserId = user != null ? user.id() : null;
         if (txUserId == null) {
             txUserId = jdbc.query("SELECT user_id FROM users WHERE company_id = ? LIMIT 1",
-                    (rs, n) -> rs.getLong(1), companyId).stream().findFirst().orElse(null);
+                    rs -> rs.next() ? rs.getLong(1) : null, companyId);
             if (txUserId == null) {
                 txUserId = jdbc.query("SELECT user_id FROM users LIMIT 1",
-                        (rs, n) -> rs.getLong(1)).stream().findFirst().orElse(null);
+                        rs -> rs.next() ? rs.getLong(1) : null);
             }
         }
         String txnRef = "PAYOS-CTR-" + contractId + "-" + (System.currentTimeMillis() % 100000);
