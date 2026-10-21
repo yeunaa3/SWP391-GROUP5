@@ -4,6 +4,7 @@ import { articleBlocks } from "../../utils/articleBlocks.js";
 import DemoNotice from "../../components/DemoNotice.jsx";
 import AdBanner from "../../components/AdBanner.jsx";
 import ModalShell from "../../components/ModalShell.jsx";
+import BookmarkButton from "../../components/BookmarkButton.jsx";
 import ArticleAudio from "../../components/ArticleAudio.jsx";
 import { getArticle, getArticles } from "../../services/contentService.js";
 import { useAuth } from "../../store/AuthContext.jsx";
@@ -110,6 +111,7 @@ export default function ArticlePage() {
                 <button aria-label="Giảm cỡ chữ" disabled={fontSize <= 16} onClick={() => setFontSize(v => v - 1)}>A−</button>
                 <span>{fontSize}px</span>
                 <button aria-label="Tăng cỡ chữ" disabled={fontSize >= 26} onClick={() => setFontSize(v => v + 1)}>A+</button>
+                <BookmarkButton articleId={article.id} />
                 {premiumActive ? (
                   <button aria-pressed={focus} onClick={() => setFocus(v => !v)}>
                     {focus ? "Thoát tập trung" : "✦ Đọc tập trung"}
@@ -251,7 +253,6 @@ export default function ArticlePage() {
               </section>
             ) : (
               <div className="article-actions">
-                <button onClick={() => setNotice("Chức năng lưu bài đang được hoàn thiện.")}>Lưu bài</button>
                 <button 
                   className="secondary-button" 
                   onClick={async () => { 

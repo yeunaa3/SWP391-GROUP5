@@ -1,3 +1,4 @@
+import CampaignQueueDemoPage from "../pages/adManager/CampaignQueueDemoPage.jsx";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import PublicLayout from "../layouts/PublicLayout.jsx";
@@ -23,6 +24,7 @@ import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 import SubscriptionPackagesPage from "../pages/admin/SubscriptionPackagesPage.jsx";
 import NotificationsPage from "../pages/account/NotificationsPage.jsx";
+import BookmarksPage from "../pages/account/BookmarksPage.jsx";
 import ProfilePage from "../pages/account/ProfilePage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
@@ -36,16 +38,19 @@ import PartnershipQueuePage from "../pages/adManager/PartnershipQueuePage.jsx";
 import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx";
 import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorPage.jsx";
 import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
+import AdManagerBookingQueuePage from "../pages/adManager/AdManagerBookingQueuePage.jsx";
 
 const specialPages = {
   "ADM-01": <AdManagerDashboardPage />,
   "ADM-02": <PartnershipQueuePage />,
   "ADM-03": <PartnershipDetailPage />,
+  "ADM-04": <AdManagerBookingQueuePage />,
   "ADM-07": <CampaignReviewPage />,
   "ADM-08": <CampaignReviewPage />,
   "ADM-09": <ActiveCampaignMonitorPage />,
   "ACC-01": <ProfilePage />,
   "ACC-02": <NotificationsPage />,
+  "ACC-03": <BookmarksPage />,
   "PUB-01": <HomePage />,
   "PUB-02": <SearchPage />,
   "PUB-03": <ArticlePage />,
@@ -80,6 +85,7 @@ export default function AppRoutes() {
   const workspaceAreas = ["account", "premium", "business", "adManager", "admin"];
   return (
     <Routes>
+      {import.meta.env.DEV && <Route path="/demo/adm-07" element={<CampaignQueueDemoPage />} />}
       <Route element={<PublicLayout />}>
         <Route path="/news" element={<BrowseNewsPage />} />
         <Route path="/advertising-demo" element={<AdvertisingDemoPage />} />
