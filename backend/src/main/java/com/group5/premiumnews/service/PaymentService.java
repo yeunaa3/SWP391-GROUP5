@@ -416,8 +416,8 @@ public class PaymentService {
         BigDecimal amount = (BigDecimal) req.get("amount");
         int durationDays = ((Number) req.get("duration_days")).intValue();
         String email = (String) req.get("email");
-        String customerName = (String) req.get("full_name");
-        if (customerName == null || customerName.isBlank()) customerName = (String) req.get("username");
+        String rawFullName = (String) req.get("full_name");
+        final String customerName = (rawFullName != null && !rawFullName.isBlank()) ? rawFullName : (String) req.get("username");
 
         // Idempotent: Nếu đã APPROVED thì báo thành công luôn
         if ("APPROVED".equals(currentStatus)) {
@@ -539,8 +539,8 @@ public class PaymentService {
         BigDecimal totalValue = (BigDecimal) ct.get("total_value");
         String companyEmail = (String) ct.get("company_email");
         String companyName = (String) ct.get("company_name");
-        String contactName = (String) ct.get("contact_name");
-        if (contactName == null || contactName.isBlank()) contactName = companyName;
+        String rawContact = (String) ct.get("contact_name");
+        final String contactName = (rawContact != null && !rawContact.isBlank()) ? rawContact : companyName;
 
         // Idempotent: Nếu đã PAID thì trả về thành công luôn
         if ("PAID".equals(paymentStatus)) {
