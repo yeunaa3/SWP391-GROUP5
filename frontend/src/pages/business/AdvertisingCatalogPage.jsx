@@ -21,6 +21,7 @@ const getRows = (response) => {
   if (Array.isArray(response?.data)) return response.data;
   return [];
 };
+const SHOW_PLACEMENT_PREVIEWS = false;
 
 function CatalogState({ loading, error, empty, onRetry }) {
   if (loading) {
@@ -280,7 +281,7 @@ export default function AdvertisingCatalogPage() {
 
                       <Link
                         className="bus05-button bus05-button-secondary bus05-card-action"
-                        to={`/business/bookings/new?packageId=${encodeURIComponent(offer.id)}`}
+                        to={`/business/advertising/calendar?packageId=${encodeURIComponent(offer.id)}`}
                       >
                         Chọn gói này <span aria-hidden="true">→</span>
                       </Link>
@@ -354,7 +355,7 @@ export default function AdvertisingCatalogPage() {
             {!slots.loading && !slots.error && visibleSlots.length === 0 && (
               <CatalogState empty />
             )}
-            {!slots.loading && !slots.error && visibleSlots.length > 0 && (
+            {SHOW_PLACEMENT_PREVIEWS && !slots.loading && !slots.error && visibleSlots.length > 0 && (
               <div className="bus05-placement-grid">{visibleSlots.map(slot=><article className="bus05-offer-card" key={slot.id}><div className={`bus05-placement-sketch ${slot.positionCode?.includes("SIDEBAR")?"sidebar":"banner"}`} aria-label={`Sơ đồ vị trí ${slot.name}`}><span>THE PULSE</span><i/><b>{slot.positionCode?.includes("SIDEBAR")?"▥":"▰"}</b><i/></div><h3>{slot.name}</h3><p>{slot.width} × {slot.height} px · PNG/JPEG/MP4 ≤ 60 giây · tối đa 8 MB</p><p>{money(slot.basePrice,slot.currency)} / 30 ngày, cộng giá gói.</p><Link className="bus05-row-link" to={`/business/bookings/new?slotId=${slot.id}`}>Chọn vị trí →</Link><small>Sơ đồ minh họa, chưa xác nhận lịch trống.</small></article>)}</div>
             )}
             {!slots.loading && !slots.error && visibleSlots.length > 0 && (
@@ -386,7 +387,7 @@ export default function AdvertisingCatalogPage() {
                         <td>
                           <Link
                             className="bus05-row-link"
-                            to={`/business/bookings/new?slotId=${encodeURIComponent(slot.id)}`}
+                            to={`/business/advertising/calendar?slotId=${encodeURIComponent(slot.id)}`}
                           >
                             Chọn vị trí →
                           </Link>
