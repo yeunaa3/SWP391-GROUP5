@@ -97,12 +97,19 @@ public class PayOSService {
         requestBody.put("orderCode", orderCode);
         requestBody.put("amount", amount);
         requestBody.put("description", cleanDescription);
-        requestBody.put("buyerName", buyerName != null ? buyerName : "Reader");
-        requestBody.put("buyerEmail", buyerEmail != null ? buyerEmail : "");
-        requestBody.put("buyerPhone", buyerPhone != null ? buyerPhone : "");
-        requestBody.put("returnUrl", returnUrl);
         requestBody.put("cancelUrl", cancelUrl);
+        requestBody.put("returnUrl", returnUrl);
         requestBody.put("signature", signature);
+
+        if (buyerName != null && !buyerName.isBlank()) {
+            requestBody.put("buyerName", buyerName.trim());
+        }
+        if (buyerEmail != null && !buyerEmail.isBlank() && buyerEmail.contains("@")) {
+            requestBody.put("buyerEmail", buyerEmail.trim());
+        }
+        if (buyerPhone != null && !buyerPhone.isBlank()) {
+            requestBody.put("buyerPhone", buyerPhone.trim());
+        }
 
         try {
             String jsonPayload = objectMapper.writeValueAsString(requestBody);

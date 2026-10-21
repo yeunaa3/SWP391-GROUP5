@@ -56,9 +56,9 @@ app:
     account-number: ${PAYMENT_ACCOUNT_NUMBER:08882626999}
     account-name: ${PAYMENT_ACCOUNT_NAME:BUI QUANG CUONG}
   payos:
-    client-id: ${PAYOS_CLIENT_ID:}
-    api-key: ${PAYOS_API_KEY:}
-    checksum-key: ${PAYOS_CHECKSUM_KEY:}
+    client-id: ${PAYOS_CLIENT_ID:${payos.client-id:${PAYOS_CLIENTID:}}}
+    api-key: ${PAYOS_API_KEY:${payos.api-key:${PAYOS_APIKEY:}}}
+    checksum-key: ${PAYOS_CHECKSUM_KEY:${payos.checksum-key:${PAYOS_CHECKSUMKEY:}}}
   storage:
     provider: ${ASSET_STORAGE_PROVIDER:local}
   upload-directory: ${UPLOAD_DIRECTORY:storage/business}

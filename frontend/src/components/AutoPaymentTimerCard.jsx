@@ -11,10 +11,28 @@ export default function AutoPaymentTimerCard({
   itemName,
   onSuccess,
 }) {
+  const storageKey = `payment_expiry_${type}_${referenceId}`;
+
+  // Kiểm tra thời gian còn lại đã lưu trong localStorage (chống reset khi reload trang)
+  const getStoredRemainingSeconds = () => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        return Math.floor((parseInt(saved, 10) - Date.now()) / 1000);
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  const initialRemaining = getStoredRemainingSeconds();
   const [loading, setLoading] = useState(true);
   const [qrData, setQrData] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(TOTAL_COOLDOWN_SECONDS);
-  const [isExpired, setIsExpired] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(
+    initialRemaining !== null ? Math.max(0, initialRemaining) : TOTAL_COOLDOWN_SECONDS
+  );
+  const [isExpired, setIsExpired] = useState(
+    initialRemaining !== null ? initialRemaining <= 0 : false
+  );
   const [isPaid, setIsPaid] = useState(false);
   const [error, setError] = useState("");
   const [copiedKey, setCopiedKey] = useState("");
@@ -22,13 +40,39 @@ export default function AutoPaymentTimerCard({
   const pollTimerRef = useRef(null);
   const countdownTimerRef = useRef(null);
 
-  // Khởi tạo mã thanh toán và đồng hồ 5 phút
-  const initPayment = async () => {
+  // Khởi tạo mã thanh toán VietQR / PayOS
+  const initPayment = async (isRetry = false) => {
     setLoading(true);
     setError("");
-    setIsExpired(false);
     setIsPaid(false);
-    setTimeLeft(TOTAL_COOLDOWN_SECONDS);
+
+    if (isRetry) {
+      // Khi bấm "Tạo mã thanh toán mới", thiết lập lại mốc 5 phút mới vào localStorage
+      const newExpiry = Date.now() + TOTAL_COOLDOWN_SECONDS * 1000;
+      try {
+        localStorage.setItem(storageKey, String(newExpiry));
+      } catch (e) {}
+      setTimeLeft(TOTAL_COOLDOWN_SECONDS);
+      setIsExpired(false);
+    } else {
+      const remaining = getStoredRemainingSeconds();
+      if (remaining !== null) {
+        if (remaining <= 0) {
+          setTimeLeft(0);
+          setIsExpired(true);
+        } else {
+          setTimeLeft(remaining);
+          setIsExpired(false);
+        }
+      } else {
+        const newExpiry = Date.now() + TOTAL_COOLDOWN_SECONDS * 1000;
+        try {
+          localStorage.setItem(storageKey, String(newExpiry));
+        } catch (e) {}
+        setTimeLeft(TOTAL_COOLDOWN_SECONDS);
+        setIsExpired(false);
+      }
+    }
 
     try {
       const res = await createPaymentQr({ type, referenceId });
@@ -42,7 +86,7 @@ export default function AutoPaymentTimerCard({
 
   useEffect(() => {
     if (referenceId) {
-      initPayment();
+      initPayment(false);
     }
     return () => {
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
@@ -50,26 +94,38 @@ export default function AutoPaymentTimerCard({
     };
   }, [type, referenceId]);
 
-  // Bộ đếm lùi 5 phút (300 giây -> 0)
+  // Bộ đếm lùi 5 phút chính xác dựa trên timestamp thực tế (không bị reset khi F5/reload)
   useEffect(() => {
-    if (loading || isPaid || isExpired || !qrData) return;
+    if (loading || isPaid || isExpired) return;
 
     countdownTimerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
+      const remaining = getStoredRemainingSeconds();
+      if (remaining !== null) {
+        if (remaining <= 0) {
           clearInterval(countdownTimerRef.current);
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          setTimeLeft(0);
           setIsExpired(true);
-          return 0;
+          return;
         }
-        return prev - 1;
-      });
+        setTimeLeft(remaining);
+      } else {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownTimerRef.current);
+            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+            setIsExpired(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }
     }, 1000);
 
     return () => {
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
-  }, [loading, isPaid, isExpired, qrData]);
+  }, [loading, isPaid, isExpired]);
 
   // Tự động lắng nghe giao dịch (Auto-Polling) mỗi 2.5s từ PayOS / Ngân hàng
   useEffect(() => {
@@ -79,23 +135,26 @@ export default function AutoPaymentTimerCard({
       try {
         const res = await checkPaymentStatus(type, referenceId, qrData.orderCode);
         if (res && res.paid) {
-          // Thanh toán thành công -> DỪNG NGAY đồng hồ và polling
+          // Thanh toán thành công -> DỪNG NGAY đồng hồ, xóa expiry khỏi localStorage
           if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          try {
+            localStorage.removeItem(storageKey);
+          } catch (e) {}
           setIsPaid(true);
           if (typeof onSuccess === "function") {
             onSuccess(res);
           }
         }
       } catch (err) {
-        // Bỏ qua lỗi kết nối tạm thời khi polling
+        // Bỏ qua lỗi mạng chập chờn khi polling
       }
     }, 2500);
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, [loading, isPaid, isExpired, qrData, type, referenceId]);
+  }, [loading, isPaid, isExpired, qrData, type, referenceId, storageKey]);
 
   const copyToClipboard = (text, key) => {
     if (navigator.clipboard) {
@@ -186,13 +245,13 @@ export default function AutoPaymentTimerCard({
             <div>
               <strong style={{ fontSize: "15px" }}>Hết thời gian thanh toán (5:00) — Giao dịch thất bại</strong>
               <div style={{ fontSize: "13px", marginTop: "2px", color: "#7f1d1d" }}>
-                Mã QR đã hết hạn sử dụng để đảm bảo an toàn giao dịch. Vui lòng tạo mã mới để thử lại.
+                Mã QR đã hết hạn sử dụng. Hãy bấm nút bên phải để bắt đầu lại phiên thanh toán 5 phút mới.
               </div>
             </div>
           </div>
           <button
             type="button"
-            onClick={initPayment}
+            onClick={() => initPayment(true)}
             style={{
               background: "#ef4444",
               color: "#ffffff",
@@ -244,7 +303,7 @@ export default function AutoPaymentTimerCard({
               </strong>
             </div>
             <div style={{ fontSize: "12px", color: "#64748b" }}>
-              Tự động nhận diện không cần bấm nút
+              Không bị reset khi reload trang
             </div>
           </div>
 
@@ -273,30 +332,71 @@ export default function AutoPaymentTimerCard({
 
           <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
               gap: "8px",
-              background: "#f0fdf4",
-              color: "#16a34a",
-              padding: "6px 14px",
-              borderRadius: "20px",
-              fontSize: "13px",
-              fontWeight: "600",
-              border: "1px solid #bbf7d0",
               marginTop: "12px",
             }}
           >
-            <span
+            <div
               style={{
-                width: "8px",
-                height: "8px",
-                borderRadius: "50%",
-                background: "#22c55e",
-                display: "inline-block",
-                boxShadow: "0 0 0 3px rgba(34, 197, 94, 0.2)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#f0fdf4",
+                color: "#16a34a",
+                padding: "6px 14px",
+                borderRadius: "20px",
+                fontSize: "13px",
+                fontWeight: "600",
+                border: "1px solid #bbf7d0",
               }}
-            />
-            <span>Hệ thống đang tự động lắng nghe giao dịch chuyển khoản từ PayOS / Ngân hàng...</span>
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#22c55e",
+                  display: "inline-block",
+                  boxShadow: "0 0 0 3px rgba(34, 197, 94, 0.2)",
+                }}
+              />
+              <span>Hệ thống đang tự động lắng nghe giao dịch từ PayOS / Ngân hàng...</span>
+            </div>
+
+            {/* Trạng thái kết nối PayOS */}
+            {qrData?.payOsActive ? (
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#059669",
+                  background: "#ecfdf5",
+                  padding: "4px 10px",
+                  borderRadius: "12px",
+                  border: "1px solid #a7f3d0",
+                  fontWeight: "600",
+                }}
+              >
+                ● Cổng PayOS: Đã kết nối
+              </span>
+            ) : (
+              <span
+                style={{
+                  fontSize: "12px",
+                  color: "#d97706",
+                  background: "#fffbeb",
+                  padding: "4px 10px",
+                  borderRadius: "12px",
+                  border: "1px solid #fde68a",
+                  fontWeight: "600",
+                }}
+              >
+                ● Cổng VietQR Napas MBBank
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -312,7 +412,7 @@ export default function AutoPaymentTimerCard({
           <div style={{ marginTop: "10px" }}>
             <button
               type="button"
-              onClick={initPayment}
+              onClick={() => initPayment(true)}
               style={{
                 background: "#0284c7",
                 color: "#fff",
@@ -535,7 +635,7 @@ export default function AutoPaymentTimerCard({
 
             <p style={{ margin: "14px 0 0 0", fontSize: "13px", color: "#64748b", lineHeight: 1.5 }}>
               ⚡ <strong>Lưu ý:</strong> Vui lòng quét mã QR hoặc nhập chính xác{" "}
-              <strong style={{ color: "#4f46e5" }}>nội dung chuyển khoản</strong> trên. Hệ thống PayOS
+              <strong style={{ color: "#4f46e5" }}>nội dung chuyển khoản</strong> trên. Hệ thống
               sẽ tự động nhận diện và kích hoạt dịch vụ của bạn trong 5 phút mà không cần thao tác bấm
               nút xác nhận.
             </p>

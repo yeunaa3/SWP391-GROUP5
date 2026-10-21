@@ -60,7 +60,8 @@ public class PaymentService {
             long referenceId,
             String itemName,
             String checkoutUrl,
-            Long orderCode
+            Long orderCode,
+            boolean payOsActive
     ) {}
 
     /**
@@ -99,6 +100,7 @@ public class PaymentService {
                     bankCode, accountNumber, amount.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
             String checkoutUrl = null;
+            boolean payOsActive = false;
             if (payOSService.isConfigured()) {
                 try {
                     String userEmail = user != null && user.email() != null ? user.email() : "";
@@ -114,13 +116,16 @@ public class PaymentService {
                             "https://swp391-group5-71mj.onrender.com/premium/packages"
                     );
                     checkoutUrl = payOsData.checkoutUrl();
+                    payOsActive = true;
                     log.info("PayOS link created for Premium ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
-                    log.warn("Lỗi tạo link PayOS cho Premium: {}, fallback sang VietQR chuẩn", ex.getMessage());
+                    log.error("Lỗi tạo link PayOS cho Premium: {}, fallback sang VietQR chuẩn", ex.getMessage(), ex);
                 }
+            } else {
+                log.warn("PayOS chưa được cấu hình biến môi trường trên server (thiếu Client ID, API Key hoặc Checksum Key)");
             }
 
-            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, checkoutUrl, orderCode);
+            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, checkoutUrl, orderCode, payOsActive);
         } else if ("CONTRACT".equals(paymentType)) {
             var contracts = jdbc.queryForList("""
                     SELECT c.contract_id, c.contract_code, c.contract_name, c.total_value, c.currency, c.payment_status, c.company_id
@@ -148,6 +153,7 @@ public class PaymentService {
                     bankCode, accountNumber, totalValue.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
             String checkoutUrl = null;
+            boolean payOsActive = false;
             if (payOSService.isConfigured()) {
                 try {
                     String userEmail = user != null && user.email() != null ? user.email() : "";
@@ -163,13 +169,16 @@ public class PaymentService {
                             "https://swp391-group5-71mj.onrender.com/business/contracts"
                     );
                     checkoutUrl = payOsData.checkoutUrl();
+                    payOsActive = true;
                     log.info("PayOS link created for Contract ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
-                    log.warn("Lỗi tạo link PayOS cho Contract: {}, fallback sang VietQR chuẩn", ex.getMessage());
+                    log.error("Lỗi tạo link PayOS cho Contract: {}, fallback sang VietQR chuẩn", ex.getMessage(), ex);
                 }
+            } else {
+                log.warn("PayOS chưa được cấu hình biến môi trường trên server (thiếu Client ID, API Key hoặc Checksum Key)");
             }
 
-            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, totalValue, "VND", memo, "CONTRACT", referenceId, "Hợp đồng " + code, checkoutUrl, orderCode);
+            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, totalValue, "VND", memo, "CONTRACT", referenceId, "Hợp đồng " + code, checkoutUrl, orderCode, payOsActive);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Loại thanh toán không hợp lệ (hỗ trợ PREMIUM hoặc CONTRACT).");
         }
