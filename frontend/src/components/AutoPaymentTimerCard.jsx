@@ -149,7 +149,7 @@ export default function AutoPaymentTimerCard({
       } catch (err) {
         // Bỏ qua lỗi mạng chập chờn khi polling
       }
-    }, 2500);
+    }, 1500);
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);

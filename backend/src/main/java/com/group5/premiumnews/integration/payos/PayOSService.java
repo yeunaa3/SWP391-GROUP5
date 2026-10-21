@@ -200,10 +200,9 @@ public class PayOSService {
         StringBuilder sb = new StringBuilder();
         for (String k : keys) {
             Object v = data.get(k);
-            if (v != null) {
-                if (!sb.isEmpty()) sb.append("&");
-                sb.append(k).append("=").append(v);
-            }
+            String valStr = v == null ? "" : String.valueOf(v);
+            if (!sb.isEmpty()) sb.append("&");
+            sb.append(k).append("=").append(valStr);
         }
 
         String calculatedSignature = hmacSha256(sb.toString(), checksumKey);
