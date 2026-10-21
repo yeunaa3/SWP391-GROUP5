@@ -85,10 +85,11 @@ public class PaymentController {
         if (configured) {
             try {
                 long testOrderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
+                String testDescription = "TEST" + (testOrderCode % 10000);
                 var testLink = paymentService.getPayOSService().createPaymentLink(
                         testOrderCode,
                         10000,
-                        "TESTPAYOS " + testOrderCode,
+                        testDescription,
                         "Test Buyer",
                         "test@thepluse.vn",
                         "",

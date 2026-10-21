@@ -107,7 +107,7 @@ public class PaymentService {
             var req = requests.get(0);
             BigDecimal amount = (BigDecimal) req.get("amount");
             String pkgName = (String) req.get("package_name");
-            String memo = "THEPLUSE SUB " + referenceId;
+            String memo = "SUB" + referenceId;
             long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
 
             // Lưu mapping orderCode để phục vụ tra cứu Webhook và Auto-Polling
@@ -115,9 +115,8 @@ public class PaymentService {
             referenceToOrderMap.put("PREMIUM:" + referenceId, orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
-            String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
-                    bankCode, accountNumber, amount.toBigInteger().toString(), cleanMemo, cleanAccountName);
+                    bankCode, accountNumber, amount.toBigInteger().toString(), memo, cleanAccountName);
 
             String checkoutUrl = null;
             boolean payOsActive = false;
@@ -137,6 +136,13 @@ public class PaymentService {
                     );
                     checkoutUrl = payOsData.checkoutUrl();
                     payOsActive = true;
+                    if (payOsData.accountNumber() != null && !payOsData.accountNumber().isBlank()) {
+                        String payosBank = payOsData.bin() != null && !payOsData.bin().isBlank() ? payOsData.bin() : bankCode;
+                        String payosAcc = payOsData.accountNumber();
+                        String payosDesc = payOsData.description() != null && !payOsData.description().isBlank() ? payOsData.description() : memo;
+                        qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
+                                payosBank, payosAcc, amount.toBigInteger().toString(), payosDesc, cleanAccountName);
+                    }
                     log.info("PayOS link created for Premium ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
                     log.error("Lỗi tạo link PayOS cho Premium: {}, fallback sang VietQR chuẩn", ex.getMessage(), ex);
@@ -160,7 +166,7 @@ public class PaymentService {
             var ct = contracts.get(0);
             BigDecimal totalValue = (BigDecimal) ct.get("total_value");
             String code = (String) ct.get("contract_code");
-            String memo = "THEPLUSE CTR " + referenceId;
+            String memo = "CTR" + referenceId;
             long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
 
             // Lưu mapping orderCode
@@ -168,9 +174,8 @@ public class PaymentService {
             referenceToOrderMap.put("CONTRACT:" + referenceId, orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
-            String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
-                    bankCode, accountNumber, totalValue.toBigInteger().toString(), cleanMemo, cleanAccountName);
+                    bankCode, accountNumber, totalValue.toBigInteger().toString(), memo, cleanAccountName);
 
             String checkoutUrl = null;
             boolean payOsActive = false;
@@ -190,6 +195,13 @@ public class PaymentService {
                     );
                     checkoutUrl = payOsData.checkoutUrl();
                     payOsActive = true;
+                    if (payOsData.accountNumber() != null && !payOsData.accountNumber().isBlank()) {
+                        String payosBank = payOsData.bin() != null && !payOsData.bin().isBlank() ? payOsData.bin() : bankCode;
+                        String payosAcc = payOsData.accountNumber();
+                        String payosDesc = payOsData.description() != null && !payOsData.description().isBlank() ? payOsData.description() : memo;
+                        qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
+                                payosBank, payosAcc, totalValue.toBigInteger().toString(), payosDesc, cleanAccountName);
+                    }
                     log.info("PayOS link created for Contract ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
                     log.error("Lỗi tạo link PayOS cho Contract: {}, fallback sang VietQR chuẩn", ex.getMessage(), ex);
