@@ -66,6 +66,58 @@ public class AdManagerPartnershipService {
     }
 
     @Transactional(readOnly = true)
+    public AdManagerDtos.BookingQueuePage bookingQueue(AdManagerDtos.BookingQueueFilter filter) {
+        validateBookingQueueFilter(filter);
+        validateDates(filter.from(), filter.to());
+        String keyword = filter.q() == null ? "" : filter.q().trim();
+        String status = filter.status() == null ? "" : filter.status();
+        StringBuilder where = new StringBuilder(" WHERE ct.status='PENDING_REVIEW' ");
+        List<Object> arguments = new ArrayList<>();
+        if (!keyword.isEmpty()) {
+            where.append(" AND (LOCATE(?,ct.contract_code)>0 OR LOCATE(?,ct.contract_name)>0 OR LOCATE(?,c.company_name)>0)");
+            arguments.add(keyword);
+            arguments.add(keyword);
+            arguments.add(keyword);
+        }
+        if (!status.isEmpty()) {
+            where.append(" AND ct.status=?");
+            arguments.add(status);
+        }
+        if (filter.from() != null) {
+            where.append(" AND ct.updated_at>=?");
+            arguments.add(Timestamp.from(filter.from().atStartOfDay(VIETNAM).toInstant()));
+        }
+        if (filter.to() != null) {
+            where.append(" AND ct.updated_at<?");
+            arguments.add(Timestamp.from(filter.to().plusDays(1).atStartOfDay(VIETNAM).toInstant()));
+        }
+
+        // updated_at advances when a draft is submitted and its status changes to PENDING_REVIEW.
+        String fromClause = " FROM contracts ct JOIN companies c ON c.company_id=ct.company_id" + where;
+        long total = nullableCount("SELECT COUNT(*)" + fromClause, arguments.toArray());
+        List<Object> pageArguments = new ArrayList<>(arguments);
+        pageArguments.add(filter.size());
+        pageArguments.add(filter.page() * filter.size());
+        List<AdManagerDtos.BookingQueueItem> items = jdbc.query("""
+                SELECT ct.contract_id, ct.contract_code, ct.contract_name, c.company_name,
+                       ct.slot_name_snapshot, ct.start_at, ct.end_at, ct.total_value,
+                       ct.currency, ct.status, ct.updated_at
+                """ + fromClause + """
+                ORDER BY ct.updated_at ASC, ct.contract_id ASC
+                LIMIT ? OFFSET ?
+                """, (rs, row) -> new AdManagerDtos.BookingQueueItem(
+                rs.getLong("contract_id"), rs.getString("contract_code"),
+                rs.getString("contract_name"), rs.getString("company_name"),
+                rs.getString("slot_name_snapshot"), instant(rs.getTimestamp("start_at")),
+                instant(rs.getTimestamp("end_at")), rs.getBigDecimal("total_value"),
+                rs.getString("currency"), rs.getString("status"),
+                instant(rs.getTimestamp("updated_at"))), pageArguments.toArray());
+
+        int totalPages = total == 0 ? 0 : (int) ((total + filter.size() - 1) / filter.size());
+        return new AdManagerDtos.BookingQueuePage(items, total, filter.page(), filter.size(), totalPages);
+    }
+
+    @Transactional(readOnly = true)
     public AdManagerDtos.QueuePage queue(AdManagerDtos.QueueFilter filter) {
         validateFilter(filter);
         validateDates(filter.from(), filter.to());
@@ -339,6 +391,15 @@ public class AdManagerPartnershipService {
                 || !List.of("", "PENDING_REVIEW", "RESUBMITTED").contains(status)
                 || !List.of("", "NORMAL", "HIGH", "URGENT").contains(priority)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc hồ sơ không hợp lệ.");
+        }
+    }
+
+    private void validateBookingQueueFilter(AdManagerDtos.BookingQueueFilter filter) {
+        String status = filter.status() == null ? "" : filter.status();
+        if (filter.page() < 0 || filter.size() < 1 || filter.size() > 100
+                || (filter.q() != null && filter.q().length() > 150)
+                || !List.of("", "PENDING_REVIEW").contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc booking không hợp lệ.");
         }
     }
 

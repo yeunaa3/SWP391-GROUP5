@@ -37,6 +37,17 @@ public class AdManagerPartnershipController {
         return service.queue(new AdManagerDtos.QueueFilter(q, status, priority, from, to, page, size));
     }
 
+    @GetMapping("/bookings")
+    public AdManagerDtos.BookingQueuePage bookingQueue(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return service.bookingQueue(new AdManagerDtos.BookingQueueFilter(q, status, from, to, page, size));
+    }
+
     @GetMapping("/partnerships/{companyId}")
     public AdManagerDtos.PartnershipDetail detail(@PathVariable long companyId) {
         return service.detail(companyId);

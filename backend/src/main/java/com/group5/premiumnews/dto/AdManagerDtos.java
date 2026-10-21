@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,6 +32,20 @@ public final class AdManagerDtos {
     public record QueueItem(long companyId, String applicationCode, String companyName,
             String taxCode, int applicationVersion, Instant submittedAt, String status,
             String priority, long documentCount) {}
+
+    public record BookingQueuePage(List<BookingQueueItem> items, long total, int page, int size, int totalPages) {}
+
+    public record BookingQueueItem(long contractId, String contractCode, String contractName,
+            String companyName, String slotName, Instant startAt, Instant endAt,
+            BigDecimal totalValue, String currency, String status, Instant submittedAt) {}
+
+    public record BookingQueueFilter(
+            @Size(max = 150) String q,
+            @Pattern(regexp = "|PENDING_REVIEW") String status,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @Min(0) int page,
+            @Min(1) @Max(100) int size) {}
 
     public record PartnershipDetail(
             CompanySnapshot company,

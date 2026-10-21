@@ -21,6 +21,14 @@ export function getPartnershipQueue(filters, signal) {
     return apiRequest(`/api/ad-manager/partnerships?${query}`, { signal });
 }
 
+export function getBookingQueue(filters, signal) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== "" && value !== null && value !== undefined) query.set(key, value);
+    }
+    return apiRequest("/api/ad-manager/bookings?" + query.toString(), { signal });
+}
+
 export function getPartnership(companyId, signal) {
     return apiRequest(`/api/ad-manager/partnerships/${encodeURIComponent(companyId)}`, { signal });
 }
