@@ -172,7 +172,7 @@ export default function AutoPaymentTimerCard({
   const displayBankName = qrData?.bankCode || paymentConfig.bankName;
   const displayAccountName = qrData?.accountName || paymentConfig.accountName;
   const displayAccountNumber = qrData?.accountNumber || paymentConfig.accountNumber;
-  const displayMemo = qrData?.memo || (type === "PREMIUM" ? `SUB${referenceId}` : `CTR${referenceId}`);
+  const displayMemo = qrData?.memo || (type === "PREMIUM" ? `DANG KY GOI ${referenceId}` : `HOP DONG ${referenceId}`);
   const displayAmount = qrData?.amount != null ? Number(qrData.amount) : Number(amount || 0);
 
   const formatCurrency = (val) =>

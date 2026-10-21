@@ -82,13 +82,13 @@ public class PayOSService {
             throw new IllegalStateException("PayOS chưa được cấu hình Client ID, API Key hoặc Checksum Key.");
         }
 
-        // Giới hạn description tối đa 9 ký tự viết liền không dấu theo quy định chuẩn của PayOS đối với tài khoản liên kết MBBank
-        String cleanDescription = description != null ? description.replaceAll("[^a-zA-Z0-9]", "").trim() : "SUB";
+        // Giới hạn description tối đa 25 ký tự theo quy định chuẩn của PayOS
+        String cleanDescription = description != null ? description.trim() : "DANG KY GOI";
         if (cleanDescription.isEmpty()) {
-            cleanDescription = "SUB" + (orderCode % 10000);
+            cleanDescription = "DANG KY GOI";
         }
-        if (cleanDescription.length() > 9) {
-            cleanDescription = cleanDescription.substring(0, 9);
+        if (cleanDescription.length() > 25) {
+            cleanDescription = cleanDescription.substring(0, 25);
         }
 
         // Chuỗi ký theo chuẩn PayOS: amount=${amount}&cancelUrl=${cancelUrl}&description=${description}&orderCode=${orderCode}&returnUrl=${returnUrl}

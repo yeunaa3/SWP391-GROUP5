@@ -107,7 +107,7 @@ public class PaymentService {
             var req = requests.get(0);
             BigDecimal amount = (BigDecimal) req.get("amount");
             String pkgName = (String) req.get("package_name");
-            String memo = "SUB" + referenceId;
+            String memo = "DANG KY GOI " + referenceId;
             long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
 
             // Lưu mapping orderCode để phục vụ tra cứu Webhook và Auto-Polling
@@ -115,8 +115,9 @@ public class PaymentService {
             referenceToOrdersMap.computeIfAbsent("PREMIUM:" + referenceId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
+            String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
-                    bankCode, accountNumber, amount.toBigInteger().toString(), memo, cleanAccountName);
+                    bankCode, accountNumber, amount.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
             String checkoutUrl = null;
             boolean payOsActive = false;
@@ -166,7 +167,7 @@ public class PaymentService {
             var ct = contracts.get(0);
             BigDecimal totalValue = (BigDecimal) ct.get("total_value");
             String code = (String) ct.get("contract_code");
-            String memo = "CTR" + referenceId;
+            String memo = "HOP DONG " + referenceId;
             long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
 
             // Lưu mapping orderCode
@@ -174,8 +175,9 @@ public class PaymentService {
             referenceToOrdersMap.computeIfAbsent("CONTRACT:" + referenceId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
+            String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
-                    bankCode, accountNumber, totalValue.toBigInteger().toString(), memo, cleanAccountName);
+                    bankCode, accountNumber, totalValue.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
             String checkoutUrl = null;
             boolean payOsActive = false;
@@ -326,8 +328,8 @@ public class PaymentService {
             }
         }
 
-        // 2. Khớp dự phòng bằng Regex Description (chấp nhận cả SUB/PREMIUM và CTR/CONTRACT bất kể khoảng trắng)
-        java.util.regex.Pattern premiumPattern = java.util.regex.Pattern.compile("(?:THE\\s*PLUSE\\s+)?(?:SUB|PREMIUM)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        // 2. Khớp dự phòng bằng Regex Description (chấp nhận DANG KY GOI, SUB, PREMIUM và HOP DONG, CTR, CONTRACT)
+        java.util.regex.Pattern premiumPattern = java.util.regex.Pattern.compile("(?:DANG\\s*KY\\s*GOI|DK\\s*GOI|THE\\s*PLUSE|SUB|PREMIUM)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
         java.util.regex.Matcher mSub = premiumPattern.matcher(desc);
         if (mSub.find()) {
             try {
@@ -340,7 +342,7 @@ public class PaymentService {
             }
         }
 
-        java.util.regex.Pattern contractPattern = java.util.regex.Pattern.compile("(?:THE\\s*PLUSE\\s+)?(?:CTR|CONTRACT)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Pattern contractPattern = java.util.regex.Pattern.compile("(?:HOP\\s*DONG|HD|THE\\s*PLUSE|CTR|CONTRACT)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
         java.util.regex.Matcher mCtr = contractPattern.matcher(desc);
         if (mCtr.find()) {
             try {
@@ -474,23 +476,25 @@ public class PaymentService {
                 VALUES (?, 'Thanh toán Premium thành công', ?, 'PREMIUM', 'SUBSCRIPTION', ?, 'SENT', CURRENT_TIMESTAMP(6))
                 """, targetUserId, "Gói " + packageName + " đã kích hoạt thành công. Thời hạn sử dụng đến " + end.toString().substring(0, 10), String.valueOf(subscriptionId));
 
-        // 6. Gửi EMAIL BIÊN LAI THẬT (Nếu có email)
+        // 6. Gửi EMAIL BIÊN LAI THẬT (Chạy bất đồng bộ ngầm, tuyệt đối không làm đơ hay chậm giao dịch trên web)
         if (email != null && !email.isBlank() && email.contains("@")) {
-            try {
-                Map<String, Object> emailData = Map.of(
-                        "title", "XÁC NHẬN KÍCH HOẠT GÓI PREMIUM",
-                        "customerName", customerName,
-                        "itemName", packageName,
-                        "itemType", "Thuê bao Premium Đọc báo Không giới hạn",
-                        "txnRef", txnRef,
-                        "amount", String.format("%,d VND", amount.longValue()),
-                        "effectiveDuration", durationDays + " ngày (Đến " + end.toString().substring(0, 10) + ")",
-                        "paymentGateway", "PayOS VietQR Napas (Tự động)"
-                );
-                emailService.sendReceiptEmail(email, "The Pluse - Biên lai thanh toán gói " + packageName, emailData);
-            } catch (Exception emailEx) {
-                log.warn("Không thể gửi email biên lai cho Premium requestId={}: {}", requestId, emailEx.getMessage());
-            }
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    Map<String, Object> emailData = Map.of(
+                            "title", "XÁC NHẬN KÍCH HOẠT GÓI PREMIUM",
+                            "customerName", customerName,
+                            "itemName", packageName,
+                            "itemType", "Thuê bao Premium Đọc báo Không giới hạn",
+                            "txnRef", txnRef,
+                            "amount", String.format("%,d VND", amount.longValue()),
+                            "effectiveDuration", durationDays + " ngày (Đến " + end.toString().substring(0, 10) + ")",
+                            "paymentGateway", "PayOS VietQR Napas (Tự động)"
+                    );
+                    emailService.sendReceiptEmail(email, "The Pluse - Biên lai thanh toán gói " + packageName, emailData);
+                } catch (Exception emailEx) {
+                    log.warn("Không thể gửi email biên lai cho Premium requestId={}: {}", requestId, emailEx.getMessage());
+                }
+            });
         }
 
         return Map.of(
@@ -564,21 +568,23 @@ public class PaymentService {
 
         // 4. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
         if (companyEmail != null && !companyEmail.isBlank() && companyEmail.contains("@")) {
-            try {
-                Map<String, Object> emailData = Map.of(
-                        "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
-                        "customerName", contactName + " (" + companyName + ")",
-                        "itemName", contractName + " (" + contractCode + ")",
-                        "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
-                        "txnRef", txnRef,
-                        "amount", String.format("%,d VND", totalValue.longValue()),
-                        "effectiveDuration", "Hợp đồng đã có hiệu lực (ACTIVE)",
-                        "paymentGateway", "PayOS VietQR Napas (Tự động)"
-                );
-                emailService.sendReceiptEmail(companyEmail, "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode, emailData);
-            } catch (Exception ex) {
-                log.warn("Không thể gửi email biên lai cho hợp đồng contractId={}: {}", contractId, ex.getMessage());
-            }
+            java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    Map<String, Object> emailData = Map.of(
+                            "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
+                            "customerName", contactName + " (" + companyName + ")",
+                            "itemName", contractName + " (" + contractCode + ")",
+                            "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
+                            "txnRef", txnRef,
+                            "amount", String.format("%,d VND", totalValue.longValue()),
+                            "effectiveDuration", "Hợp đồng đã có hiệu lực (ACTIVE)",
+                            "paymentGateway", "PayOS VietQR Napas (Tự động)"
+                    );
+                    emailService.sendReceiptEmail(companyEmail, "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode, emailData);
+                } catch (Exception ex) {
+                    log.warn("Không thể gửi email biên lai cho hợp đồng contractId={}: {}", contractId, ex.getMessage());
+                }
+            });
         }
 
         return Map.of(
