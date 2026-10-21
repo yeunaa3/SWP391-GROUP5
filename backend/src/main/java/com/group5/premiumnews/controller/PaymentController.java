@@ -74,7 +74,9 @@ public class PaymentController {
      * [API-04] Endpoint kiểm tra tình trạng kết nối PayOS trực tiếp (Dùng để chẩn đoán cấu hình)
      */
     @GetMapping("/payos-check")
-    public Map<String, Object> checkPayosConfig() {
+    public Map<String, Object> checkPayosConfig(
+            @RequestParam(required = false) Long orderCode,
+            @RequestParam(required = false) Long confirm) {
         boolean configured = paymentService.isPayOsConfigured();
         java.util.Map<String, Object> res = new java.util.HashMap<>();
         res.put("payOsConfigured", configured);
@@ -82,7 +84,29 @@ public class PaymentController {
         res.put("accountNumber", paymentService.getAccountNumber());
         res.put("accountName", paymentService.getAccountName());
 
-        if (configured) {
+        if (orderCode != null) {
+            try {
+                String payOsStatus = paymentService.getPayOSService().getPaymentStatus(orderCode);
+                res.put("queriedOrderCode", orderCode);
+                res.put("payOsStatus", payOsStatus);
+            } catch (Exception ex) {
+                res.put("orderCodeQueryError", ex.getMessage());
+            }
+        }
+
+        if (confirm != null) {
+            try {
+                var confirmRes = paymentService.confirmPremiumDirect(confirm);
+                res.put("confirmResult", confirmRes);
+            } catch (Exception ex) {
+                res.put("confirmError", ex.getMessage());
+                java.io.StringWriter sw = new java.io.StringWriter();
+                ex.printStackTrace(new java.io.PrintWriter(sw));
+                res.put("confirmStackTrace", sw.toString());
+            }
+        }
+
+        if (configured && orderCode == null && confirm == null) {
             try {
                 long testOrderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
                 String testDescription = "TEST" + (testOrderCode % 10000);

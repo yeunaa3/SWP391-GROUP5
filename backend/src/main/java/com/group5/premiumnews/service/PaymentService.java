@@ -375,6 +375,10 @@ public class PaymentService {
         }
     }
 
+    public Map<String, Object> confirmPremiumDirect(long requestId) {
+        return confirmPremium(requestId, null);
+    }
+
     private Map<String, Object> confirmPremium(long requestId, AuthenticatedUserPrincipal user) {
         var requests = jdbc.queryForList("""
                 SELECT r.request_id, r.user_id, r.package_id, r.package_code, r.package_name,
