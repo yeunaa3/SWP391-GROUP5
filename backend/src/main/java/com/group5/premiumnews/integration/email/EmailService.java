@@ -8,11 +8,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
-public class EmailService implements EmailGateway {
+public class EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailService.class);
 
@@ -29,7 +28,6 @@ public class EmailService implements EmailGateway {
         this.mailUsername = mailUsername;
     }
 
-    @Override
     public void send(String recipient, String templateCode, Map<String, Object> variables) {
         sendReceiptEmail(recipient, String.valueOf(variables.getOrDefault("subject", "The Pluse - Thông báo thanh toán thành công")), variables);
     }
@@ -38,7 +36,6 @@ public class EmailService implements EmailGateway {
      * Gửi email biên lai/hóa đơn thanh toán tự động đến người dùng.
      * Chạy an toàn: nếu người dùng không có email hoặc chưa cấu hình SMTP thì ghi log, không làm fail transaction.
      */
-    @Async
     public void sendReceiptEmail(String recipient, String subject, Map<String, Object> data) {
         if (recipient == null || recipient.isBlank() || !recipient.contains("@")) {
             log.info("[EmailService] Bỏ qua gửi email: Người dùng không có địa chỉ email hợp lệ (recipient: '{}')", recipient);
