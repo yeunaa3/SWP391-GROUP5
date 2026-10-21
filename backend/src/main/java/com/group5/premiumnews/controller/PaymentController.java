@@ -45,11 +45,29 @@ public class PaymentController {
     }
 
     /**
+     * [API-03] Kiểm tra trạng thái thanh toán tự động (Auto-Polling ngầm trên Frontend)
+     */
+    @GetMapping("/status")
+    public Map<String, Object> checkStatus(
+            @RequestParam String type,
+            @RequestParam long id,
+            @RequestParam(required = false) Long orderCode) {
+        return paymentService.checkStatus(type, id, orderCode);
+    }
+
+    /**
      * Webhook công khai nhận callback từ cổng thanh toán bên ngoài (như PayOS / SePay)
      */
     @PostMapping("/webhook")
     public Map<String, Object> webhook(@RequestBody Map<String, Object> payload) {
-        // Hỗ trợ webhook IPN từ bên thứ ba nếu có
-        return Map.of("status", "RECEIVED", "success", true);
+        return paymentService.processPayOSWebhook(payload);
+    }
+
+    /**
+     * Webhook chính thức của PayOS
+     */
+    @PostMapping("/payos/webhook")
+    public Map<String, Object> payosWebhook(@RequestBody Map<String, Object> payload) {
+        return paymentService.processPayOSWebhook(payload);
     }
 }

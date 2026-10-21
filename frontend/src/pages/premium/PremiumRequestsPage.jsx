@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getMyPremiumRequests } from "../../services/premiumService.js";
-import { autoConfirmPayment } from "../../services/paymentService.js";
+import { autoConfirmPayment, checkPaymentStatus } from "../../services/paymentService.js";
 import { paymentConfig } from "../../data/paymentConfig.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import PremiumMembership from "../../components/PremiumMembership.jsx";
@@ -42,6 +42,30 @@ export default function PremiumRequestsPage() {
     }
   }
   useEffect(() => { load(); }, []);
+
+  // Lắng nghe tự động (Auto-Polling): Kiểm tra trạng thái thanh toán từ PayOS/Ngân hàng mỗi 2.5s
+  useEffect(() => {
+    const pendingRow = rows.find(r => r.status === "PENDING");
+    if (!pendingRow) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await checkPaymentStatus("PREMIUM", pendingRow.id);
+        if (res && res.paid) {
+          clearInterval(timer);
+          setAutoSuccessMsg(t(
+            "⚡ Hệ thống đã nhận được tiền từ PayOS/Ngân hàng! Gói cước đã được tự động kích hoạt thành công.",
+            "⚡ Payment received from PayOS! Your subscription has been automatically activated."
+          ));
+          await load();
+        }
+      } catch (err) {
+        // bỏ qua lỗi mạng chập chờn khi poll
+      }
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [rows]);
   const date = value => value ? new Date(value).toLocaleString(language === "vi" ? "vi-VN" : "en-GB") : "—";
   return <main className="page-content premium-page"><PremiumMembership /><header className="premium-checkout-heading"><span className="premium-kicker">THE PLUSE PREMIUM</span><h1>{t("Đăng ký và trạng thái duyệt", "Requests and approval status")}</h1>
     <p>{t("Yêu cầu chờ duyệt chưa mở quyền. Cập nhật sau khi admin xử lý; quyền đọc bài được kiểm tra trực tiếp từ DB.", "Pending requests do not grant access. Refresh after review; article access is checked against the database.")}</p><button className="secondary-button" onClick={load} disabled={loading}>{t("Cập nhật trạng thái", "Refresh status")}</button></header>
@@ -84,6 +108,10 @@ export default function PremiumRequestsPage() {
               <p>{t("Nội dung chuyển khoản", "Transfer Memo / Reference")}: <strong className="highlight-text">{transferMemo}</strong></p>
               <p>{t("Số tiền thanh toán", "Amount")}: <strong className="highlight-text">{money(row.amount, row.currency)}</strong></p>
               <p className="premium-hint">{t("⚡ Mã QR đã tự động điền sẵn số tiền và nội dung chuyển khoản. Khi quét bằng ứng dụng ngân hàng bất kỳ, bạn chỉ cần nhập mã OTP để xác nhận thanh toán.", "⚡ The QR code automatically includes the exact amount and description. Just scan with any mobile banking app and confirm with OTP.")}</p>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f0fdf4", color: "#16a34a", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: "600", border: "1px solid #bbf7d0", marginBlock: "10px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                <span>{t("Hệ thống đang tự động lắng nghe giao dịch chuyển khoản (không cần bấm nút)...", "Automatically listening for payment confirmation...")}</span>
+              </div>
               <div style={{ marginTop: "16px" }}>
                 <button
                   type="button"

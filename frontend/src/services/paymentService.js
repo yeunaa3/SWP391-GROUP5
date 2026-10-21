@@ -19,3 +19,16 @@ export const autoConfirmPayment = (payload) =>
     method: "POST",
     body: JSON.stringify(payload),
   });
+
+/**
+ * Kiểm tra trạng thái thanh toán tự động (Auto-Polling ngầm mỗi 2-3s)
+ * @param {"PREMIUM" | "CONTRACT"} type
+ * @param {number} id referenceId (subscriptionId hoặc contractId)
+ * @param {number} [orderCode] mã orderCode của PayOS nếu có
+ */
+export const checkPaymentStatus = (type, id, orderCode) =>
+  apiRequest(
+    `/api/payment/status?type=${type}&id=${id}${
+      orderCode ? `&orderCode=${orderCode}` : ""
+    }`
+  );

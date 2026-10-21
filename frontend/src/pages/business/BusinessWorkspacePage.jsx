@@ -9,7 +9,7 @@ import { apiRequest } from "../../services/apiClient.js";
 import { getAdvertisingCatalog } from "../../services/contentService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import { paymentConfig } from "../../data/paymentConfig.js";
-import { autoConfirmPayment } from "../../services/paymentService.js";
+import { autoConfirmPayment, checkPaymentStatus } from "../../services/paymentService.js";
 import UiIcon from "../../components/UiIcon.jsx";
 import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
@@ -291,6 +291,27 @@ export default function BusinessWorkspacePage({ screen }) {
       alive = false;
     };
   }, [screen.id, params.campaignId, params.contractId]);
+
+  // Lắng nghe tự động thanh toán hợp đồng từ PayOS/Ngân hàng mỗi 2.5s
+  useEffect(() => {
+    if (!contract || contract.payment_status === "PAID" || !["BUS-08", "BUS-09", "BUS-10", "BUS-12"].includes(screen.id)) {
+      return;
+    }
+    const timer = setInterval(async () => {
+      try {
+        const res = await checkPaymentStatus("CONTRACT", contract.contract_id);
+        if (res && res.paid) {
+          clearInterval(timer);
+          setMessage("⚡ Hệ thống đã nhận được thanh toán hợp đồng từ PayOS/Ngân hàng! Hợp đồng đã kích hoạt có hiệu lực.");
+          await refresh();
+        }
+      } catch (err) {
+        // ignore polling glitch
+      }
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [contract?.contract_id, contract?.payment_status, screen.id]);
 
   // Bao thao tác API: khóa gửi lặp, hiển thị lỗi/thành công, đồng bộ workspace rồi gọi callback nếu có.
   async function action(task, success, after) {
@@ -1500,6 +1521,10 @@ export default function BusinessWorkspacePage({ screen }) {
                             kích hoạt hợp đồng và gửi hóa đơn điện tử về email
                             doanh nghiệp.
                           </p>
+                          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f0fdf4", color: "#16a34a", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: "600", border: "1px solid #bbf7d0", marginBlock: "10px" }}>
+                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+                            <span>Hệ thống đang tự động lắng nghe giao dịch chuyển khoản từ PayOS / Ngân hàng (không cần bấm nút)...</span>
+                          </div>
                           <button
                             type="button"
                             disabled={busy}

@@ -55,6 +55,10 @@ app:
     bank-code: ${PAYMENT_BANK_CODE:MB}
     account-number: ${PAYMENT_ACCOUNT_NUMBER:08882626999}
     account-name: ${PAYMENT_ACCOUNT_NAME:BUI QUANG CUONG}
+  payos:
+    client-id: ${PAYOS_CLIENT_ID:}
+    api-key: ${PAYOS_API_KEY:}
+    checksum-key: ${PAYOS_CHECKSUM_KEY:}
   storage:
     provider: ${ASSET_STORAGE_PROVIDER:local}
   upload-directory: ${UPLOAD_DIRECTORY:storage/business}
