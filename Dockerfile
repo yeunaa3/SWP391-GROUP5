@@ -24,6 +24,6 @@ COPY deploy/certs/aiven-ca.pem /tmp/aiven-ca.pem
 RUN keytool -importcert -trustcacerts -noprompt -alias aiven-mysql -file /tmp/aiven-ca.pem -cacerts -storepass changeit
 USER pulse
 ENV SPRING_PROFILES_ACTIVE=prod,render
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=65.0"
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=55.0 -XX:+UseSerialGC -XX:MaxMetaspaceSize=128m -Xss512k -XX:+ExitOnOutOfMemoryError"
 EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

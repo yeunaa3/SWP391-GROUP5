@@ -1,6 +1,12 @@
 # Used together with prod; local profile remains unchanged.
 server:
   port: ${PORT:8080}
+  tomcat:
+    threads:
+      max: 20
+      min-spare: 4
+    max-connections: 100
+    accept-count: 50
 
 app:
   render-demo:
