@@ -8,8 +8,7 @@ import {
 import { apiRequest } from "../../services/apiClient.js";
 import { getAdvertisingCatalog } from "../../services/contentService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
-import { paymentConfig } from "../../data/paymentConfig.js";
-import { autoConfirmPayment, checkPaymentStatus } from "../../services/paymentService.js";
+import AutoPaymentTimerCard from "../../components/AutoPaymentTimerCard.jsx";
 import UiIcon from "../../components/UiIcon.jsx";
 import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
@@ -292,26 +291,6 @@ export default function BusinessWorkspacePage({ screen }) {
     };
   }, [screen.id, params.campaignId, params.contractId]);
 
-  // Lắng nghe tự động thanh toán hợp đồng từ PayOS/Ngân hàng mỗi 2.5s
-  useEffect(() => {
-    if (!contract || contract.payment_status === "PAID" || !["BUS-08", "BUS-09", "BUS-10", "BUS-12"].includes(screen.id)) {
-      return;
-    }
-    const timer = setInterval(async () => {
-      try {
-        const res = await checkPaymentStatus("CONTRACT", contract.contract_id);
-        if (res && res.paid) {
-          clearInterval(timer);
-          setMessage("⚡ Hệ thống đã nhận được thanh toán hợp đồng từ PayOS/Ngân hàng! Hợp đồng đã kích hoạt có hiệu lực.");
-          await refresh();
-        }
-      } catch (err) {
-        // ignore polling glitch
-      }
-    }, 2500);
-
-    return () => clearInterval(timer);
-  }, [contract?.contract_id, contract?.payment_status, screen.id]);
 
   // Bao thao tác API: khóa gửi lặp, hiển thị lỗi/thành công, đồng bộ workspace rồi gọi callback nếu có.
   async function action(task, success, after) {
@@ -1432,130 +1411,18 @@ export default function BusinessWorkspacePage({ screen }) {
                       </Link>
                     </>
                   ) : (
-                    <div
-                      style={{
-                        background: "#f8fafc",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "12px",
-                        padding: "20px",
-                        marginTop: "16px",
+                    <AutoPaymentTimerCard
+                      type="CONTRACT"
+                      referenceId={contract.contract_id}
+                      amount={contract.total_value}
+                      itemName={`Hợp đồng ${contract.contract_code}`}
+                      onSuccess={async () => {
+                        setMessage(
+                          "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp."
+                        );
+                        await refresh();
                       }}
-                    >
-                      <h3
-                        style={{
-                          margin: "0 0 12px 0",
-                          fontSize: "16px",
-                          fontWeight: "700",
-                        }}
-                      >
-                        Thanh toán hợp đồng tự động qua VietQR
-                      </h3>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "20px",
-                          alignItems: "flex-start",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <img
-                          src={paymentConfig.getDynamicQrUrl(
-                            contract.total_value,
-                            `THEPLUSE CTR ${contract.contract_id}`,
-                          )}
-                          onError={(e) => {
-                            e.currentTarget.src = paymentConfig.qrImage;
-                          }}
-                          alt="VietQR Hợp đồng"
-                          style={{
-                            width: "180px",
-                            height: "180px",
-                            borderRadius: "8px",
-                            border: "1px solid #cbd5e1",
-                            background: "#fff",
-                            padding: "4px",
-                          }}
-                        />
-                        <div style={{ flex: 1, minWidth: "260px" }}>
-                          <p style={{ margin: "0 0 6px 0" }}>
-                            Ngân hàng: <strong>{paymentConfig.bankName}</strong>
-                          </p>
-                          <p style={{ margin: "0 0 6px 0" }}>
-                            Chủ tài khoản:{" "}
-                            <strong>{paymentConfig.accountName}</strong>
-                          </p>
-                          <p style={{ margin: "0 0 6px 0" }}>
-                            Số tài khoản:{" "}
-                            <strong>{paymentConfig.accountNumber}</strong>
-                          </p>
-                          <p style={{ margin: "0 0 6px 0" }}>
-                            Số tiền:{" "}
-                            <strong
-                              style={{ color: "#047857", fontSize: "16px" }}
-                            >
-                              {currency(contract.total_value)}
-                            </strong>
-                          </p>
-                          <p style={{ margin: "0 0 12px 0" }}>
-                            Nội dung chuyển khoản:{" "}
-                            <strong
-                              style={{
-                                color: "#4f46e5",
-                                background: "#eef2ff",
-                                padding: "2px 8px",
-                                borderRadius: "4px",
-                              }}
-                            >
-                              THEPLUSE CTR {contract.contract_id}
-                            </strong>
-                          </p>
-                          <p
-                            style={{
-                              fontSize: "13px",
-                              color: "#64748b",
-                              margin: "0 0 16px 0",
-                            }}
-                          >
-                            ⚡ Quét mã bằng app ngân hàng bất kỳ. Sau khi chuyển
-                            khoản, bấm nút xác nhận dưới đây để hệ thống tự động
-                            kích hoạt hợp đồng và gửi hóa đơn điện tử về email
-                            doanh nghiệp.
-                          </p>
-                          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", background: "#f0fdf4", color: "#16a34a", padding: "6px 14px", borderRadius: "20px", fontSize: "13px", fontWeight: "600", border: "1px solid #bbf7d0", marginBlock: "10px" }}>
-                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                            <span>Hệ thống đang tự động lắng nghe giao dịch chuyển khoản từ PayOS / Ngân hàng (không cần bấm nút)...</span>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() =>
-                              action(
-                                () =>
-                                  autoConfirmPayment({
-                                    type: "CONTRACT",
-                                    contractId: contract.contract_id,
-                                  }),
-                                "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp.",
-                              )
-                            }
-                            style={{
-                              background:
-                                "linear-gradient(135deg, #10b981 0%, #059669 100%)",
-                              color: "#ffffff",
-                              border: "none",
-                              padding: "10px 20px",
-                              borderRadius: "8px",
-                              fontWeight: "700",
-                              cursor: busy ? "not-allowed" : "pointer",
-                            }}
-                          >
-                            {busy
-                              ? "Đang xử lý kích hoạt…"
-                              : "⚡ Xác nhận đã thanh toán VietQR (Tự động kích hoạt hợp đồng)"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    />
                   )}
                 </>
               ) : (

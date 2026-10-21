@@ -29,6 +29,10 @@ public class PaymentService {
     private final EmailService emailService;
     private final PayOSService payOSService;
 
+    public record OrderMapping(String type, long referenceId, long orderCode, Instant createdAt) {}
+    private final Map<Long, OrderMapping> orderCodeMap = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, Long> referenceToOrderMap = new java.util.concurrent.ConcurrentHashMap<>();
+
     @Value("${app.payment.bank-code:MB}")
     private String bankCode;
 
@@ -61,10 +65,10 @@ public class PaymentService {
 
     /**
      * Sinh thông tin VietQR thanh toán tự động cho gói Premium hoặc hợp đồng quảng cáo B2B
-     * - Tự động tạo link PayOS nếu cấu hình PayOS tồn tại.
-     * - Tự động fallback sang VietQR tiêu chuẩn nếu chưa cấu hình PayOS.
+     * - Tự động đăng ký Payment Request trên PayOS nếu cấu hình PayOS tồn tại.
+     * - Tự động tạo mã QR Napas VietQR chuẩn có hình ảnh scannable 24/7.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public PaymentQrResponse createQr(String type, long referenceId, AuthenticatedUserPrincipal user) {
         String paymentType = type.trim().toUpperCase();
 
@@ -83,15 +87,19 @@ public class PaymentService {
             BigDecimal amount = (BigDecimal) req.get("amount");
             String pkgName = (String) req.get("package_name");
             String memo = "THEPLUSE SUB " + referenceId;
+            long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
+
+            // Lưu mapping orderCode để phục vụ tra cứu Webhook và Auto-Polling
+            orderCodeMap.put(orderCode, new OrderMapping("PREMIUM", referenceId, orderCode, Instant.now()));
+            referenceToOrderMap.put("PREMIUM:" + referenceId, orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
             String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
                     bankCode, accountNumber, amount.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
-            // Tích hợp PayOS nếu có cấu hình
+            String checkoutUrl = null;
             if (payOSService.isConfigured()) {
-                long orderCode = System.currentTimeMillis() % 1000000000L;
                 try {
                     String userEmail = user != null && user.email() != null ? user.email() : "";
                     String userName = user != null ? user.getUsername() : "Reader";
@@ -102,18 +110,17 @@ public class PaymentService {
                             userName,
                             userEmail,
                             "",
-                            "http://localhost:5173/premium/payment-result",
-                            "http://localhost:5173/premium/packages"
+                            "https://swp391-group5-71mj.onrender.com/premium/payment-result",
+                            "https://swp391-group5-71mj.onrender.com/premium/packages"
                     );
-                    String qr = payOsData.qrCode() != null && !payOsData.qrCode().isBlank() ? payOsData.qrCode() : qrUrl;
-                    return new PaymentQrResponse(qr, payOsData.bin(), payOsData.accountNumber(), payOsData.accountName(),
-                            amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, payOsData.checkoutUrl(), orderCode);
+                    checkoutUrl = payOsData.checkoutUrl();
+                    log.info("PayOS link created for Premium ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
-                    log.warn("Lỗi tạo link PayOS cho Premium, fallback sang VietQR chuẩn: {}", ex.getMessage());
+                    log.warn("Lỗi tạo link PayOS cho Premium: {}, fallback sang VietQR chuẩn", ex.getMessage());
                 }
             }
 
-            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, null, null);
+            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, checkoutUrl, orderCode);
         } else if ("CONTRACT".equals(paymentType)) {
             var contracts = jdbc.queryForList("""
                     SELECT c.contract_id, c.contract_code, c.contract_name, c.total_value, c.currency, c.payment_status, c.company_id
@@ -129,15 +136,19 @@ public class PaymentService {
             BigDecimal totalValue = (BigDecimal) ct.get("total_value");
             String code = (String) ct.get("contract_code");
             String memo = "THEPLUSE CTR " + referenceId;
+            long orderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
+
+            // Lưu mapping orderCode
+            orderCodeMap.put(orderCode, new OrderMapping("CONTRACT", referenceId, orderCode, Instant.now()));
+            referenceToOrderMap.put("CONTRACT:" + referenceId, orderCode);
 
             String cleanAccountName = accountName.replace(" ", "%20");
             String cleanMemo = memo.replace(" ", "%20");
             String qrUrl = String.format("https://img.vietqr.io/image/%s-%s-compact2.png?amount=%s&addInfo=%s&accountName=%s",
                     bankCode, accountNumber, totalValue.toBigInteger().toString(), cleanMemo, cleanAccountName);
 
-            // Tích hợp PayOS nếu có cấu hình
+            String checkoutUrl = null;
             if (payOSService.isConfigured()) {
-                long orderCode = System.currentTimeMillis() % 1000000000L;
                 try {
                     String userEmail = user != null && user.email() != null ? user.email() : "";
                     String userName = user != null ? user.getUsername() : "Business";
@@ -148,18 +159,17 @@ public class PaymentService {
                             userName,
                             userEmail,
                             "",
-                            "http://localhost:5173/business/contracts/" + referenceId,
-                            "http://localhost:5173/business/contracts"
+                            "https://swp391-group5-71mj.onrender.com/business/contracts/" + referenceId,
+                            "https://swp391-group5-71mj.onrender.com/business/contracts"
                     );
-                    String qr = payOsData.qrCode() != null && !payOsData.qrCode().isBlank() ? payOsData.qrCode() : qrUrl;
-                    return new PaymentQrResponse(qr, payOsData.bin(), payOsData.accountNumber(), payOsData.accountName(),
-                            totalValue, "VND", memo, "CONTRACT", referenceId, "Hợp đồng " + code, payOsData.checkoutUrl(), orderCode);
+                    checkoutUrl = payOsData.checkoutUrl();
+                    log.info("PayOS link created for Contract ref={}, orderCode={}, checkoutUrl={}", referenceId, orderCode, checkoutUrl);
                 } catch (Exception ex) {
-                    log.warn("Lỗi tạo link PayOS cho Contract, fallback sang VietQR chuẩn: {}", ex.getMessage());
+                    log.warn("Lỗi tạo link PayOS cho Contract: {}, fallback sang VietQR chuẩn", ex.getMessage());
                 }
             }
 
-            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, totalValue, "VND", memo, "CONTRACT", referenceId, "Hợp đồng " + code, null, null);
+            return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, totalValue, "VND", memo, "CONTRACT", referenceId, "Hợp đồng " + code, checkoutUrl, orderCode);
         } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Loại thanh toán không hợp lệ (hỗ trợ PREMIUM hoặc CONTRACT).");
         }
@@ -171,6 +181,10 @@ public class PaymentService {
     @Transactional
     public Map<String, Object> checkStatus(String type, long referenceId, Long orderCode) {
         String paymentType = type.trim().toUpperCase();
+        Long effectiveOrderCode = orderCode;
+        if (effectiveOrderCode == null) {
+            effectiveOrderCode = referenceToOrderMap.get(paymentType + ":" + referenceId);
+        }
 
         if ("PREMIUM".equals(paymentType)) {
             var list = jdbc.queryForList("SELECT status FROM premium_requests WHERE request_id = ?", referenceId);
@@ -180,9 +194,9 @@ public class PaymentService {
             String st = String.valueOf(list.get(0).get("status"));
             boolean isPaid = "APPROVED".equalsIgnoreCase(st) || "ACTIVE".equalsIgnoreCase(st);
 
-            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, thử check PayOS trực tiếp
-            if (!isPaid && orderCode != null && payOSService.isConfigured()) {
-                String payOsStatus = payOSService.getPaymentStatus(orderCode);
+            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, query PayOS trực tiếp
+            if (!isPaid && effectiveOrderCode != null && payOSService.isConfigured()) {
+                String payOsStatus = payOSService.getPaymentStatus(effectiveOrderCode);
                 if ("PAID".equalsIgnoreCase(payOsStatus)) {
                     confirmPremium(referenceId, null);
                     return Map.of("paid", true, "status", "ACTIVE", "source", "PAYOS_POLL");
@@ -198,9 +212,9 @@ public class PaymentService {
             String pStatus = String.valueOf(list.get(0).get("payment_status"));
             boolean isPaid = "PAID".equalsIgnoreCase(pStatus);
 
-            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, thử check PayOS trực tiếp
-            if (!isPaid && orderCode != null && payOSService.isConfigured()) {
-                String payOsStatus = payOSService.getPaymentStatus(orderCode);
+            // Nếu DB chưa cập nhật mà có orderCode trên PayOS, query PayOS trực tiếp
+            if (!isPaid && effectiveOrderCode != null && payOSService.isConfigured()) {
+                String payOsStatus = payOSService.getPaymentStatus(effectiveOrderCode);
                 if ("PAID".equalsIgnoreCase(payOsStatus)) {
                     confirmContract(referenceId, null);
                     return Map.of("paid", true, "status", "PAID", "source", "PAYOS_POLL");
@@ -230,22 +244,52 @@ public class PaymentService {
 
         @SuppressWarnings("unchecked")
         Map<String, Object> data = (Map<String, Object>) dataObj;
-        String desc = String.valueOf(data.getOrDefault("description", "")).trim();
-        log.info("Nhận PayOS Webhook thành công: desc='{}', amount={}", desc, data.get("amount"));
-
-        if (desc.startsWith("THEPLUSE SUB ")) {
+        Long orderCode = null;
+        if (data.get("orderCode") != null) {
             try {
-                long reqId = Long.parseLong(desc.replace("THEPLUSE SUB ", "").trim());
+                orderCode = Long.parseLong(String.valueOf(data.get("orderCode")));
+            } catch (Exception ignored) {}
+        }
+
+        String desc = String.valueOf(data.getOrDefault("description", "")).toUpperCase().replaceAll("\\s+", " ").trim();
+        log.info("Nhận PayOS Webhook thành công: orderCode={}, desc='{}', amount={}", orderCode, desc, data.get("amount"));
+
+        // 1. Khớp theo orderCode đã lưu trong hệ thống
+        if (orderCode != null && orderCodeMap.containsKey(orderCode)) {
+            OrderMapping mapping = orderCodeMap.get(orderCode);
+            if ("PREMIUM".equalsIgnoreCase(mapping.type())) {
+                confirmPremium(mapping.referenceId(), null);
+                log.info("PayOS Webhook: Khớp theo orderCode {}, tự động kích hoạt Premium request_id={}", orderCode, mapping.referenceId());
+                return Map.of("code", "00", "desc", "success");
+            } else if ("CONTRACT".equalsIgnoreCase(mapping.type())) {
+                confirmContract(mapping.referenceId(), null);
+                log.info("PayOS Webhook: Khớp theo orderCode {}, tự động kích hoạt Contract contract_id={}", orderCode, mapping.referenceId());
+                return Map.of("code", "00", "desc", "success");
+            }
+        }
+
+        // 2. Khớp dự phòng bằng Regex Description (chấp nhận cả SUB/PREMIUM và CTR/CONTRACT bất kể khoảng trắng)
+        java.util.regex.Pattern premiumPattern = java.util.regex.Pattern.compile("(?:THE\\s*PLUSE\\s+)?(?:SUB|PREMIUM)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher mSub = premiumPattern.matcher(desc);
+        if (mSub.find()) {
+            try {
+                long reqId = Long.parseLong(mSub.group(1));
                 confirmPremium(reqId, null);
-                log.info("PayOS Webhook: Tự động kích hoạt gói Premium cho request_id={}", reqId);
+                log.info("PayOS Webhook: Khớp theo description regex, tự động kích hoạt Premium request_id={}", reqId);
+                return Map.of("code", "00", "desc", "success");
             } catch (Exception e) {
                 log.error("PayOS Webhook: Lỗi xử lý Premium request", e);
             }
-        } else if (desc.startsWith("THEPLUSE CTR ")) {
+        }
+
+        java.util.regex.Pattern contractPattern = java.util.regex.Pattern.compile("(?:THE\\s*PLUSE\\s+)?(?:CTR|CONTRACT)\\s*(\\d+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher mCtr = contractPattern.matcher(desc);
+        if (mCtr.find()) {
             try {
-                long ctrId = Long.parseLong(desc.replace("THEPLUSE CTR ", "").trim());
+                long ctrId = Long.parseLong(mCtr.group(1));
                 confirmContract(ctrId, null);
-                log.info("PayOS Webhook: Tự động kích hoạt hợp đồng cho contract_id={}", ctrId);
+                log.info("PayOS Webhook: Khớp theo description regex, tự động kích hoạt hợp đồng contract_id={}", ctrId);
+                return Map.of("code", "00", "desc", "success");
             } catch (Exception e) {
                 log.error("PayOS Webhook: Lỗi xử lý Contract", e);
             }

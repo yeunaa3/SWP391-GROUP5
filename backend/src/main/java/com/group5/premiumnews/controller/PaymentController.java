@@ -17,8 +17,23 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    public record QrRequest(String type, long referenceId) {}
-    public record ConfirmRequest(String type, long referenceId) {}
+    public record QrRequest(String type, Long referenceId, Long subscriptionId, Long contractId) {
+        public long resolvedReferenceId() {
+            if (referenceId != null && referenceId > 0) return referenceId;
+            if (subscriptionId != null && subscriptionId > 0) return subscriptionId;
+            if (contractId != null && contractId > 0) return contractId;
+            return 0L;
+        }
+    }
+
+    public record ConfirmRequest(String type, Long referenceId, Long subscriptionId, Long contractId) {
+        public long resolvedReferenceId() {
+            if (referenceId != null && referenceId > 0) return referenceId;
+            if (subscriptionId != null && subscriptionId > 0) return subscriptionId;
+            if (contractId != null && contractId > 0) return contractId;
+            return 0L;
+        }
+    }
 
     /**
      * [API-01] Sinh mã VietQR Napas thanh toán tự động cho gói Premium hoặc Hợp đồng B2B
@@ -28,7 +43,7 @@ public class PaymentController {
     public PaymentService.PaymentQrResponse createQr(
             @AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @RequestBody QrRequest request) {
-        return paymentService.createQr(request.type(), request.referenceId(), user);
+        return paymentService.createQr(request.type(), request.resolvedReferenceId(), user);
     }
 
     /**
@@ -41,7 +56,7 @@ public class PaymentController {
     public Map<String, Object> autoConfirm(
             @AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @RequestBody ConfirmRequest request) {
-        return paymentService.autoConfirm(request.type(), request.referenceId(), user);
+        return paymentService.autoConfirm(request.type(), request.resolvedReferenceId(), user);
     }
 
     /**
