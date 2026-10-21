@@ -248,6 +248,21 @@ public class AdvertisingDataService {
             Long.class, fingerprint, type
         );
         if (existingCount != null && existingCount > 0) {
+            if ("CLICK".equals(type)) {
+                // Ghi nhận click trùng lặp liên tục là KHÔNG HỢP LỆ (Anti-fraud click protection)
+                String dupFingerprint = hash(session + ":" + creativeId + ":" + System.currentTimeMillis());
+                jdbc.update("""
+                    INSERT INTO ad_events (event_type, campaign_id, creative_id, slot_id, request_fingerprint, is_valid, invalid_reason) 
+                    VALUES ('CLICK', ?, ?, ?, ?, FALSE, 'RAPID_CLICK_DUPLICATE')
+                    """, row.get("campaign_id"), creativeId, row.get("slot_id"), dupFingerprint);
+
+                jdbc.update("""
+                    INSERT INTO ad_metrics (creative_id, metric_date, impressions_count, clicks_count, invalid_clicks_count, delivery_errors_count) 
+                    VALUES (?, CURRENT_DATE, 0, 0, 1, 0) 
+                    ON DUPLICATE KEY UPDATE 
+                        invalid_clicks_count = invalid_clicks_count + 1
+                    """, creativeId);
+            }
             return url;
         }
 
