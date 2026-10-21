@@ -71,6 +71,45 @@ public class PaymentController {
     }
 
     /**
+     * [API-04] Endpoint kiểm tra tình trạng kết nối PayOS trực tiếp (Dùng để chẩn đoán cấu hình)
+     */
+    @GetMapping("/payos-check")
+    public Map<String, Object> checkPayosConfig() {
+        boolean configured = paymentService.isPayOsConfigured();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("payOsConfigured", configured);
+        res.put("bankCode", paymentService.getBankCode());
+        res.put("accountNumber", paymentService.getAccountNumber());
+        res.put("accountName", paymentService.getAccountName());
+
+        if (configured) {
+            try {
+                long testOrderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
+                var testLink = paymentService.getPayOSService().createPaymentLink(
+                        testOrderCode,
+                        10000,
+                        "TESTPAYOS " + testOrderCode,
+                        "Test Buyer",
+                        "test@thepluse.vn",
+                        "",
+                        "https://swp391-group5-71mj.onrender.com/",
+                        "https://swp391-group5-71mj.onrender.com/"
+                );
+                res.put("payOsConnection", "SUCCESS");
+                res.put("testOrderCode", testOrderCode);
+                res.put("testCheckoutUrl", testLink.checkoutUrl());
+            } catch (Exception e) {
+                res.put("payOsConnection", "FAILED");
+                res.put("error", e.getMessage());
+            }
+        } else {
+            res.put("payOsConnection", "NOT_CONFIGURED");
+            res.put("note", "Chưa nhận diện được biến môi trường PayOS trên Render (PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY)");
+        }
+        return res;
+    }
+
+    /**
      * Webhook công khai nhận callback từ cổng thanh toán bên ngoài (như PayOS / SePay)
      */
     @PostMapping("/webhook")

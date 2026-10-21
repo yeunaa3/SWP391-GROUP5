@@ -48,6 +48,26 @@ public class PaymentService {
         this.payOSService = payOSService;
     }
 
+    public boolean isPayOsConfigured() {
+        return payOSService.isConfigured();
+    }
+
+    public PayOSService getPayOSService() {
+        return payOSService;
+    }
+
+    public String getBankCode() {
+        return bankCode;
+    }
+
+    public String getAccountNumber() {
+        return accountNumber;
+    }
+
+    public String getAccountName() {
+        return accountName;
+    }
+
     public record PaymentQrResponse(
             String qrUrl,
             String bankCode,
