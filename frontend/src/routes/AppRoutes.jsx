@@ -21,6 +21,7 @@ import TransactionHistoryPage from "../pages/premium/TransactionHistoryPage.jsx"
 import ReceiptDetailPage from "../pages/premium/ReceiptDetailPage.jsx";
 import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
+import SubscriptionPackagesPage from "../pages/admin/SubscriptionPackagesPage.jsx";
 import NotificationsPage from "../pages/account/NotificationsPage.jsx";
 import ProfilePage from "../pages/account/ProfilePage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
@@ -60,6 +61,7 @@ const specialPages = {
   "PRE-06": <TransactionHistoryPage />,
   "PRE-07": <ReceiptDetailPage />,
   "CFG-03": <PremiumReviewPage />,
+  "CFG-05": <SubscriptionPackagesPage />,
   "CFG-01": <AdminDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,

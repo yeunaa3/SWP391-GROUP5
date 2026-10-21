@@ -1,4 +1,16 @@
 spring:
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   application:
     name: premium-news-backend
   servlet:
@@ -39,6 +51,10 @@ management:
         include: health,info
 
 app:
+  payment:
+    bank-code: ${PAYMENT_BANK_CODE:MB}
+    account-number: ${PAYMENT_ACCOUNT_NUMBER:08882626999}
+    account-name: ${PAYMENT_ACCOUNT_NAME:BUI QUANG CUONG}
   storage:
     provider: ${ASSET_STORAGE_PROVIDER:local}
   upload-directory: ${UPLOAD_DIRECTORY:storage/business}

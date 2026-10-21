@@ -95,7 +95,10 @@ export default function AdminDashboardPage() {
         {!data.recentRequests.length && <div className="admin-zero-state"><span>✓</span><h3>{t("Hàng chờ đang trống", "Your queue is clear")}</h3><p>{t("Đăng ký mới của độc giả sẽ xuất hiện tại đây.", "New reader requests will appear here.")}</p></div>}
         <div className="admin-request-list">{data.recentRequests.map(row => <Link to="/admin/subscription-packages" key={row.id}><span className="admin-avatar">{row.username.slice(0, 2).toUpperCase()}</span><div><strong>{row.username}</strong><small>PRE-{row.id} · {row.packageName}</small></div><div className="admin-request-value"><strong>{money(row.amount, row.currency)}</strong><small>{statuses.find(item => item[0] === row.status)?.[1] || row.status}</small></div><span aria-hidden="true">↗</span></Link>)}</div>
       </article><aside className="admin-panel admin-inventory"><span className="admin-eyebrow">CONTENT & BUSINESS</span><h2>{t("Những mảnh ghép đang vận hành", "Your publishing ecosystem")}</h2>{[[data.totals.articles, t("Bài đang xuất bản", "Published articles"), "/"], [data.totals.companies, t("Hồ sơ doanh nghiệp", "Company profiles"), "/ad-manager/partnerships"], [data.totals.activeCampaigns, t("Chiến dịch ACTIVE", "ACTIVE campaigns"), "/admin/ad-slots"]].map(([count, label, path], index) => <div className="admin-inventory-row" key={label}><span className="admin-inventory-number">0{index + 1}</span><div><strong>{Number(count).toLocaleString(locale)}</strong><p>{label}</p></div></div>)}
-        <Link to="/admin/settings" className="admin-settings-link">{t("Cài đặt & nhập tin RSS", "Settings & RSS import")} →</Link>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
+          <Link to="/admin/packages" className="admin-settings-link">{t("Quản lý gói cước & giá (CFG-05)", "Packages & Pricing (CFG-05)")} →</Link>
+          <Link to="/admin/settings" className="admin-settings-link">{t("Cài đặt & nhập tin RSS", "Settings & RSS import")} →</Link>
+        </div>
       </aside></section>
       <footer className="admin-overview-footer">{t("Cập nhật lúc", "Updated at")} {new Date(data.asOf).toLocaleString(locale)} · {t("Làm mới thủ công · Không phải giám sát thời gian thực", "Manual refresh · Not real-time monitoring")}</footer>
     </>}
