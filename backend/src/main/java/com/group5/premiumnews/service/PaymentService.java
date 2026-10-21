@@ -68,6 +68,18 @@ public class PaymentService {
         return accountName;
     }
 
+    public boolean isMailConfigured() {
+        return emailService.isConfigured();
+    }
+
+    public Map<String, Object> getMailDiagnostics() {
+        return emailService.getDiagnostics();
+    }
+
+    public String testSendEmail(String to) {
+        return emailService.sendTestEmail(to);
+    }
+
     public record PaymentQrResponse(
             String qrUrl,
             String bankCode,

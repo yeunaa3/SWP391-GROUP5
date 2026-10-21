@@ -52,10 +52,20 @@ public class EmailService implements EmailGateway {
         }
 
         try {
+            if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
+                if (impl.getUsername() != null) {
+                    impl.setUsername(impl.getUsername().trim());
+                }
+                if (impl.getPassword() != null) {
+                    impl.setPassword(impl.getPassword().trim().replaceAll("\\s+", ""));
+                }
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(fromEmail.isBlank() ? mailUsername : fromEmail, "The Pluse Media");
+            String effectiveFrom = (mailUsername != null && mailUsername.endsWith("@gmail.com")) ? mailUsername : (fromEmail.isBlank() ? mailUsername : fromEmail);
+            helper.setFrom(effectiveFrom, "The Pluse Media");
             helper.setTo(recipient);
             helper.setSubject(subject);
 
@@ -66,6 +76,63 @@ public class EmailService implements EmailGateway {
             log.info("[EmailService] Đã gửi email xác nhận thanh toán thành công tới: {}", recipient);
         } catch (Exception e) {
             log.error("[EmailService] Lỗi khi gửi email tới {}: {}", recipient, e.getMessage());
+        }
+    }
+
+    public boolean isConfigured() {
+        return mailUsername != null && !mailUsername.isBlank();
+    }
+
+    public Map<String, Object> getDiagnostics() {
+        Map<String, Object> diag = new java.util.HashMap<>();
+        diag.put("configured", isConfigured());
+        diag.put("username", mailUsername);
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
+            diag.put("host", impl.getHost());
+            diag.put("port", impl.getPort());
+            String pwd = impl.getPassword();
+            if (pwd != null) {
+                String cleanPwd = pwd.trim().replaceAll("\\s+", "");
+                diag.put("hasPassword", true);
+                diag.put("rawPasswordLength", pwd.length());
+                diag.put("cleanPasswordLength", cleanPwd.length());
+                diag.put("hasSpaces", pwd.contains(" "));
+            } else {
+                diag.put("hasPassword", false);
+            }
+        }
+        return diag;
+    }
+
+    public String sendTestEmail(String recipient) {
+        if (!isConfigured()) return "MAIL_USERNAME chưa được cấu hình";
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) return "JavaMailSender không khả dụng";
+        try {
+            if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
+                if (impl.getUsername() != null) {
+                    impl.setUsername(impl.getUsername().trim());
+                }
+                if (impl.getPassword() != null) {
+                    impl.setPassword(impl.getPassword().trim().replaceAll("\\s+", ""));
+                }
+            }
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            String effectiveFrom = (mailUsername != null && mailUsername.endsWith("@gmail.com")) ? mailUsername : (fromEmail.isBlank() ? mailUsername : fromEmail);
+            helper.setFrom(effectiveFrom, "The Pluse Media");
+            helper.setTo(recipient);
+            helper.setSubject("The Pluse - Thử nghiệm gửi email hệ thống");
+            helper.setText("<h3>Xin chào!</h3><p>Hệ thống gửi email The Pluse đang hoạt động chuẩn xác 100%.</p>", true);
+            mailSender.send(message);
+            return "SUCCESS";
+        } catch (Exception ex) {
+            String msg = ex.getMessage();
+            if (ex.getCause() != null) {
+                msg += " (Cause: " + ex.getCause().getMessage() + ")";
+            }
+            return "FAILED: " + msg;
         }
     }
 

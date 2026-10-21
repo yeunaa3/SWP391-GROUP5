@@ -76,13 +76,21 @@ public class PaymentController {
     @GetMapping("/payos-check")
     public Map<String, Object> checkPayosConfig(
             @RequestParam(required = false) Long orderCode,
-            @RequestParam(required = false) Long confirm) {
+            @RequestParam(required = false) Long confirm,
+            @RequestParam(required = false) String testEmail) {
         boolean configured = paymentService.isPayOsConfigured();
         java.util.Map<String, Object> res = new java.util.HashMap<>();
         res.put("payOsConfigured", configured);
+        res.put("mailConfigured", paymentService.isMailConfigured());
+        res.put("mailDiagnostics", paymentService.getMailDiagnostics());
         res.put("bankCode", paymentService.getBankCode());
         res.put("accountNumber", paymentService.getAccountNumber());
         res.put("accountName", paymentService.getAccountName());
+
+        if (testEmail != null && !testEmail.isBlank()) {
+            res.put("testEmailRecipient", testEmail);
+            res.put("testEmailStatus", paymentService.testSendEmail(testEmail));
+        }
 
         if (orderCode != null) {
             try {
