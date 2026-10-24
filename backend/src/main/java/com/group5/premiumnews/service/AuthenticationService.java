@@ -32,21 +32,21 @@ public class AuthenticationService {
     @Transactional
     // UC-05: tạo user và liên kết role trong một transaction; lỗi giữa chừng sẽ rollback.
     public AuthenticatedUserResponse register(RegistrationRequest request) {
-        if(!Boolean.TRUE.equals(request.acceptedTerms()) || !request.isPasswordConfirmed())
+        if (!Boolean.TRUE.equals(request.acceptedTerms()) || !request.isPasswordConfirmed()) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                "Cần đồng ý điều khoản và nhập mật khẩu xác nhận trùng khớp.");
+                    "Cần đồng ý điều khoản và nhập mật khẩu xác nhận trùng khớp.");
+        }
         String phone = validatePhone(request.phoneNumber());
         String username = request.username().trim();
         String email = request.email().trim().toLowerCase(Locale.ROOT);
-        boolean usernameTaken=userRepository.existsByUsernameIgnoreCase(username);
-        
+        boolean usernameTaken = userRepository.existsByUsernameIgnoreCase(username);
+
         // Kiểm tra duy nhất trên toàn bộ tài khoản, không chia riêng Reader và Business.
-        
-        boolean emailTaken=userRepository.existsByEmailIgnoreCase(email);
-        if(usernameTaken || emailTaken) {
-            String message=(usernameTaken?"Username đã được sử dụng. Vui lòng đặt username khác.":"")
-                +(usernameTaken && emailTaken?" ":"")
-                +(emailTaken?"Email đã được sử dụng. Vui lòng sử dụng email khác.":"");
+        boolean emailTaken = userRepository.existsByEmailIgnoreCase(email);
+        if (usernameTaken || emailTaken) {
+            String message = (usernameTaken ? "Username đã được sử dụng. Vui lòng đặt username khác." : "")
+                    + (usernameTaken && emailTaken ? " " : "")
+                    + (emailTaken ? "Email đã được sử dụng. Vui lòng sử dụng email khác." : "");
             throw new ConflictException(message);
         }
 
@@ -65,19 +65,26 @@ public class AuthenticationService {
         // Hàm tiện ích cũ; luồng register hiện tại không gọi hàm này.
         return value == null || value.isBlank() ? null : value.trim();
     }
+
     static String validatePhone(String value) {
         // Số tùy chọn có 8–15 chữ số. Đầu 0 dùng vùng VN; mã quốc gia khác do libphonenumber kiểm tra
         // độ dài/đầu số thực tế, sau đó chuẩn hóa E.164 để DB không lưu nhiều dạng khác nhau.
-        if(value==null || value.isEmpty()) return null;
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
         try {
-            if(!value.matches("[0-9]{8,15}")) throw new IllegalArgumentException();
-            var util=com.google.i18n.phonenumbers.PhoneNumberUtil.getInstance();
-            var number=util.parse(value.startsWith("0")?value:"+"+value,"VN");
-            if(!util.isValidNumber(number)) throw new IllegalArgumentException();
-            return util.format(number,com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat.E164);
-        } catch(Exception e) {
+            if (!value.matches("[0-9]{8,15}")) {
+                throw new IllegalArgumentException();
+            }
+            var util = com.google.i18n.phonenumbers.PhoneNumberUtil.getInstance();
+            var number = util.parse(value.startsWith("0") ? value : "+" + value, "VN");
+            if (!util.isValidNumber(number)) {
+                throw new IllegalArgumentException();
+            }
+            return util.format(number, com.google.i18n.phonenumbers.PhoneNumberUtil.PhoneNumberFormat.E164);
+        } catch (Exception e) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST,
-                "Số điện thoại không hợp lệ theo đầu số quốc gia. Dùng 0 cho Việt Nam hoặc mã quốc gia (84, 1, 44…).");
+                    "Số điện thoại không hợp lệ theo đầu số quốc gia. Dùng 0 cho Việt Nam hoặc mã quốc gia (84, 1, 44…).");
         }
     }
 }
