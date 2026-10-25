@@ -31,10 +31,10 @@ public record AuthenticatedUserPrincipal(
     }
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return authorities; }
-    @Override public String getPassword() { return password; }
+    @Override public String getPassword() { return password; }//Hash mật khẩu trong DB
     @Override public String getUsername() { return username; }
     @Override public boolean isAccountNonExpired() { return true; }
-    @Override public boolean isAccountNonLocked() { return enabled; }
+    @Override public boolean isAccountNonLocked() { return enabled; }//
     @Override public boolean isCredentialsNonExpired() { return true; }
-    @Override public boolean isEnabled() { return enabled; }
+    @Override public boolean isEnabled() { return enabled; }//User có trạng thái ACTIVE hay không
 }

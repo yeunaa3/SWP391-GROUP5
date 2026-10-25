@@ -40,9 +40,13 @@ public class BusinessWorkspaceController {
         return service.submitApplication(user);
     }
 
-    /** Mở hồ sơ mới sau từ chối; không xóa các phiên bản và quyết định đã có. */
+    /**
+     * Mở hồ sơ mới sau từ chối; không xóa các phiên bản và quyết định đã có.
+     */
     @PostMapping("/application/new")
-    public Object newApplication(@AuthenticationPrincipal AuthenticatedUserPrincipal user){return service.newApplication(user);}
+    public Object newApplication(@AuthenticationPrincipal AuthenticatedUserPrincipal user) {
+        return service.newApplication(user);
+    }
 
     @PostMapping("/bookings")
     public Map<String, Object> booking(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody BusinessRequests.Booking request) {
@@ -80,32 +84,73 @@ public class BusinessWorkspaceController {
     }
 
     @PostMapping("/campaigns/{id}/submit")
-    public Map<String, Object> submit(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id,@Valid @RequestBody BusinessRequests.CampaignSubmit request) {
-        return campaigns.submit(user, id,request.editVersion());
+    public Map<String, Object> submit(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id, @Valid @RequestBody BusinessRequests.CampaignSubmit request) {
+        return campaigns.submit(user, id, request.editVersion());
     }
 
-    /** Workspace dùng dữ liệu thật, catalog targeting, metrics và thông báo theo người đăng nhập. */
+    /**
+     * Workspace dùng dữ liệu thật, catalog targeting, metrics và thông báo theo
+     * người đăng nhập.
+     */
     @GetMapping("/campaign-workspace")
-    public Map<String,Object> campaignWorkspace(@AuthenticationPrincipal AuthenticatedUserPrincipal user) {return campaigns.workspace(user);}
-    /** Đọc detail/history/snapshot được kiểm tra company ownership ở service. */
+    public Map<String, Object> campaignWorkspace(@AuthenticationPrincipal AuthenticatedUserPrincipal user) {
+        return campaigns.workspace(user);
+    }
+
+    /**
+     * Đọc detail/history/snapshot được kiểm tra company ownership ở service.
+     */
     @GetMapping("/campaigns/{id}")
-    public Map<String,Object> detail(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id){return campaigns.detail(user,id);}
-    /** Checklist chỉ xem trước; submit luôn kiểm tra lại trong transaction. */
+    public Map<String, Object> detail(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        return campaigns.detail(user, id);
+    }
+
+    /**
+     * Checklist chỉ xem trước; submit luôn kiểm tra lại trong transaction.
+     */
     @GetMapping("/campaigns/{id}/validation")
-    public Object validation(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id){return campaigns.validation(user,id);}
-    /** Lưu Category/Tags/Geo/Device và chống stale tab bằng editVersion. */
+    public Object validation(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        return campaigns.validation(user, id);
+    }
+
+    /**
+     * Lưu Category/Tags/Geo/Device và chống stale tab bằng editVersion.
+     */
     @PutMapping("/campaigns/{id}/targeting")
-    public Object targeting(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id,@Valid @RequestBody BusinessRequests.Targeting request){return campaigns.saveTargeting(user,id,request);}
+    public Object targeting(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id, @Valid @RequestBody BusinessRequests.Targeting request) {
+        return campaigns.saveTargeting(user, id, request);
+    }
+
     @DeleteMapping("/campaigns/{id}")
-    /** Xóa mềm nháp chưa nộp; giữ lịch sử và quan hệ FK. */
-    public void remove(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id){campaigns.delete(user,id);}
+    /**
+     * Xóa mềm nháp chưa nộp; giữ lịch sử và quan hệ FK.
+     */
+    public void remove(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        campaigns.delete(user, id);
+    }
+
     @PostMapping("/campaigns/{id}/copy")
-    /** Nhân bản thành nháp, không sao chép quyền phê duyệt hoặc metrics. */
-    public Object copy(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id){return campaigns.copy(user,id,false);}
+    /**
+     * Nhân bản thành nháp, không sao chép quyền phê duyệt hoặc metrics.
+     */
+    public Object copy(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        return campaigns.copy(user, id, false);
+    }
+
     @PostMapping("/campaigns/{id}/change-request")
-    /** Tạo nháp thay thế cho campaign đã duyệt, chưa làm ngừng bản đang chạy. */
-    public Object change(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id){return campaigns.copy(user,id,true);}
+    /**
+     * Tạo nháp thay thế cho campaign đã duyệt, chưa làm ngừng bản đang chạy.
+     */
+    public Object change(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id) {
+        return campaigns.copy(user, id, true);
+    }
+
     @DeleteMapping("/campaigns/{id}/creatives/{creativeId}")
-    /** Bỏ liên kết creative nháp, giữ file nếu các phiên bản khác còn tham chiếu. */
-    public void removeCreative(@AuthenticationPrincipal AuthenticatedUserPrincipal user,@PathVariable long id,@PathVariable long creativeId){campaigns.removeCreative(user,id,creativeId);}
+    /**
+     * Bỏ liên kết creative nháp, giữ file nếu các phiên bản khác còn tham
+     * chiếu.
+     */
+    public void removeCreative(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id, @PathVariable long creativeId) {
+        campaigns.removeCreative(user, id, creativeId);
+    }
 }

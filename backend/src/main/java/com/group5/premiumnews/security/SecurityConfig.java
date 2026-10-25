@@ -29,35 +29,38 @@ public class SecurityConfig {
         csrfRepository.setCookiePath("/");
 
         return http
-                .cors(cors -> { })
+                .cors(cors -> {
+                })
                 .csrf(csrf -> csrf
-                        .csrfTokenRepository(csrfRepository)
-                        .ignoringRequestMatchers("/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**"))
+                .csrfTokenRepository(csrfRepository)
+                .ignoringRequestMatchers("/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**"))
                 // Phân biệt token hết hạn và thiếu quyền, giúp client không phải đoán mọi lỗi 403 là CSRF.
                 .exceptionHandling(errors -> errors
-                    .authenticationEntryPoint((request,response,error)->{
-                        response.setStatus(401);response.setContentType("application/json;charset=UTF-8");
-                        response.getWriter().write("{\"code\":\"AUTH_REQUIRED\",\"message\":\"Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\"}");
-                    })
-                    .accessDeniedHandler((request,response,error)->{
-                        boolean csrf=error instanceof org.springframework.security.web.csrf.CsrfException;
-                        response.setStatus(403);response.setContentType("application/json;charset=UTF-8");
-                        response.getWriter().write(csrf?"{\"code\":\"CSRF_INVALID\",\"message\":\"Phiên bảo mật đã thay đổi. Vui lòng thử lại.\"}":"{\"code\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
-                    }))
+                .authenticationEntryPoint((request, response, error) -> {
+                    response.setStatus(401);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"code\":\"AUTH_REQUIRED\",\"message\":\"Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.\"}");
+                })
+                .accessDeniedHandler((request, response, error) -> {
+                    boolean csrf = error instanceof org.springframework.security.web.csrf.CsrfException;
+                    response.setStatus(403);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write(csrf ? "{\"code\":\"CSRF_INVALID\",\"message\":\"Phiên bảo mật đã thay đổi. Vui lòng thử lại.\"}" : "{\"code\":\"FORBIDDEN\",\"message\":\"Bạn không có quyền thực hiện thao tác này.\"}");
+                }))
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/articles/**",
-                                "/api/payment/status/**", "/api/payment/payos-check/**", "/api/subscription-packages/**", "/api/public/packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/advertising/click/**", "/api/media/creative/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**").permitAll()
-                        // Public HTML shell/assets only. Data stays behind /api authorization above/below.
-                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
-                                "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
-                                "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
-                                "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo").permitAll()
-                        .anyRequest().authenticated())
+                .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/articles/**",
+                        "/api/payment/status/**", "/api/payment/payos-check/**", "/api/subscription-packages/**", "/api/public/packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/advertising/click/**", "/api/media/creative/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**").permitAll()
+                // Public HTML shell/assets only. Data stays behind /api authorization above/below.
+                .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
+                        "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
+                        "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
+                        "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo").permitAll()
+                .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .logout(logout -> logout.disable())

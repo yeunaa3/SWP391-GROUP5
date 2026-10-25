@@ -55,10 +55,12 @@ public class AuthenticationController {
     public AuthenticatedUserResponse login(@Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest, HttpServletResponse httpResponse) {
         // UC-06: provider đọc user từ DB và so mật khẩu; chỉ tiếp tục khi xác thực thành công.
-        Authentication authentication = authenticationManager.authenticate(
+        Authentication authentication = authenticationManager.authenticate(//giao việc xác thực cho Spring Security
                 UsernamePasswordAuthenticationToken.unauthenticated(request.login(), request.password()));
         // Đổi session ID sau login để chống session fixation; không tái sử dụng identity tài khoản trước.
-        if(httpRequest.getSession(false)!=null) httpRequest.changeSessionId();
+        if (httpRequest.getSession(false) != null) {
+            httpRequest.changeSessionId();
+        }
         // Lưu người đã xác thực vào context của request hiện tại và session cho request tiếp theo.---để ko query lại database 
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(authentication);
