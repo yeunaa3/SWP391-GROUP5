@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -12,6 +12,7 @@ import AutoPaymentTimerCard from "../../components/AutoPaymentTimerCard.jsx";
 import UiIcon from "../../components/UiIcon.jsx";
 import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
+import { applicationSubmitBlockReason, legalDocumentError } from "../../utils/partnershipApplication.js";
 
 const statusLabels = {
   DRAFT: "Bản nháp",
@@ -167,6 +168,10 @@ export default function BusinessWorkspacePage({ screen }) {
   });
 
   const [file, setFile] = useState(null);
+  const [documentError, setDocumentError] = useState("");
+  const [documentNotice, setDocumentNotice] = useState("");
+  const [documentInputKey, setDocumentInputKey] = useState(0);
+  const documentSaving = useRef(false);
   const [targetUrl, setTargetUrl] = useState("");
 
   const queryString = query.toString();
@@ -194,7 +199,7 @@ export default function BusinessWorkspacePage({ screen }) {
 
   // Nạp lại dữ liệu thật từ backend sau thao tác lưu/gửi; không tự giả lập trạng thái thành công.
   async function refresh() {
-    const result = await apiRequest("/api/business/workspace");
+    const result = await apiRequest("/api/business/workspace", { cache: "no-store" });
     setData(result);
     return result;
   }
@@ -206,6 +211,8 @@ export default function BusinessWorkspacePage({ screen }) {
     setError("");
     setMessage("");
     setFile(null);
+    setDocumentError("");
+    setDocumentNotice("");
     setEditingBooking(false);
     setDeleteConfirm(false);
 
@@ -356,6 +363,30 @@ export default function BusinessWorkspacePage({ screen }) {
 
   const isProfile = screen.id === "BUS-02";
   const isApplication = ["BUS-03", "BUS-04"].includes(screen.id);
+  const submitBlockReason = applicationSubmitBlockReason(data.company, data.documents, file, busy);
+
+  /** Chọn tệp chưa phải upload; chỉ xóa lựa chọn sau khi server xác nhận đã lưu tài liệu. */
+  async function uploadApplicationDocument(event) {
+    event.preventDefault();
+    if (busy || documentSaving.current) return;
+    const validation = legalDocumentError(file);
+    setDocumentError(validation);setDocumentNotice("");
+    if (validation) return;
+    documentSaving.current=true;setBusy(true);setError("");setMessage("");
+    try {
+      const body=new FormData();body.append("file",file);
+      await apiRequest("/api/business/documents",{method:"POST",body});
+      setFile(null);setDocumentInputKey(value=>value+1);
+      try {
+        await refresh();
+        setDocumentNotice("Đã tải tài liệu lên máy chủ. Kiểm tra tài liệu trong danh sách rồi bấm Gửi đăng ký hợp tác.");
+      } catch {
+        setDocumentError("Tài liệu đã được lưu nhưng chưa tải lại được danh sách. Bấm Làm mới để kiểm tra; không cần tải tệp lại.");
+      }
+    } catch (e) {
+      setDocumentError(e.message); // Giữ tệp để người dùng sửa lỗi/thử lại, không báo thành công giả.
+    } finally { documentSaving.current=false;setBusy(false); }
+  }
 
   // BUS-13 hiển thị danh sách ở nhánh riêng; isCampaign dùng cho màn tạo/sửa/banner/gửi/chi tiết.
   const isCampaign = ["BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(
@@ -404,7 +435,7 @@ export default function BusinessWorkspacePage({ screen }) {
       <div className="page-heading">
         <div>
           <p className="eyebrow">
-            BUS-07 Đặt Quảng Cáo
+            THE PULSE BUSINESS · {screen.id}
           </p>
           <h1>{tr(screen.name)}</h1>
           <p className="page-subtitle">
@@ -750,42 +781,38 @@ export default function BusinessWorkspacePage({ screen }) {
                 </Link>
               ) : editable(data.company.application_status) ? (
                 <>
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const body = new FormData();
-                      body.append("file", file);
-                      action(
-                        () =>
-                          apiRequest("/api/business/documents", {
-                            method: "POST",
-                            body,
-                          }),
-                        "Đã tải tài liệu và lưu thông tin vào MySQL.",
-                        () => setFile(null),
-                      );
-                    }}
-                  >
+                  <form onSubmit={uploadApplicationDocument} aria-label="Tải tài liệu pháp lý">
                     <Field label="PDF, PNG hoặc JPEG · tối đa 8 MB">
                       <input
+                        key={documentInputKey}
                         type="file"
                         accept="application/pdf,image/png,image/jpeg"
                         required
                         disabled={busy}
-                        onChange={(event) =>
-                          setFile(event.target.files?.[0] || null)
-                        }
+                        onChange={(event) => {
+                          const selected=event.target.files?.[0] || null;
+                          setFile(selected);setDocumentNotice("");
+                          setDocumentError(selected?legalDocumentError(selected):"");
+                        }}
                       />
                     </Field>
                     <button
                       className="secondary-button"
                       disabled={busy || !file}
                     >
-                      Tải tài liệu lên
+                      {busy ? "Đang xử lý…" : "Tải tài liệu lên"}
                     </button>
+                    {file && <>
+                      <p className="info-note" role="status">Đã chọn “{file.name}”, chưa tải lên máy chủ. Bấm Tải tài liệu lên để lưu tệp.</p>
+                      <button type="button" className="outline-button" disabled={busy} onClick={()=>{setFile(null);setDocumentError("");setDocumentInputKey(value=>value+1);}}>Bỏ tệp đã chọn</button>
+                    </>}
                   </form>
+                  {documentError && <p className="form-error" role="alert">{documentError}</p>}
+                  {documentNotice && <p className="success-message" role="status">{documentNotice}</p>}
+                  {submitBlockReason && <p id="application-submit-reason" className="info-note" role="status">{submitBlockReason} <Link to="/business/company">Xem hồ sơ doanh nghiệp</Link></p>}
                   <button
-                    disabled={busy || !data.documents.length}
+                    disabled={Boolean(submitBlockReason)}
+                    aria-describedby={submitBlockReason ? "application-submit-reason" : undefined}
                     onClick={() =>
                       action(
                         () =>
