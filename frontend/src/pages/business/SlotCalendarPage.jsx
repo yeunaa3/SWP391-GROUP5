@@ -73,7 +73,7 @@ export default function SlotCalendarPage() {
 
   const occupied = (day) => occupiedDay(windows, slot, day);
   const today = iso(new Date());
-  const chosenOffer = offers.find(
+  const chosenOffer = offers.find(  
     (item) => String(item.id) === packageId,
   );
   const packageDuration = Number(chosenOffer?.durationDays);
@@ -106,29 +106,6 @@ export default function SlotCalendarPage() {
       setError("");
       return;
     }
-
-    if (!start || end || day < start) {
-      setStart(day);
-      setEnd("");
-      setError("");
-      return;
-    }
-
-    const cursor = new Date(`${start}T12:00:00`);
-
-    while (iso(cursor) <= day) {
-      if (occupied(iso(cursor))) {
-        setError(
-          "Khoảng chọn đi qua ngày đã được đặt. Hãy chọn khoảng trống khác.",
-        );
-        return;
-      }
-
-      cursor.setDate(cursor.getDate() + 1);
-    }
-
-    setError("");
-    setEnd(day);
   }
 
   const offset = (month.getDay() + 6) % 7;
