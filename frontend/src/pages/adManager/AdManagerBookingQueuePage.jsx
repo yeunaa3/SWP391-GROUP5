@@ -21,6 +21,19 @@ function formatMoney(amount, currency) {
     }).format(Number(amount || 0));
 }
 
+function formatAdDate(value) {
+    if (!value) return "—";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+
+    return new Intl.DateTimeFormat("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(date);
+}
+
 export default function AdManagerBookingQueuePage() {
     const [params, setParams] = useSearchParams();
     const filters = useMemo(() => filtersFrom(params), [params]);
@@ -59,7 +72,7 @@ export default function AdManagerBookingQueuePage() {
     return <main className="page-content ad-manager-page">
         <header className="page-heading">
             <div>
-                <p className="eyebrow">ADM-04 · UC-23</p>
+                <p className="eyebrow">ADM-04 · DUYỆT YÊU CẦU ĐẶT QUẢNG CÁO</p>
                 <h1>Yêu cầu đặt quảng cáo chờ xem xét</h1>
                 <p className="page-subtitle">Danh sách yêu cầu mới đang chờ Ad Manager xử lý.</p>
             </div>
@@ -100,8 +113,9 @@ export default function AdManagerBookingQueuePage() {
                     <td><strong>{item.contractCode}</strong><small>{item.contractName}</small></td>
                     <td>{item.companyName}</td>
                     <td>{item.slotName}</td>
-                    <td>{formatDateTime(item.startAt)}<small>đến {formatDateTime(item.endAt)}</small></td>
+                    <td>{formatAdDate(item.startAt)}<small>đến {formatAdDate(item.endAt)}</small></td>
                     <td>{formatMoney(item.totalValue, item.currency)}</td>
+
                     <td><StatusBadge value={item.status} /><small>Gửi lúc {formatDateTime(item.submittedAt)}</small></td>
                     <td><Link className="review-open-link" to={"/ad-manager/bookings/" + item.contractId + "/proposal?returnTo=" + encodeURIComponent(returnTo)}>Mở yêu cầu →</Link></td>
                 </tr>)}</tbody>

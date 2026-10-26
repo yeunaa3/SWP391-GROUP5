@@ -12,7 +12,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/business")
-@PreAuthorize("hasRole('BUSINESS')")// chỉ business mới được sử dụng
+@PreAuthorize("hasRole('BUSINESS')") // chỉ business mới được sử dụng
 public class BusinessWorkspaceController {
 
     private final BusinessWorkspaceService service;
@@ -31,7 +31,8 @@ public class BusinessWorkspaceController {
 
     // UC-38: @Valid kiểm tra Company DTO; quyền BUSINESS được kiểm tra ở cấp class.
     @PutMapping("/company")
-    public Map<String, Object> company(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody BusinessRequests.Company request) {
+    public Map<String, Object> company(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @Valid @RequestBody BusinessRequests.Company request) {
         return service.saveCompany(user, request);
     }
 
@@ -49,42 +50,55 @@ public class BusinessWorkspaceController {
     }
 
     @PostMapping("/bookings")
-    public Map<String, Object> booking(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody BusinessRequests.Booking request) {
+    public Map<String, Object> booking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @Valid @RequestBody BusinessRequests.Booking request) {
         return service.createBooking(user, request);
     }
 
     @PostMapping("/bookings/{id}/submit")
-    public Map<String, Object> submitBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id) {
-        return service.submitBooking(user, id);
+    public Map<String, Object> submitBooking(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) BusinessRequests.BookingSubmissionRequest request) {
+        return service.submitBooking(
+                user,
+                id,
+                request == null ? null : request.expectedRevisionNo());
     }
 
     @PostMapping("/bookings/drafts")
-    public Map<String, Object> draft(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody BusinessRequests.Booking request) {
+    public Map<String, Object> draft(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @Valid @RequestBody BusinessRequests.Booking request) {
         return service.saveBooking(user, null, request, false);
     }
 
     @PutMapping("/bookings/{id}")
-    public Map<String, Object> updateBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id, @Valid @RequestBody BusinessRequests.Booking request) {
+    public Map<String, Object> updateBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id, @Valid @RequestBody BusinessRequests.Booking request) {
         return service.saveBooking(user, id, request, false);
     }
 
     @DeleteMapping("/bookings/{id}")
-    public Map<String, Object> deleteBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id) {
+    public Map<String, Object> deleteBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id) {
         return service.deleteBooking(user, id);
     }
 
     @PostMapping("/campaigns")
-    public Map<String, Object> create(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @Valid @RequestBody BusinessRequests.Campaign request) {
+    public Map<String, Object> create(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @Valid @RequestBody BusinessRequests.Campaign request) {
         return campaigns.save(user, null, request);
     }
 
     @PutMapping("/campaigns/{id}")
-    public Map<String, Object> update(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id, @Valid @RequestBody BusinessRequests.Campaign request) {
+    public Map<String, Object> update(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id,
+            @Valid @RequestBody BusinessRequests.Campaign request) {
         return campaigns.save(user, id, request);
     }
 
     @PostMapping("/campaigns/{id}/submit")
-    public Map<String, Object> submit(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id, @Valid @RequestBody BusinessRequests.CampaignSubmit request) {
+    public Map<String, Object> submit(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable Long id,
+            @Valid @RequestBody BusinessRequests.CampaignSubmit request) {
         return campaigns.submit(user, id, request.editVersion());
     }
 
@@ -117,7 +131,8 @@ public class BusinessWorkspaceController {
      * Lưu Category/Tags/Geo/Device và chống stale tab bằng editVersion.
      */
     @PutMapping("/campaigns/{id}/targeting")
-    public Object targeting(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id, @Valid @RequestBody BusinessRequests.Targeting request) {
+    public Object targeting(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id,
+            @Valid @RequestBody BusinessRequests.Targeting request) {
         return campaigns.saveTargeting(user, id, request);
     }
 
@@ -150,7 +165,8 @@ public class BusinessWorkspaceController {
      * Bỏ liên kết creative nháp, giữ file nếu các phiên bản khác còn tham
      * chiếu.
      */
-    public void removeCreative(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id, @PathVariable long creativeId) {
+    public void removeCreative(@AuthenticationPrincipal AuthenticatedUserPrincipal user, @PathVariable long id,
+            @PathVariable long creativeId) {
         campaigns.removeCreative(user, id, creativeId);
     }
 }

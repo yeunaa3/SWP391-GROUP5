@@ -48,6 +48,35 @@ public class AdManagerPartnershipController {
         return service.bookingQueue(new AdManagerDtos.BookingQueueFilter(q, status, from, to, page, size));
     }
 
+    @GetMapping("/bookings/{contractId}")
+    public AdManagerDtos.BookingDetail bookingDetail(@PathVariable long contractId) {
+        return service.bookingDetail(contractId);
+    }
+
+    @PutMapping("/bookings/{contractId}/proposal")
+    public AdManagerDtos.BookingDetail saveProposal(
+            @PathVariable long contractId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal manager,
+            @Valid @RequestBody AdManagerDtos.SaveProposalRequest request) {
+        return service.saveProposal(contractId, manager, request);
+    }
+
+    @PostMapping("/bookings/{contractId}/proposal/send")
+    public AdManagerDtos.BookingDetail sendProposal(
+            @PathVariable long contractId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal manager,
+            @Valid @RequestBody AdManagerDtos.SendProposalRequest request) {
+        return service.sendProposal(contractId, manager, request);
+    }
+
+    @PostMapping("/bookings/{contractId}/request-another-period")
+    public AdManagerDtos.BookingDetail requestAnotherPeriod(
+            @PathVariable long contractId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal manager,
+            @Valid @RequestBody AdManagerDtos.RequestAnotherPeriodRequest request) {
+        return service.requestAnotherPeriod(contractId, manager, request);
+    }
+
     @GetMapping("/partnerships/{companyId}")
     public AdManagerDtos.PartnershipDetail detail(@PathVariable long companyId) {
         return service.detail(companyId);

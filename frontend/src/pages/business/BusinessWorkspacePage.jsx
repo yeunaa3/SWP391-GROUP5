@@ -244,7 +244,7 @@ export default function BusinessWorkspacePage({ screen }) {
             startDate: String(draft.start_at).slice(0, 10),
             endDate: new Date(
               Date.parse(`${String(draft.end_at).slice(0, 10)}T00:00:00Z`) -
-                86400000,
+              86400000,
             )
               .toISOString()
               .slice(0, 10),
@@ -258,19 +258,19 @@ export default function BusinessWorkspacePage({ screen }) {
         setCampaignForm(
           selected
             ? {
-                name: selected.campaign_name,
-                description: selected.description || "",
-                contractId: String(selected.contract_id),
-                startTime: datetime(selected.scheduled_start_time),
-                endTime: datetime(selected.scheduled_end_time),
-              }
+              name: selected.campaign_name,
+              description: selected.description || "",
+              contractId: String(selected.contract_id),
+              startTime: datetime(selected.scheduled_start_time),
+              endTime: datetime(selected.scheduled_end_time),
+            }
             : {
-                name: "",
-                description: "",
-                contractId: "",
-                startTime: "",
-                endTime: "",
-              },
+              name: "",
+              description: "",
+              contractId: "",
+              startTime: "",
+              endTime: "",
+            },
         );
 
         setTargetUrl(selected?.target_url || "");
@@ -823,26 +823,26 @@ export default function BusinessWorkspacePage({ screen }) {
               const bookingDays =
                 booking.startDate && booking.endDate
                   ? Math.max(
-                      0,
-                      Math.round(
-                        (new Date(`${booking.endDate}T12:00:00`) -
-                          new Date(`${booking.startDate}T12:00:00`)) /
-                          86400000,
-                      ) + 1,
-                    )
+                    0,
+                    Math.round(
+                      (new Date(`${booking.endDate}T12:00:00`) -
+                        new Date(`${booking.startDate}T12:00:00`)) /
+                      86400000,
+                    ) + 1,
+                  )
                   : 0;
 
               // Tính giá dự kiến theo công thức: Giá gói + (Giá vị trí * Số ngày / 30)
               const estimatedPrice =
                 selectedSlotObj && selectedPackObj && bookingDays > 0
                   ? Number(selectedPackObj.price) +
-                    (Number(
-                      selectedSlotObj.base_price ||
-                        selectedSlotObj.basePrice ||
-                        0,
-                    ) *
-                      bookingDays) /
-                      30
+                  (Number(
+                    selectedSlotObj.base_price ||
+                    selectedSlotObj.basePrice ||
+                    0,
+                  ) *
+                    bookingDays) /
+                  30
                   : 0;
 
               // ĐIỀU KIỆN HỢP LỆ ĐỂ MỞ NÚT "LƯU BẢN NHÁP" VÀ "GỬI YÊU CẦU ĐẶT QUẢNG CÁO":
@@ -1021,10 +1021,10 @@ export default function BusinessWorkspacePage({ screen }) {
                             {currency(
                               Number(
                                 selectedSlotObj.basePrice ||
-                                  selectedSlotObj.base_price ||
-                                  0,
+                                selectedSlotObj.base_price ||
+                                0,
                               ) *
-                                (bookingDays / 30),
+                              (bookingDays / 30),
                             )}{" "}
                             ({bookingDays}/30 ngày). Server xác nhận lại báo giá
                             khi lưu.
@@ -1267,8 +1267,72 @@ export default function BusinessWorkspacePage({ screen }) {
                   )}
 
                   {!editingBooking && <QuoteSummary quote={contract.quote_snapshot} />}
+                  {contract.status === "REVISION_REQUESTED" ? (
+                    <>
+                      <p role="status" className="info-note">
+                        Quản lý yêu cầu chọn thời gian khác. Hãy sửa lịch booking, lưu thay đổi,
+                        rồi gửi lại để được xem xét.
+                      </p>
 
-                  {contract.status === "DRAFT" ? (
+                      {editingBooking ? (
+                        <ContractDraftEditor
+                          key={contract.contract_id}
+                          contract={contract}
+                          catalog={catalog}
+                          busy={busy}
+                          onCancel={() => setEditingBooking(false)}
+                          onSave={(payload) =>
+                            action(
+                              () =>
+                                json(
+                                  `/api/business/bookings/${contract.contract_id}`,
+                                  payload,
+                                  "PUT",
+                                ),
+                              "Đã lưu thay đổi. Gửi lại booking để quản lý xem xét.",
+                              () => setEditingBooking(false),
+                            )
+                          }
+                        />
+                      ) : (
+                        <div className="form-actions">
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            disabled={busy}
+                            onClick={() => {
+                              setEditingBooking(true);
+                              setError("");
+                              setMessage("");
+                            }}
+                          >
+                            Sửa thời gian booking
+                          </button>
+
+                          <button
+                            disabled={busy || data.company.application_status !== "APPROVED"}
+                            onClick={() =>
+                              action(
+                                () =>
+                                  apiRequest(
+                                    `/api/business/bookings/${contract.contract_id}/submit`,
+                                    {
+                                      method: "POST",
+                                      body: JSON.stringify({
+                                        expectedRevisionNo: Number(contract.revision_no),
+                                      }),
+                                    },
+                                  ),
+                                "Đã gửi lại booking để quản lý xem xét.",
+                              )
+                            }
+                          >
+                            {busy ? "Đang gửi…" : "Gửi lại booking"}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : contract.status === "DRAFT" ? (
                     <>
                       <div className="form-actions">
                         <button
@@ -1369,7 +1433,12 @@ export default function BusinessWorkspacePage({ screen }) {
                             () =>
                               apiRequest(
                                 `/api/business/bookings/${contract.contract_id}/submit`,
-                                { method: "POST" },
+                                {
+                                  method: "POST",
+                                  body: JSON.stringify({
+                                    expectedRevisionNo: Number(contract.revision_no),
+                                  }),
+                                }
                               ),
                             "Đã gửi yêu cầu đặt quảng cáo. Chờ quản lý xét duyệt và chuẩn bị đề xuất hợp đồng.",
                           )
@@ -1492,8 +1561,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 action(
                   () =>
                     json(
-                      `/api/business/campaigns${
-                        params.campaignId ? `/${params.campaignId}` : ""
+                      `/api/business/campaigns${params.campaignId ? `/${params.campaignId}` : ""
                       }`,
                       {
                         ...campaignForm,
