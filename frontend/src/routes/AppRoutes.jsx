@@ -39,6 +39,7 @@ import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx"
 import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorPage.jsx";
 import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
 import AdManagerBookingQueuePage from "../pages/adManager/AdManagerBookingQueuePage.jsx";
+import AdSlotManagementPage from "../pages/admin/AdSlotManagementPage.jsx";
 
 const specialPages = {
   "ADM-01": <AdManagerDashboardPage />,
@@ -66,6 +67,7 @@ const specialPages = {
   "PRE-06": <TransactionHistoryPage />,
   "PRE-07": <ReceiptDetailPage />,
   "CFG-03": <PremiumReviewPage />,
+  "CFG-04": <AdSlotManagementPage />,
   "CFG-05": <SubscriptionPackagesPage />,
   "CFG-01": <AdminDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,

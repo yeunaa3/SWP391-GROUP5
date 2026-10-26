@@ -375,3 +375,121 @@ button, .button-link { border-radius: 6px; background: #cf1322; }
   .auth-form-panel { padding: 24px; }
   .auth-benefits, .specification-grid { grid-template-columns: 1fr; }
 }
+
+.ad-slot-list {
+  padding: 20px;
+}
+
+.ad-slot-table-wrap {
+  overflow-x: auto;
+}
+
+.ad-slot-table {
+  width: 100%;
+  min-width: 1000px;
+  border-collapse: collapse;
+}
+
+.ad-slot-table th,
+.ad-slot-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid #e7ebf0;
+  text-align: left;
+}
+
+.ad-slot-table th {
+  color: #fff;
+  background: #171717;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.ad-slot-table td {
+  color: #26374b;
+  font-size: 13px;
+}
+
+.ad-slot-table td small {
+  display: block;
+  margin-top: 4px;
+  color: #718096;
+}
+
+.ad-slot-table tr.is-selected {
+  background: #fff6f7;
+}
+
+.ad-slot-status {
+  display: inline-block;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ad-slot-status.status-active {
+  color: #14734f;
+  background: #e7f7ef;
+}
+
+.ad-slot-status.status-inactive {
+  color: #626b78;
+  background: #edf0f4;
+}
+
+.ad-slot-editor {
+  margin-top: 20px;
+  padding: 20px;
+}
+
+.ad-slot-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ad-slot-form label {
+  display: grid;
+  gap: 7px;
+  color: #26374b;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ad-slot-form input,
+.ad-slot-form select {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #d6dce5;
+  border-radius: 7px;
+  background: #fff;
+  font: inherit;
+}
+
+.ad-slot-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #e7ebf0;
+}
+
+.ad-slot-form-actions button[type="submit"] {
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #fff;
+  background: #c92345;
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .ad-slot-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ad-slot-form-actions {
+    grid-column: auto;
+  }
+}
