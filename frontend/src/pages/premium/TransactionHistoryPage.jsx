@@ -100,9 +100,6 @@ export default function TransactionHistoryPage() {
         <section className="premium-panel">
           <div className="premium-request-heading">
             <h2>{t("Danh sách biên lai thanh toán", "Payment Receipts")} ({transactions.length})</h2>
-            <button className="secondary-button" onClick={loadData}>
-              {t("Làm mới", "Refresh")}
-            </button>
           </div>
 
           <div className="premium-table-wrap">

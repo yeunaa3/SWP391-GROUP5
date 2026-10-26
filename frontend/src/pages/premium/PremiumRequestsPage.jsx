@@ -67,9 +67,6 @@ export default function PremiumRequestsPage() {
             "Pending requests do not grant access. Updated automatically after payment; article access is checked against the database."
           )}
         </p>
-        <button className="secondary-button" onClick={load} disabled={loading}>
-          {t("Cập nhật trạng thái", "Refresh status")}
-        </button>
       </header>
 
       {loading && <p role="status">{t("Đang tải…", "Loading…")}</p>}

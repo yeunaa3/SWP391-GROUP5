@@ -32,7 +32,6 @@ export function PlanState({ loading, error, retry }) {
             "Only an active catalog plan can be selected."
           )}
         </p>
-        {error && <button onClick={retry}>{t("Thử lại", "Retry")}</button>}
       </section>
     </main>
   );

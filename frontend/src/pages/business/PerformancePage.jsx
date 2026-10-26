@@ -59,7 +59,6 @@ export default function PerformancePage() {
   const [metric, setMetric] = useState("impressions");
   const [type, setType] = useState("line");
   const [hover, setHover] = useState(null);
-  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
     setSelected(campaignId || "all");
@@ -84,7 +83,7 @@ export default function PerformancePage() {
     return () => {
       alive = false;
     };
-  }, [refresh]);
+  }, []);
 
   const campaigns = useMemo(
     () => [
@@ -230,14 +229,6 @@ export default function PerformancePage() {
             <option value="30">30 ngày gần đây</option>
           </select>
         </label>
-
-        <button
-          className="secondary-button"
-          onClick={() => setRefresh((value) => value + 1)}
-          disabled={loading}
-        >
-          ↻ Làm mới
-        </button>
 
         <Link to={business ? "/business/campaigns" : "/ad-manager/campaign-monitor"}>
           Xem chiến dịch →

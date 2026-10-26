@@ -8,20 +8,10 @@ import "../../assets/premium.css";
 export default function MySubscriptionPage() {
   const { user, premium, premiumLoading, refreshPremium } = useAuth();
   const { t, language } = usePreferences();
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     refreshPremium();
   }, []);
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    try {
-      await refreshPremium();
-    } finally {
-      setRefreshing(false);
-    }
-  }
 
   const subscriptions = premium?.subscriptions || [];
   const activeSub = subscriptions.find(s => s.current) || subscriptions.find(s => s.status === "ACTIVE" && new Date(s.endAt) > new Date());
@@ -129,9 +119,6 @@ export default function MySubscriptionPage() {
                 <Link to="/premium/transactions" className="secondary-button" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: "12px" }}>
                   🧾 {t("Xem lịch sử giao dịch", "View transactions")}
                 </Link>
-                <button className="secondary-button" onClick={handleRefresh} disabled={refreshing}>
-                  {refreshing ? t("Đang làm mới…", "Refreshing…") : t("Làm mới trạng thái", "Refresh status")}
-                </button>
               </div>
             </section>
 

@@ -48,7 +48,7 @@ export const screenFields = {
   "ADM-10": ["Company and campaign filters", "Date range", "Impressions", "Clicks", "CTR", "Delivery trend", "Campaign comparison", "Export report"],
   "CFG-01": ["Active users", "Active Premium packages", "Active ad slots", "Active B2B packages", "Failed jobs", "System warnings", "Recent administration activity"],
   "CFG-02": ["Search and filters", "User identity", "Email", "Role", "Company", "Account status", "Permissions", "Save changes"],
-  "CFG-03": ["Request code", "Subscriber name", "Plan", "Amount", "Transfer memo", "Review notes", "Approve", "Reject"],
+  "CFG-03": ["Request code", "Subscriber name", "Plan", "Amount", "Transfer memo", "Review notes", "Approve", "Reject", "C2B Premium Packages Catalog", "Add/Edit Plan", "Toggle Active Status", "Delete Plan"],
   "CFG-04": ["Slot code", "Slot name", "Position", "Width", "Height", "Base price", "Status", "Save slot"],
   "CFG-05": ["Package code", "Package name", "Price", "Duration days", "Impression quota", "Description", "Status", "Save package"],
   "CFG-06": ["Setting group", "Setting name", "Setting value", "Description", "Status", "Last updated by", "Save changes"],

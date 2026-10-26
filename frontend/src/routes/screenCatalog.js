@@ -48,7 +48,7 @@ export const screens = [
   { id: "ADM-10", name: "Advertising Performance Report", feature: "Campaign Performance", path: "/ad-manager/reports", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-08"], uc: ["UC-32"] },
   { id: "CFG-01", name: "Administration Dashboard", feature: "Administration", path: "/admin", area: "admin", roles: ["ADMINISTRATOR"] },
   { id: "CFG-02", name: "User and Role Management", feature: "Administration", path: "/admin/users", area: "admin", roles: ["ADMINISTRATOR"], uc: ["UC-34"] },
-  { id: "CFG-03", name: "Premium Request Review", feature: "Administration", path: "/admin/subscription-packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-01"], uc: ["UC-12", "UC-13"] },
+  { id: "CFG-03", name: "C2B Premium Package & Review Management", feature: "Administration", path: "/admin/subscription-packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-01"], uc: ["UC-12", "UC-13", "UC-35"] },
   { id: "CFG-04", name: "Advertising Slot Management", feature: "Administration", path: "/admin/ad-slots", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-05", "BF-08"], uc: ["UC-33"] },
   { id: "CFG-05", name: "B2B Package and Pricing Management", feature: "Administration", path: "/admin/b2b-packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-05"] },
   { id: "CFG-06", name: "System Settings", feature: "Administration", path: "/admin/settings", area: "admin", roles: ["ADMINISTRATOR"], uc: ["UC-37"] },

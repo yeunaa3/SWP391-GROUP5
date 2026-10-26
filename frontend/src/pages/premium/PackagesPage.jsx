@@ -71,10 +71,7 @@ export default function PackagesPage() {
 
       {state.error && (
         <div role="alert" className="premium-empty">
-          <p>{t("Không tải được danh sách gói.", "Unable to load plans.")}</p>
-          <button onClick={() => setAttempt((value) => value + 1)}>
-            {t("Thử lại", "Retry")}
-          </button>
+          <p>{t("Không tải được danh sách gói cước vào lúc này.", "Unable to load plans at this time.")}</p>
         </div>
       )}
 
