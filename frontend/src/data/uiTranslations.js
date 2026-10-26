@@ -40,7 +40,7 @@ Administration Dashboard|Tổng quan quản trị
 User and Role Management|Quản lý người dùng và vai trò
 Subscription Package Management|Quản lý gói Premium
 Advertising Slot Management|Quản lý vị trí quảng cáo
-B2B Package and Pricing Management|Quản lý gói quảng cáo và giá
+B2B Package and Pricing Management|Quản Lý Gói Quảng Cáo
 System Settings|Cài đặt hệ thống
 Profile and Security|Hồ sơ và bảo mật
 Notification Center|Thông báo

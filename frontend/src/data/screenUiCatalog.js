@@ -50,7 +50,7 @@ export const screenFields = {
   "CFG-02": ["Search and filters", "User identity", "Email", "Role", "Company", "Account status", "Permissions", "Save changes"],
   "CFG-03": ["Request code", "Subscriber name", "Plan", "Amount", "Transfer memo", "Review notes", "Approve", "Reject"],
   "CFG-04": ["Slot code", "Slot name", "Position", "Width", "Height", "Base price", "Status", "Save slot"],
-  "CFG-05": ["Package code", "Package name", "Price", "Duration days", "Benefits", "Status", "Display priority", "Save package"],
+  "CFG-05": ["Package code", "Package name", "Price", "Duration days", "Impression quota", "Description", "Status", "Save package"],
   "CFG-06": ["Setting group", "Setting name", "Setting value", "Description", "Status", "Last updated by", "Save changes"],
 };
 

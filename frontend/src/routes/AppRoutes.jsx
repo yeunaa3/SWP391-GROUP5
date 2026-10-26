@@ -40,6 +40,7 @@ import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorP
 import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
 import AdManagerBookingQueuePage from "../pages/adManager/AdManagerBookingQueuePage.jsx";
 import AdSlotManagementPage from "../pages/admin/AdSlotManagementPage.jsx";
+import B2bPackageManagementPage from "../pages/admin/B2bPackageManagementPage.jsx";
 
 const specialPages = {
   "ADM-01": <AdManagerDashboardPage />,
@@ -68,7 +69,7 @@ const specialPages = {
   "PRE-07": <ReceiptDetailPage />,
   "CFG-03": <PremiumReviewPage />,
   "CFG-04": <AdSlotManagementPage />,
-  "CFG-05": <SubscriptionPackagesPage />,
+  "CFG-05": <B2bPackageManagementPage />,
   "CFG-01": <AdminDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,
@@ -79,7 +80,7 @@ const specialPages = {
 const publicAreas = new Set(["public"]);
 
 function screenElement(screen) {
-  const page = specialPages[screen.id] || (["BUS-01","BUS-02","BUS-13","BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id)?<BusinessCampaignPage screen={screen}/>:screen.area === "business" ? <BusinessWorkspacePage screen={screen}/> : <ScreenWorkspacePage screen={screen} />);
+  const page = specialPages[screen.id] || (["BUS-01", "BUS-02", "BUS-13", "BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id) ? <BusinessCampaignPage screen={screen} /> : screen.area === "business" ? <BusinessWorkspacePage screen={screen} /> : <ScreenWorkspacePage screen={screen} />);
   return screen.roles?.length ? <ProtectedRoute roles={screen.roles}>{page}</ProtectedRoute> : page;
 }
 
@@ -96,7 +97,26 @@ export default function AppRoutes() {
       {screens.filter((screen) => screen.area === "auth").map((screen) => <Route key={screen.id} path={screen.path} element={screenElement(screen)} />)}
       {workspaceAreas.map((area) => (
         <Route key={area} element={<WorkspaceLayout area={area} />}>
-          {screens.filter((screen) => screen.area === area).map((screen) => <Route key={screen.id} path={screen.path} element={screenElement(screen)} />)}
+          {screens
+            .filter((screen) => screen.area === area)
+            .map((screen) => (
+              <Route
+                key={screen.id}
+                path={screen.path}
+                element={screenElement(screen)}
+              />
+            ))}
+
+          {area === "admin" && (
+            <Route
+              path="/admin/packages"
+              element={
+                <ProtectedRoute roles={["ADMINISTRATOR"]}>
+                  <SubscriptionPackagesPage />
+                </ProtectedRoute>
+              }
+            />
+          )}
         </Route>
       ))}
       <Route path="*" element={<Navigate to="/" replace />} />

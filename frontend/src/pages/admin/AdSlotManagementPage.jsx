@@ -206,7 +206,7 @@ export default function AdSlotManagementPage() {
     <main className="page-content ad-slot-page">
       <header className="page-heading">
         <div>
-          <p className="eyebrow">CFG-04 · QUẢN TRỊ</p>
+          <p className="eyebrow">CFG-04 · QUẢN LÝ VỊ TRÍ QUẢNG CÁO</p>
           <h1>Quản lý vị trí quảng cáo</h1>
           <p className="page-subtitle">
             Xem, tạo và chỉnh sửa cấu hình các vị trí quảng cáo.

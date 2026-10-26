@@ -50,7 +50,7 @@ export const screens = [
   { id: "CFG-02", name: "User and Role Management", feature: "Administration", path: "/admin/users", area: "admin", roles: ["ADMINISTRATOR"], uc: ["UC-34"] },
   { id: "CFG-03", name: "Premium Request Review", feature: "Administration", path: "/admin/subscription-packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-01"], uc: ["UC-12", "UC-13"] },
   { id: "CFG-04", name: "Advertising Slot Management", feature: "Administration", path: "/admin/ad-slots", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-05", "BF-08"], uc: ["UC-33"] },
-  { id: "CFG-05", name: "Subscription Packages Management", feature: "Administration", path: "/admin/packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-01"], uc: ["UC-35"] },
+  { id: "CFG-05", name: "B2B Package and Pricing Management", feature: "Administration", path: "/admin/b2b-packages", area: "admin", roles: ["ADMINISTRATOR"], bf: ["BF-05"] },
   { id: "CFG-06", name: "System Settings", feature: "Administration", path: "/admin/settings", area: "admin", roles: ["ADMINISTRATOR"], uc: ["UC-37"] },
 ];
 
