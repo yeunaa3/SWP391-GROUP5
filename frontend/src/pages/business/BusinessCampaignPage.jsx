@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient.js";
+import { prepareCompanyProfile, saveAndVerifyCompany } from "../../services/companyProfileService.js";
 import { campaignLabels as labels, editableCampaign as editable, money, dateInput, startInput, dateLabel, campaignStatuses, withUtm } from "../../utils/businessCampaign.js";
 import "../../assets/business-campaign.css";
 const json = (path, body, method = "POST") => apiRequest(path, {method, body: JSON.stringify(body)});
@@ -17,8 +18,8 @@ function Media( {creative, ...props}){
     return creative?.mime_type?.startsWith("video/") || creative?.creative_type === "VIDEO" ? <video controls preload="metadata" src={creative.media_url} {...props}/> : creative?.media_url ? <img src={creative.media_url} alt={creative.title || "Banner xem trước"} {...props}/> : <p>Chưa có creative.</p>;
 }
 /** Xác nhận cụ thể trước mutation; hủy chỉ đóng dialog, không gọi API. */
-function Confirm( {value, onCancel, onConfirm, busy}){
-    return value && <div className="campaign-dialog-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="campaign-dialog"><h2 id="confirm-title">{value.title}</h2><p>{value.text}</p><div className="form-actions"><button type="button" className="secondary-button" disabled={busy} autoFocus onClick={onCancel}>Hủy</button><button type="button" disabled={busy} onClick={onConfirm}>{busy ? "Đang xử lý…" : "Xác nhận"}</button></div></section></div>;
+function Confirm( {value, onCancel, onConfirm, busy, error}){
+    return value && <div className="campaign-dialog-backdrop"><section role="dialog" aria-modal="true" aria-labelledby="confirm-title" className="campaign-dialog"><h2 id="confirm-title">{value.title}</h2><p>{value.text}</p>{error && <p className="form-error" role="alert">{error}</p>}<div className="form-actions"><button type="button" className="secondary-button" disabled={busy} autoFocus onClick={onCancel}>Hủy</button><button type="button" disabled={busy} onClick={onConfirm}>{busy ? "Đang xử lý…" : "Xác nhận"}</button></div></section></div>;
 }
 
 /** Giữ draft trên server; cảnh báo reload/rời trang nếu người dùng đang có dữ liệu chưa lưu. */
@@ -73,7 +74,7 @@ export default function BusinessCampaignPage( {screen}){
     const [dirty, setDirty] = useState(false),
     [confirm, setConfirm] = useState(null),
     [utm, setUtm] = useState({source: "thepulse", medium: "display", campaign: ""});
-    const dirtyRef = useUnsaved(dirty), savingRef = useRef(false), requestKey = useRef(crypto.randomUUID());
+    const dirtyRef = useUnsaved(dirty), savingRef = useRef(false), requestKey = useRef(crypto.randomUUID()), loadGeneration = useRef(0);
     const c = detail?.campaign, ct = detail?.contract, creatives = detail?.creatives || [], latest = creatives.find(x => x.status !== "ARCHIVED"), approved = creatives.find(x => x.status === "APPROVED");
     const company = workspace?.company || {}, allowed = company.application_status === "APPROVED";
     const activeContracts = (workspace?.contracts || []).filter(x => x.status === "ACTIVE" && x.payment_status === "PAID" && new Date(x.end_at) > new Date());
@@ -84,8 +85,9 @@ export default function BusinessCampaignPage( {screen}){
     const creativeChanged = !!file || !!c && form.targetUrl !== (c.target_url || "");
     /** Nạp workspace và record; AbortController ngăn response màn cũ ghi đè khi chuyển route. */
     async function load(signal, keep = {}){
-        const [w, d] = await Promise.all([apiRequest("/api/business/campaign-workspace", {signal}), campaignId ? apiRequest(`/api/business/campaigns/${campaignId}`, {signal}) : Promise.resolve(null)]);
-        if (signal?.aborted)
+        const generation = ++loadGeneration.current;
+        const [w, d] = await Promise.all([apiRequest("/api/business/campaign-workspace", {signal, cache: "no-store"}), campaignId ? apiRequest(`/api/business/campaigns/${campaignId}`, {signal}) : Promise.resolve(null)]);
+        if (signal?.aborted || generation !== loadGeneration.current)
             return;
         setWorkspace(w);
         setDetail(d);
@@ -166,8 +168,27 @@ export default function BusinessCampaignPage( {screen}){
     /** Lưu Company sau xác nhận; đổi legal field sẽ chuyển về vòng review và khóa chức năng quảng cáo. */
     function saveCompany(e) {
         e.preventDefault();
-        const legal = company.application_status === "APPROVED" && (companyForm.name !== company.company_name || companyForm.taxCode !== company.tax_code);
-        setConfirm({title: "Xác nhận lưu hồ sơ", text: legal ? "Thông tin pháp lý thay đổi sẽ cần được xét duyệt lại. Booking và chiến dịch bị khóa cho đến khi hồ sơ được duyệt." : "Lưu những thay đổi thông tin doanh nghiệp?", action: () => run(() => json("/api/business/company", companyForm, "PUT"), "Đã lưu hồ sơ.")});
+        let payload;
+        try { payload = prepareCompanyProfile(companyForm); }
+        catch (e) { setError(e.message); return; }
+        setError("");setMessage("");
+        const legal = company.application_status === "APPROVED" && (payload.name !== company.company_name || payload.taxCode !== company.tax_code);
+        setConfirm({title: "Xác nhận lưu hồ sơ", text: legal ? "Thông tin pháp lý thay đổi sẽ cần được xét duyệt lại. Booking và chiến dịch bị khóa cho đến khi hồ sơ được duyệt." : "Lưu những thay đổi thông tin doanh nghiệp?", action: () => persistCompany(payload)});
+    }
+    /** Giữ dialog và dữ liệu nhập khi lỗi; chỉ bỏ dirty sau khi backend đọc lại đủ tám trường đã lưu. */
+    async function persistCompany(payload) {
+        if (savingRef.current) return;
+        // Một GET bắt đầu trước PUT không được ghi đè lại hồ sơ vừa lưu bằng dữ liệu cũ.
+        loadGeneration.current++;
+        savingRef.current = true;setBusy(true);setError("");setMessage("");
+        try {
+            const saved = await saveAndVerifyCompany(payload);
+            setWorkspace(previous => ({...previous, ...saved}));
+            setCompanyForm(payload);setDirty(false);dirtyRef.current=false;
+            setConfirm(null);setMessage("Đã lưu hồ sơ và kiểm tra lại dữ liệu trên máy chủ.");
+        } catch(e) {
+            setError(e.message);setDirty(true);dirtyRef.current=true;
+        } finally { savingRef.current=false;setBusy(false); }
     }
     /** Upload bản mới giữ nguyên creative cũ; backend kiểm tra thực file trước khi lưu liên kết. */
     function upload(e) {
@@ -303,6 +324,6 @@ export default function BusinessCampaignPage( {screen}){
         </>}
         </>}
         <Confirm value=
-        {confirm} busy={busy} onCancel={() => setConfirm(null)} onConfirm={() => confirm.action()}/>
+        {confirm} error={error} busy={busy} onCancel={() => setConfirm(null)} onConfirm={() => confirm.action()}/>
 </main>;
 }
