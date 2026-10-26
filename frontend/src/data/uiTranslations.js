@@ -39,6 +39,7 @@ Advertising Performance Report|Báo cáo hiệu quả quảng cáo
 Administration Dashboard|Tổng quan quản trị
 User and Role Management|Quản lý người dùng và vai trò
 Subscription Package Management|Quản lý gói Premium
+C2B Premium Package & Review Management|Quản lý gói & Duyệt đơn Premium
 Advertising Slot Management|Quản lý vị trí quảng cáo
 B2B Package and Pricing Management|Quản Lý Gói Quảng Cáo
 System Settings|Cài đặt hệ thống

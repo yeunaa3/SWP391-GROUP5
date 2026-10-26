@@ -89,18 +89,18 @@ export default function AdminDashboardPage() {
             return <circle className="admin-donut-slice" key={status} cx="90" cy="90" r="68" fill="none" stroke={color} strokeWidth="17" strokeDasharray={`${length} 427.26`} strokeDashoffset={dashOffset} transform="rotate(-90 90 90)"><title>{label}: {counts[index]}</title></circle>;
           })}<text x="90" y="87" textAnchor="middle" className="admin-donut-number">{total}</text><text x="90" y="108" textAnchor="middle" className="admin-axis">{t("yêu cầu", "requests")}</text></svg></div>
           <div className="admin-status-legend">{statuses.map(([status, label, color], index) => <div key={status}><span><i style={{ background: color }} />{label}</span><strong>{counts[index]}</strong></div>)}</div>
-          <p className="admin-fine-print">{t("Toàn bộ lịch sử yêu cầu, không giới hạn theo bộ lọc ngày.", "All request history, independent of the period filter.")}</p><Link className="admin-primary-link" to="/admin/subscription-packages">{t("Mở hàng chờ duyệt", "Open review queue")} →</Link>
+          <p className="admin-fine-print">{t("Toàn bộ lịch sử yêu cầu, không giới hạn theo bộ lọc ngày.", "All request history, independent of the period filter.")}</p><Link className="admin-primary-link" to="/admin/subscription-packages?tab=review">{t("Mở hàng chờ duyệt", "Open review queue")} →</Link>
         </aside></section>
-      <section className="admin-bottom-grid"><article className="admin-panel"><div className="admin-panel-title"><div><span className="admin-eyebrow">ACTION CENTER</span><h2>{t("Ưu tiên xử lý hôm nay", "Your next actions")}</h2></div><Link to="/admin/subscription-packages">{t("Xem tất cả", "View all")} ↗</Link></div>
+      <section className="admin-bottom-grid"><article className="admin-panel"><div className="admin-panel-title"><div><span className="admin-eyebrow">ACTION CENTER</span><h2>{t("Ưu tiên xử lý hôm nay", "Your next actions")}</h2></div><Link to="/admin/subscription-packages?tab=review">{t("Xem tất cả", "View all")} ↗</Link></div>
         {!data.recentRequests.length && <div className="admin-zero-state"><span>✓</span><h3>{t("Hàng chờ đang trống", "Your queue is clear")}</h3><p>{t("Đăng ký mới của độc giả sẽ xuất hiện tại đây.", "New reader requests will appear here.")}</p></div>}
-        <div className="admin-request-list">{data.recentRequests.map(row => <Link to="/admin/subscription-packages" key={row.id}><span className="admin-avatar">{row.username.slice(0, 2).toUpperCase()}</span><div><strong>{row.username}</strong><small>PRE-{row.id} · {row.packageName}</small></div><div className="admin-request-value"><strong>{money(row.amount, row.currency)}</strong><small>{statuses.find(item => item[0] === row.status)?.[1] || row.status}</small></div><span aria-hidden="true">↗</span></Link>)}</div>
+        <div className="admin-request-list">{data.recentRequests.map(row => <Link to="/admin/subscription-packages?tab=review" key={row.id}><span className="admin-avatar">{row.username.slice(0, 2).toUpperCase()}</span><div><strong>{row.username}</strong><small>PRE-{row.id} · {row.packageName}</small></div><div className="admin-request-value"><strong>{money(row.amount, row.currency)}</strong><small>{statuses.find(item => item[0] === row.status)?.[1] || row.status}</small></div><span aria-hidden="true">↗</span></Link>)}</div>
       </article><aside className="admin-panel admin-inventory"><span className="admin-eyebrow">CONTENT & BUSINESS</span><h2>{t("Những mảnh ghép đang vận hành", "Your publishing ecosystem")}</h2>{[[data.totals.articles, t("Bài đang xuất bản", "Published articles"), "/"], [data.totals.companies, t("Hồ sơ doanh nghiệp", "Company profiles"), "/ad-manager/partnerships"], [data.totals.activeCampaigns, t("Chiến dịch ACTIVE", "ACTIVE campaigns"), "/admin/ad-slots"]].map(([count, label, path], index) => <div className="admin-inventory-row" key={label}><span className="admin-inventory-number">0{index + 1}</span><div><strong>{Number(count).toLocaleString(locale)}</strong><p>{label}</p></div></div>)}
           <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
             <Link to="/admin/b2b-packages" className="admin-settings-link">
-              Quản lý gói quảng cáo B2B (CFG-05) →
+              {t("Quản lý gói quảng cáo B2B (CFG-05) →", "B2B advertising packages (CFG-05) →")}
             </Link>
             <Link to="/admin/packages" className="admin-settings-link">
-              Quản lý gói thuê bao Premium →
+              {t("Quản lý gói thuê bao Premium C2B →", "C2B Premium subscription packages →")}
             </Link>
           </div>
         </aside></section>

@@ -67,7 +67,7 @@ const specialPages = {
   "PRE-05": <MySubscriptionPage />,
   "PRE-06": <TransactionHistoryPage />,
   "PRE-07": <ReceiptDetailPage />,
-  "CFG-03": <PremiumReviewPage />,
+  "CFG-03": <SubscriptionPackagesPage />,
   "CFG-04": <AdSlotManagementPage />,
   "CFG-05": <B2bPackageManagementPage />,
   "CFG-01": <AdminDashboardPage />,
