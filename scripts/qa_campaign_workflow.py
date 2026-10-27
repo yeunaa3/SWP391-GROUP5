@@ -317,6 +317,22 @@ class CampaignWorkflowQA(unittest.TestCase):
         self.assertEqual("DRAFT",sql(f"SELECT application_status FROM companies WHERE company_id={company}"))
         self.assertEqual("2",sql(f"SELECT COUNT(*) FROM company_application_versions WHERE company_id={company}"))
         self.assertEqual(422,self.business.call("/api/business/application/submit","POST")[0])
+        # BUS-02: mở hồ sơ mới không được mất kết quả từng version hoặc biến tất cả thành DRAFT.
+        history=self.business.call("/api/business/campaign-workspace")[1]["companyVersions"]
+        by_version={int(v["application_version"]):v for v in history}
+        self.assertEqual("NEEDS_REVISION",by_version[first]["history_status"])
+        self.assertEqual("REJECTED",by_version[second]["history_status"])
+        self.assertEqual("RESUBMITTED",by_version[second]["submission_status"])
+        self.assertEqual("Không đáp ứng yêu cầu",by_version[second]["history_events"][-1]["note"])
+        self.assertNotIn("NOTE",[e["status"] for v in history for e in v["history_events"]])
+        # Nộp vòng mới: có record chờ duyệt mới, bản đã từ chối vẫn giữ nguyên.
+        self.assertEqual(200,self.business.document(self.asset)[0])
+        code,result=self.business.call("/api/business/application/submit","POST");self.assertEqual(200,code,result)
+        third=result["company"]["application_version"]
+        history=self.business.call("/api/business/campaign-workspace")[1]["companyVersions"]
+        by_version={int(v["application_version"]):v for v in history}
+        self.assertEqual("PENDING_REVIEW",by_version[third]["submission_status"])
+        self.assertEqual("REJECTED",by_version[second]["history_status"])
         sql(f"UPDATE companies SET application_status='APPROVED' WHERE company_id={company}")
 
     def test_14_forecast_excludes_aggregate_fixtures(self):

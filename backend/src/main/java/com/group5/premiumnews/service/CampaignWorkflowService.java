@@ -48,7 +48,7 @@ public class CampaignWorkflowService {
         result.put("tags",jdbc.queryForList("SELECT tag_id id,name FROM tags WHERE status='ACTIVE' ORDER BY name"));
         result.put("notices",jdbc.queryForList("SELECT title,content,created_at FROM notifications WHERE user_id=? ORDER BY notification_id DESC LIMIT 5",user.id()));
         result.put("metrics",metrics(user));
-        result.put("companyVersions",company.get("company_id")==null?List.of():jdbc.queryForList("SELECT * FROM company_application_versions WHERE company_id=? ORDER BY application_version DESC",company.get("company_id")));
+        result.put("companyVersions",CompanyApplicationHistory.load(jdbc,company));
         return result;
     }
 

@@ -618,8 +618,18 @@ public class BusinessWorkspaceService {
     }
 
     private void audit(AuthenticatedUserPrincipal user, String action, String type, Long id) {
-        jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES(?,?,?,?)", user.id(), action,
-                type, String.valueOf(id));
+        if ("SUBMIT_APPLICATION".equals(action)) {
+            // Lưu trạng thái lúc nộp theo version; mở vòng mới/reset company sau này không làm mất dấu gửi lại.
+            jdbc.update("""
+                INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,new_value)
+                SELECT ?,?,?,?,JSON_OBJECT('application_version',application_version,
+                    'submission_status',application_status,'application_code',application_code)
+                FROM companies WHERE company_id=?
+                """,user.id(),action,type,String.valueOf(id),id);
+        } else {
+            jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES(?,?,?,?)", user.id(), action,
+                    type, String.valueOf(id));
+        }
         String title = switch (action) {
             case "SUBMIT_APPLICATION" ->
                 "Hồ sơ hợp tác đã được gửi duyệt";
