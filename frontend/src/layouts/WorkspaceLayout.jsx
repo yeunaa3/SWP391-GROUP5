@@ -45,7 +45,7 @@ export default function WorkspaceLayout({ area }) {
   // Lọc các mục menu phù hợp với role của user đang đăng nhập
   const navigation = screens.filter(
     (screen) =>
-      screen.area === area &&
+      screen.area === area && screen.id !== "BUS-04" &&
       !screen.path.includes(":") &&
       (!screen.roles?.length || screen.roles.some((role) => user?.roles?.includes(role)))
   );
@@ -137,6 +137,7 @@ export default function WorkspaceLayout({ area }) {
                 .map((screen) => (
                   <NavLink
                     key={screen.id}
+                    className={screen.id === "BUS-03" && pathname === "/business/partnership/status" ? "active" : undefined}
                     to={screen.path}
                     onClick={() => setMenuOpen(false)}
                     end

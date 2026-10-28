@@ -65,6 +65,8 @@ public class BusinessWorkspaceService {
         Map<String, Object> result = new HashMap<>();
         result.put("company", company);
         result.put("documents", documents);
+        // BUS-04 lấy đúng quyết định và sự kiện từng lần nộp, không dựng trạng thái giả.
+        result.put("companyVersions", CompanyApplicationHistory.load(jdbc, company));
         // BUS-13: không trả danh sách chiến dịch khi hồ sơ hợp tác chưa được phê duyệt.
         result.put("contracts", contracts);
         result.put("campaigns", "APPROVED".equals(company.get("application_status")) ? campaigns : List.of());

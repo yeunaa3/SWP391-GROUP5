@@ -11,6 +11,8 @@ import { usePreferences } from "../../store/PreferencesContext.jsx";
 import AutoPaymentTimerCard from "../../components/AutoPaymentTimerCard.jsx";
 import UiIcon from "../../components/UiIcon.jsx";
 import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
+import PartnershipStatus from "./PartnershipStatus.jsx";
+import "../../assets/partnership-status.css";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
 import { applicationSubmitBlockReason, legalDocumentError } from "../../utils/partnershipApplication.js";
 
@@ -214,12 +216,14 @@ export default function BusinessWorkspacePage({ screen }) {
     setFile(null);
     setDocumentError("");
     setDocumentNotice("");
+    setApplicationConfirm(false);
     setEditingBooking(false);
     setDeleteConfirm(false);
 
     Promise.all([
       apiRequest("/api/business/workspace"),
-      getAdvertisingCatalog(),
+      // Hồ sơ và trạng thái hợp tác không phụ thuộc danh mục quảng cáo.
+      ["BUS-03", "BUS-04"].includes(screen.id) ? Promise.resolve(null) : getAdvertisingCatalog(),
     ])
       .then(([result, offers]) => {
         if (!alive) {
@@ -364,7 +368,8 @@ export default function BusinessWorkspacePage({ screen }) {
   );
 
   const isProfile = screen.id === "BUS-02";
-  const isApplication = ["BUS-03", "BUS-04"].includes(screen.id);
+  const isPartnership = ["BUS-03", "BUS-04"].includes(screen.id);
+  const isApplication = screen.id === "BUS-03";
   const submitBlockReason = applicationSubmitBlockReason(data.company, data.documents, file, busy);
 
   /** Chọn tệp chưa phải upload; chỉ xóa lựa chọn sau khi server xác nhận đã lưu tài liệu. */
@@ -711,6 +716,8 @@ export default function BusinessWorkspacePage({ screen }) {
             </form>
           )}
 
+          {isPartnership && <nav className="partnership-tabs" aria-label="Đăng ký hợp tác"><Link to="/business/partnership/apply" aria-current={isApplication?"page":undefined}>Đăng ký hợp tác</Link><Link to="/business/partnership/status" aria-current={screen.id==="BUS-04"?"page":undefined}>Trạng thái xử lý</Link></nav>}
+          {screen.id === "BUS-04" && <PartnershipStatus company={data.company} versions={data.companyVersions || []}/>}
           {isApplication && (
             <section className="dashboard-section">
               <h2>Hồ sơ hợp tác</h2>
