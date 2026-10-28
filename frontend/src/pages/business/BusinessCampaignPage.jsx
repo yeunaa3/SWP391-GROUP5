@@ -78,6 +78,7 @@ import "../../assets/business-campaign.css";
                 const dirtyRef = useUnsaved(dirty), savingRef = useRef(false), requestKey = useRef(crypto.randomUUID()), loadGeneration = useRef(0);
                 const c = detail?.campaign, ct = detail?.contract, creatives = detail?.creatives || [], latest = creatives.find(x => x.status !== "ARCHIVED"), approved = creatives.find(x => x.status === "APPROVED");
                 const company = workspace?.company || {}, allowed = company.application_status === "APPROVED";
+                const profileEditable = !company.company_id || ["DRAFT", "NEEDS_REVISION"].includes(company.application_status);
                 const activeContracts = (workspace?.contracts || []).filter(x => x.status === "ACTIVE" && x.payment_status === "PAID" && new Date(x.end_at) > new Date());
                 const selectedContract = ct || activeContracts.find(x => String(x.contract_id) === form.contractId);
                 const version = c?.edit_version;
@@ -166,15 +167,15 @@ import "../../assets/business-campaign.css";
                         function saveDraft(next) {
                         run(() => json(`/api/business/campaigns${campaignId ? `/${campaignId}` : ""}`, {...form, contractId: Number(form.contractId), editVersion: version, requestKey: requestKey.current}, campaignId ? "PUT" : "POST"), "Đã lưu bản nháp.", r => navigate(next ? `/business/campaigns/${r.id}/creative` : "/business/campaigns"));
                         }
-                        /** Lưu Company sau xác nhận; đổi legal field sẽ chuyển về vòng review và khóa chức năng quảng cáo. */
+                        /** BUS-02 lưu hồ sơ sau xác nhận, chỉ khi chưa gửi hoặc được yêu cầu bổ sung. */
                         function saveCompany(e) {
                         e.preventDefault();
+                        if (!profileEditable) return;
                                 let payload;
                                 try { payload = prepareCompanyProfile(companyForm); }
                         catch (e) { setError(e.message); return; }
                         setError(""); setMessage("");
-                                const legal = company.application_status === "APPROVED" && (payload.name !== company.company_name || payload.taxCode !== company.tax_code);
-                                setConfirm({title: "Xác nhận lưu hồ sơ", text: legal ? "Thông tin pháp lý thay đổi sẽ cần được xét duyệt lại. Booking và chiến dịch bị khóa cho đến khi hồ sơ được duyệt." : "Lưu những thay đổi thông tin doanh nghiệp?", action: () => persistCompany(payload)});
+                                setConfirm({title: "Xác nhận lưu hồ sơ", text: "Lưu những thay đổi thông tin doanh nghiệp? Hồ sơ chưa được gửi xét duyệt.", action: () => persistCompany(payload)});
                         }
                         /** Giữ dialog và dữ liệu nhập khi lỗi; chỉ bỏ dirty sau khi backend đọc lại đủ tám trường đã lưu. */
                         async function persistCompany(payload) {
@@ -225,8 +226,7 @@ import "../../assets/business-campaign.css";
     <section className="dashboard-section"><h2>Thông báo gần đây</h2>{workspace.notices.length?workspace.notices.map((n, i) => <article key={i}><h3>{n.title}</h3><p>{n.content}</p><small>{dateLabel(n.created_at)}</small></article>):<p>Chưa có thông báo.</p>}</section>
     </>}
     {screen.id === "BUS-02" && <>
-    <form className="dashboard-section" onSubmit={saveCompany}><h2>Thông tin doanh nghiệp</h2><p>Trạng thái: <Badge value={company.application_status}/></p><div className="business-form-grid">{[["name", "Tên pháp lý", 150], ["taxCode", "Mã số thuế", 14], ["industry", "Ngành nghề", 150], ["contactPerson", "Người liên hệ", 150], ["email", "Email liên hệ", 254], ["phone", "Điện thoại", 30], ["address", "Địa chỉ", 500], ["billingAddress", "Địa chỉ xuất hóa đơn", 500]].map(([key, label, max]) => <Field key={key} label={label}><input required maxLength={max} type={key === "email"?"email":"text"} disabled={busy || ["PENDING_REVIEW", "RESUBMITTED"].includes(company.application_status)} value={companyForm[key] || ""} onChange={e => {setCompanyForm(x => ({...x, [key]:e.target.value})); setDirty(true); }}/></Field>)}</div><div className="form-actions"><button disabled={busy || ["PENDING_REVIEW", "RESUBMITTED"].includes(company.application_status)}>Lưu hồ sơ</button><Link to="/business/partnership/apply">Tài liệu và gửi xét duyệt</Link></div><p>Thay tên pháp lý, mã số thuế hoặc tài liệu đã duyệt cần xét duyệt lại; các phiên bản đã nộp được giữ nguyên.</p></form>
-    {company.company_id && !["PENDING_REVIEW", "RESUBMITTED"].includes(company.application_status) && <section className="dashboard-section"><h2>Thay tài liệu pháp lý</h2><input type="file" accept="application/pdf,image/png,image/jpeg" onChange={e => setFile(e.target.files?.[0] || null)}/><button disabled={!file || busy || dirty} onClick={() => ask("Xác nhận thay tài liệu", "Tài liệu mới được lưu thành phiên bản mới. Hồ sơ đã duyệt sẽ cần gửi xét duyệt lại.", () => {const b = new FormData(); b.append("file", file); return apiRequest("/api/business/documents", {method:"POST", body:b}); })}>Tải phiên bản mới</button>{dirty && <p className="info-note">Lưu thay đổi thông tin doanh nghiệp trước khi tải tài liệu mới để giữ đầy đủ dữ liệu đã nhập.</p>}</section>}
+    <form className="dashboard-section" onSubmit={saveCompany}><h2>Thông tin doanh nghiệp</h2><p>Trạng thái: <Badge value={company.application_status}/></p><div className="business-form-grid">{[["name", "Tên pháp lý", 150], ["taxCode", "Mã số thuế", 14], ["industry", "Ngành nghề", 150], ["contactPerson", "Người liên hệ", 150], ["email", "Email liên hệ", 254], ["phone", "Điện thoại", 30], ["address", "Địa chỉ", 500], ["billingAddress", "Địa chỉ xuất hóa đơn", 500]].map(([key, label, max]) => <Field key={key} label={label}><input required maxLength={max} type={key === "email"?"email":"text"} disabled={busy || !profileEditable} value={companyForm[key] || ""} onChange={e => {setCompanyForm(x => ({...x, [key]:e.target.value})); setDirty(true); }}/></Field>)}</div><div className="form-actions"><button disabled={busy || !profileEditable}>Lưu hồ sơ</button><Link to="/business/partnership/apply">Tài liệu và gửi xét duyệt</Link></div><p>Chỉ được sửa bản nháp hoặc hồ sơ được quản lý yêu cầu bổ sung. Hồ sơ đang chờ duyệt hoặc đã duyệt bị khóa. Tải tài liệu và gửi xét duyệt tại Đăng ký hợp tác.</p></form>
     </>}
     {screen.id === "BUS-02" && <CompanyApplicationHistory versions={workspace.companyVersions || []}/>}
     {screen.id !== "BUS-01" && screen.id !== "BUS-02" && !allowed?<section className="dashboard-section"><h2>Chưa đủ điều kiện sử dụng quảng cáo</h2><p>{company.application_status === "REJECTED"?"Hồ sơ bị từ chối. Vui lòng tạo hồ sơ mới và chờ phê duyệt.":company.application_status === "NEEDS_REVISION"?"Hồ sơ cần chỉnh sửa hoặc xét duyệt lại. Hãy hoàn thiện và gửi lại.":"Hồ sơ hợp tác đang chờ hoặc chưa gửi. Vui lòng chờ phê duyệt."}</p><Link to="/business/partnership/status">Xem hồ sơ hợp tác</Link></section>:<>

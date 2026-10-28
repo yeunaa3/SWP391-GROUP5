@@ -169,6 +169,7 @@ export default function BusinessWorkspacePage({ screen }) {
 
   const [file, setFile] = useState(null);
   const [documentError, setDocumentError] = useState("");
+  const [applicationConfirm, setApplicationConfirm] = useState(false);
   const [documentNotice, setDocumentNotice] = useState("");
   const [documentInputKey, setDocumentInputKey] = useState(0);
   const documentSaving = useRef(false);
@@ -328,6 +329,7 @@ export default function BusinessWorkspacePage({ screen }) {
 
   // Làm mới bỏ phần đang sửa và tải thông tin đã lưu, không ghi dữ liệu form.
   async function reloadWorkspace() {
+    setApplicationConfirm(false);
     if (busy || loading) {
       return;
     }
@@ -426,7 +428,7 @@ export default function BusinessWorkspacePage({ screen }) {
             </Link>
           </div>
         </section>
-      </main>
+    </main>
     );
   }
 
@@ -719,6 +721,8 @@ export default function BusinessWorkspacePage({ screen }) {
                 <dd>{data.company.application_code || "—"}</dd>
                 <dt>Thời gian gửi</dt>
                 <dd>{time(data.company.submitted_at)}</dd>
+                <dt>Thời gian xét duyệt</dt>
+                <dd>{time(data.company.reviewed_at)}</dd>
                 <dt>Phản hồi quản lý</dt>
                 <dd>{data.company.review_note || "Chưa có phản hồi"}</dd>
               </dl>
@@ -813,15 +817,7 @@ export default function BusinessWorkspacePage({ screen }) {
                   <button
                     disabled={Boolean(submitBlockReason)}
                     aria-describedby={submitBlockReason ? "application-submit-reason" : undefined}
-                    onClick={() =>
-                      action(
-                        () =>
-                          apiRequest("/api/business/application/submit", {
-                            method: "POST",
-                          }),
-                        "Đã gửi hồ sơ chờ quản lý xét duyệt.",
-                      )
-                    }
+                    onClick={() => { setError(""); setApplicationConfirm(true); }}
                   >
                     Gửi đăng ký hợp tác
                   </button>
@@ -1841,6 +1837,18 @@ export default function BusinessWorkspacePage({ screen }) {
           )}
         </>
       )}
+      {applicationConfirm && <div className="campaign-dialog-backdrop"><section className="campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="application-confirm-title" style={{maxHeight:"85vh",overflowY:"auto"}}>
+        <h2 id="application-confirm-title">Xác nhận gửi đăng ký hợp tác</h2>
+        <p>Thông tin doanh nghiệp đã lưu và tài liệu sau sẽ được gửi xét duyệt. Sau khi gửi, BUS-02 và BUS-03 bị khóa sửa.</p>
+        <dl className="business-details">{[["Doanh nghiệp","company_name"],["Mã số thuế","tax_code"],["Ngành nghề","industry"],["Người liên hệ","contact_person"],["Email","email"],["Điện thoại","phone"],["Địa chỉ","address"],["Địa chỉ xuất hóa đơn","billing_address"]].map(([label,key])=><div key={key}><dt>{label}</dt><dd>{data.company[key] || "—"}</dd></div>)}</dl>
+        <h3>Tài liệu pháp lý</h3><ul>{data.documents.map(doc=><li key={doc.document_id}><a href={`/api/media/document/${doc.document_id}`} target="_blank" rel="noreferrer">{doc.original_file_name}</a> · Phiên bản {doc.version_no}</li>)}</ul>
+        {error && <p className="form-error" role="alert">{error}</p>}
+        <div className="form-actions"><button type="button" className="secondary-button" disabled={busy} autoFocus onClick={()=>setApplicationConfirm(false)}>Hủy</button><button type="button" disabled={busy || Boolean(submitBlockReason)} onClick={()=>action(async()=>{
+          // BUS-03 chỉ gửi dữ liệu đã lưu; hủy xác nhận không phát sinh POST hay thay đổi DB.
+          const result=await apiRequest("/api/business/application/submit",{method:"POST"});
+          setApplicationConfirm(false);return result;
+        },"Đã gửi hồ sơ chờ quản lý xét duyệt.")}>{busy?"Đang gửi…":"Xác nhận gửi"}</button></div>
+      </section></div>}
     </main>
   );
 }

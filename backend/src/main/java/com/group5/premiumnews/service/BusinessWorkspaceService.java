@@ -102,17 +102,9 @@ public class BusinessWorkspaceService {
             // Công ty đã tồn tại: kiểm tra trạng thái duyệt trước khi cho sửa thông tin.
             Map<String, Object> company = jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE", id);
             String state = (String) company.get("application_status");
-            if (List.of("PENDING_REVIEW", "RESUBMITTED").contains(state)) {
-                throw new InvalidStateTransitionException("Hồ sơ đang được duyệt; chưa thể chỉnh sửa.");
-            }
-            if ("APPROVED".equals(state) && (!request.taxCode().equals(company.get("tax_code"))
-                    || !request.name().trim().equals(company.get("company_name")))) {
-                // UC-38: giữ snapshot đã duyệt, mở bản sửa và khóa booking/campaign cho đến khi
-                // duyệt lại.
-                jdbc.update("UPDATE companies SET application_status='NEEDS_REVISION',review_note=? WHERE company_id=?",
-                        "Doanh nghiệp thay đổi thông tin pháp lý; vui lòng kiểm tra tài liệu và gửi xét duyệt lại.",
-                        id);
-                audit(user, "REQUEST_LEGAL_REVIEW", "COMPANY", id);
+            // BUS-02 chỉ sửa bản nháp hoặc hồ sơ được yêu cầu bổ sung; không tự mở lại hồ sơ đã duyệt.
+            if (!List.of("DRAFT", "NEEDS_REVISION").contains(state)) {
+                throw new InvalidStateTransitionException("Hồ sơ đã gửi hoặc đã xét duyệt bị khóa. Chỉ được sửa bản nháp hoặc khi quản lý yêu cầu bổ sung.");
             }
             jdbc.update(
                     "UPDATE companies SET company_name=?,tax_code=?,email=?,phone=?,address=?,billing_address=? WHERE company_id=?",

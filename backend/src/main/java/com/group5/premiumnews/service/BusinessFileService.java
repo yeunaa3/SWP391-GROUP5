@@ -27,15 +27,13 @@ public class BusinessFileService {
     }
     /** Dùng storage adapter để checklist/review kiểm tra cả asset local và cloud. */
     public boolean available(String key){return storage.available(key);}
-    /** Lưu tài liệu pháp lý thành phiên bản mới; đổi hồ sơ đã duyệt sẽ yêu cầu xét duyệt lại. */
+    /** BUS-03 lưu tài liệu pháp lý thành phiên bản mới chỉ khi bản nháp hoặc cần bổ sung. */
     @Transactional(rollbackFor=Exception.class) @PreAuthorize("hasRole('BUSINESS')")
     public Map<String,Object> document(AuthenticatedUserPrincipal user,MultipartFile file) throws Exception {
         Long company=business.requireCompany(user);
         String state=jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,company);
-        if("APPROVED".equals(state)) {
-            // Đổi tài liệu pháp lý làm mất eligibility tạm thời; snapshot/document cũ vẫn giữ nguyên.
-            jdbc.update("UPDATE companies SET application_status='NEEDS_REVISION',review_note=? WHERE company_id=?","Đã thay tài liệu pháp lý, cần gửi xét duyệt lại.",company);
-        } else if(!List.of("DRAFT","NEEDS_REVISION").contains(state)) throw new InvalidStateTransitionException("Hồ sơ đang duyệt không được thay tài liệu.");
+        // BUS-03 dùng chung khóa trạng thái với BUS-02; không thay giấy tờ sau khi gửi/duyệt.
+        if(!List.of("DRAFT","NEEDS_REVISION").contains(state)) throw new InvalidStateTransitionException("Hồ sơ đã gửi hoặc đã xét duyệt bị khóa, không được thay tài liệu.");
         Stored stored=store(file,true);
         try {
             Integer version=jdbc.queryForObject("SELECT COALESCE(MAX(version_no),0)+1 FROM company_documents WHERE company_id=? AND document_type='LEGAL'",Integer.class,company);
