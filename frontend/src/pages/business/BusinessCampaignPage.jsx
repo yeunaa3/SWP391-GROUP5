@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient.js";
+import CampaignList from "./CampaignList.jsx";
 import CompanyApplicationHistory from "./CompanyApplicationHistory.jsx";
 import { sortCampaigns } from "../../utils/campaignSort.js";
 import { prepareCampaignDraft } from "../../utils/campaignDraft.js";
@@ -240,15 +241,14 @@ import "../../assets/business-campaign.css";
     </>}
     {screen.id === "BUS-02" && <CompanyApplicationHistory versions={workspace.companyVersions || []}/>}
     {screen.id !== "BUS-01" && screen.id !== "BUS-02" && !allowed?<section className="dashboard-section"><h2>Chưa đủ điều kiện sử dụng quảng cáo</h2><p>{company.application_status === "REJECTED"?"Hồ sơ bị từ chối. Vui lòng tạo hồ sơ mới và chờ phê duyệt.":company.application_status === "NEEDS_REVISION"?"Hồ sơ cần chỉnh sửa hoặc xét duyệt lại. Hãy hoàn thiện và gửi lại.":"Hồ sơ hợp tác đang chờ hoặc chưa gửi. Vui lòng chờ phê duyệt."}</p><Link to="/business/partnership/status">Xem hồ sơ hợp tác</Link></section>:<>
-    {screen.id === "BUS-13" && <section className="dashboard-section"><div className="section-heading"><h2>Chiến dịch và bản nháp</h2><Link className="button-link" to="/business/campaigns/edit">Tạo chiến dịch</Link></div>{!activeContracts.length && <p>Cần hợp đồng đã thanh toán còn hiệu lực để tạo hoặc nhân bản chiến dịch.</p>}
-        <div className="campaign-toolbar"><Field label="Tìm kiếm"><input type="search" placeholder="Mã, tên hoặc hợp đồng" value={q} onChange={e => {setQ(e.target.value); setPage(0); }}/></Field><Field label="Xét duyệt"><select value={filter} onChange={e => {setFilter(e.target.value); setPage(0); }}><option value="ALL">Tất cả</option>{["DRAFT", "PENDING_REVIEW", "NEEDS_REVISION", "APPROVED", "REJECTED"].map(s => <option key={s} value={s}>{labels[s]}</option>)}</select></Field><Field label="Phân phối"><select value={delivery} onChange={e => {setDelivery(e.target.value); setPage(0); }}><option value="ALL">Tất cả</option>{["NOT_RUNNING", "SCHEDULED", "ACTIVE", "PAUSED", "COMPLETED"].map(s => <option key={s} value={s}>{labels[s] || "Chưa phân phối"}</option>)}</select></Field><Field label="Sắp xếp"><select value={sortOrder} onChange={e=>{setSortOrder(e.target.value);setPage(0);}}><option value="NAME_ASC">Tên: A → Z</option><option value="NAME_DESC">Tên: Z → A</option><option value="CREATED_DESC">Tạo mới nhất</option><option value="CREATED_ASC">Tạo cũ nhất</option><option value="START_ASC">Bắt đầu: sớm nhất</option><option value="START_DESC">Bắt đầu: muộn nhất</option></select></Field></div>
-        <div className="campaign-table"><table><thead><tr><th>Mã và tên</th><th>Hợp đồng và lịch</th><th>Xét duyệt</th><th>Phân phối</th><th>Thao tác</th></tr></thead><tbody>{filtered.slice(page * 10, page * 10 + 10).map(x => {const s = campaignStatuses(x.status); return <tr key={x.campaign_id}><td>{x.code}<strong>{x.campaign_name}</strong></td><td>{x.contract_code}<small>{dateLabel(x.scheduled_start_time)} → {dateLabel(x.scheduled_end_time)}</small></td><td><Badge value={s.review}/></td><td><Badge value={s.delivery}/></td><td><Link to={`/business/campaigns/${x.campaign_id}`
-                                                                                                                                                                                                        }>Chi tiết</Link>{editable(x.status) && <Link to={`/business/campaigns/edit/${x.campaign_id}`
-                                                                                                                                                                                                        }>Tiếp tục nháp</Link>}<button className="secondary-button" disabled={busy || !activeContracts.length} onClick={() => run(() => apiRequest(`/api/business/campaigns/${x.campaign_id}
-    /copy`, {method:"POST"}), "Đã nhân bản.", r => navigate(`/business/campaigns/edit/${r.id}`
-                                ))}>Nhân bản</button>{x.status === "DRAFT" && <button className="secondary-button" disabled={busy} onClick={() => ask("Xóa bản nháp?", "Chỉ bản chưa từng gửi được xóa. Lịch sử được giữ theo chính sách lưu trữ.", () => apiRequest(`/api/business/campaigns/${x.campaign_id}`
-                                , {method:"DELETE"}))}>Xóa nháp</button>}</td></tr>; })}</tbody></table></div>{!filtered.length && <p>Không có chiến dịch phù hợp.</p>}<div className="form-actions"><button className="secondary-button" disabled={page === 0} onClick={() => setPage(x => x - 1)}>Trước</button><span>Trang {page + 1} · {filtered.length} chiến dịch</span><button className="secondary-button" disabled={(page + 1) * 10 >= filtered.length} onClick={() => setPage(x => x + 1)}>Sau</button></div>
-    </section>}
+    {screen.id === "BUS-13" && <CampaignList
+      items={filtered} total={workspace.campaigns.length}
+      q={q} setQ={setQ} filter={filter} setFilter={setFilter} delivery={delivery} setDelivery={setDelivery}
+      sortOrder={sortOrder} setSortOrder={setSortOrder} page={page} setPage={setPage}
+      busy={busy} canCreate={Boolean(activeContracts.length)}
+      onCopy={item=>run(()=>apiRequest(`/api/business/campaigns/${item.campaign_id}/copy`,{method:"POST"}),"Đã nhân bản.",r=>navigate(`/business/campaigns/edit/${r.id}`))}
+      onDelete={item=>ask("Xóa bản nháp?","Chỉ bản chưa từng gửi được xóa. Lịch sử được giữ theo chính sách lưu trữ.",()=>apiRequest(`/api/business/campaigns/${item.campaign_id}`,{method:"DELETE"}))}
+    />}
     {["BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id) && <>
     <nav className="campaign-steps" aria-label="Tiến độ chiến dịch">{steps.map(([id, label, path], i) => <Link aria-current={screen.id === id?"step":undefined} aria-disabled={!campaignId && i > 0} onClick={e => {if (!campaignId && i > 0)e.preventDefault(); }} key={id} to={path}><span>{i + 1}</span>{label}</Link>)}</nav>
     <div className="campaign-columns"><div>
