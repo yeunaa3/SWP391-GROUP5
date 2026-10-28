@@ -374,6 +374,7 @@ export default function BusinessWorkspacePage({ screen }) {
     const validation = legalDocumentError(file);
     setDocumentError(validation);setDocumentNotice("");
     if (validation) return;
+    if (data.documents.length >= 5) { setDocumentError("Tối đa 5 tài liệu. Hãy gỡ tệp không dùng trước khi tải thêm."); return; }
     documentSaving.current=true;setBusy(true);setError("");setMessage("");
     try {
       const body=new FormData();body.append("file",file);
@@ -756,7 +757,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 </div>
               )}
 
-              <h3>Tài liệu pháp lý</h3>
+              <h3>Tài liệu pháp lý ({data.documents.length}/5)</h3>
               {data.documents.length ? (
                 <ul className="business-document-list">
                   {data.documents.map((document) => (
@@ -772,6 +773,10 @@ export default function BusinessWorkspacePage({ screen }) {
                         Phiên bản {document.version_no} ·{" "}
                         {time(document.uploaded_at)}
                       </small>
+                      {editable(data.company.application_status) && <button type="button" className="secondary-button" disabled={busy} onClick={()=>{
+                        // Chỉ gỡ sau xác nhận; file thuộc lịch sử đã nộp vẫn được giữ ở backend.
+                        if(window.confirm(`Gỡ tài liệu “${document.original_file_name}” khỏi hồ sơ chuẩn bị gửi?`)) action(()=>apiRequest(`/api/business/documents/${document.document_id}`,{method:"DELETE"}),"Đã gỡ tài liệu khỏi hồ sơ chuẩn bị gửi.");
+                      }}>Gỡ tài liệu</button>}
                     </li>
                   ))}
                 </ul>
@@ -785,8 +790,9 @@ export default function BusinessWorkspacePage({ screen }) {
                 </Link>
               ) : editable(data.company.application_status) ? (
                 <>
+                  {data.documents.length >= 5 && <p className="info-note">Đã đủ 5 tài liệu. Gỡ tài liệu không dùng để tải tệp khác.</p>}
                   <form onSubmit={uploadApplicationDocument} aria-label="Tải tài liệu pháp lý">
-                    <Field label="PDF, PNG hoặc JPEG · tối đa 8 MB">
+                    <Field label="PDF, PNG hoặc JPEG · tối đa 8 MB/tệp · tối đa 5 tài liệu">
                       <input
                         key={documentInputKey}
                         type="file"
@@ -802,7 +808,7 @@ export default function BusinessWorkspacePage({ screen }) {
                     </Field>
                     <button
                       className="secondary-button"
-                      disabled={busy || !file}
+                      disabled={busy || !file || data.documents.length >= 5}
                     >
                       {busy ? "Đang xử lý…" : "Tải tài liệu lên"}
                     </button>
@@ -1765,7 +1771,7 @@ export default function BusinessWorkspacePage({ screen }) {
                         />
                       </Field>
 
-                      <button disabled={busy || !file}>
+                      <button disabled={busy || !file || data.documents.length >= 5}>
                         Tải và lưu banner
                       </button>
                       <p className="info-note">

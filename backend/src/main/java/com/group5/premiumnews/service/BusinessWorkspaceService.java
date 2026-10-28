@@ -143,6 +143,9 @@ public class BusinessWorkspaceService {
         if (count == null || count == 0) {
             throw new InvalidStateTransitionException("Cần tải ít nhất một tài liệu doanh nghiệp trước khi gửi.");
         }
+        if (count > 5) {
+            throw new InvalidStateTransitionException("Hồ sơ chỉ được gửi tối đa 5 tài liệu. Vui lòng gỡ tài liệu không dùng.");
+        }
         int nextVersion = ((Number) c.get("application_version")).intValue() + 1;
         String nextStatus = "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW";
         String priority = "NEEDS_REVISION".equals(state) ? "HIGH" : "NORMAL";

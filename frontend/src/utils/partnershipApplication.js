@@ -13,6 +13,7 @@ export function applicationSubmitBlockReason(company, documents, selectedFile, b
   if (missing.length) return `Hồ sơ đã lưu còn thiếu: ${missing.join(", ")}. Vào Hồ sơ doanh nghiệp, lưu và xác nhận trước khi gửi.`;
   if (selectedFile) return "Tệp mới chỉ được chọn, chưa tải lên. Bấm Tải tài liệu lên và chờ thành công, hoặc bỏ tệp đã chọn để dùng tài liệu đã lưu.";
   if (!documents?.length) return "Chưa có tài liệu được lưu. Chọn tệp rồi bấm Tải tài liệu lên trước khi gửi đăng ký hợp tác.";
+  if (documents.length > 5) return "Hồ sơ chỉ được gửi tối đa 5 tài liệu. Hãy gỡ tài liệu không dùng trước khi gửi.";
   return "";
 }
 

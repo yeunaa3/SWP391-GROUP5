@@ -34,17 +34,29 @@ public class BusinessFileService {
         String state=jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,company);
         // BUS-03 dùng chung khóa trạng thái với BUS-02; không thay giấy tờ sau khi gửi/duyệt.
         if(!List.of("DRAFT","NEEDS_REVISION").contains(state)) throw new InvalidStateTransitionException("Hồ sơ đã gửi hoặc đã xét duyệt bị khóa, không được thay tài liệu.");
+        // Khóa company ở trên để hai lượt upload đồng thời không vượt quá năm tài liệu.
+        Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM company_documents WHERE company_id=? AND document_type='LEGAL' AND status='ACTIVE'",Integer.class,company);
+        if(count!=null && count>=5) throw new InvalidStateTransitionException("Chỉ được gửi tối đa 5 tài liệu. Gỡ tài liệu không dùng trước khi tải thêm.");
         Stored stored=store(file,true);
         try {
             Integer version=jdbc.queryForObject("SELECT COALESCE(MAX(version_no),0)+1 FROM company_documents WHERE company_id=? AND document_type='LEGAL'",Integer.class,company);
-            // Snapshot nộp trước vẫn trỏ ID cũ; vòng nộp mới chỉ dùng bản đang ACTIVE.
-            jdbc.update("UPDATE company_documents SET status='REPLACED' WHERE company_id=? AND document_type='LEGAL' AND status='ACTIVE'",company);
+            // Thêm vào bộ tài liệu hiện tại; không thay thế các tệp đã tải trước đó.
             jdbc.update("INSERT INTO company_documents(company_id,document_type,original_file_name,storage_object_key,media_url,mime_type,file_size,checksum_sha256,version_no,uploaded_by) VALUES(?,'LEGAL',?,?,?,?,?,?,?,?)",
                 company,safeName(file.getOriginalFilename()),stored.key(),"pending",stored.mime(),file.getSize(),stored.sha(),version,user.id());
             Long id=jdbc.queryForObject("SELECT document_id FROM company_documents WHERE company_id=? AND document_type='LEGAL' AND version_no=?",Long.class,company,version);
             String url="/api/media/document/"+id;jdbc.update("UPDATE company_documents SET media_url=? WHERE document_id=?",url,id);
             return Map.of("id",id,"url",url);
         } catch(RuntimeException ex) { discardFailed(stored.key(),ex);throw ex; }
+    }
+    /** Gỡ tệp khỏi bộ hồ sơ đang sửa; giữ metadata/bytes để snapshot đã nộp vẫn đọc được. */
+    @Transactional @PreAuthorize("hasRole('BUSINESS')")
+    public Map<String,Object> removeDocument(AuthenticatedUserPrincipal user,Long documentId) {
+        Long company=business.requireCompany(user);
+        String state=jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,company);
+        if(!List.of("DRAFT","NEEDS_REVISION").contains(state)) throw new InvalidStateTransitionException("Hồ sơ đã gửi hoặc đã xét duyệt bị khóa, không được gỡ tài liệu.");
+        int changed=jdbc.update("UPDATE company_documents SET status='REPLACED' WHERE document_id=? AND company_id=? AND document_type='LEGAL' AND status='ACTIVE'",documentId,company);
+        if(changed==0) throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Không tìm thấy tài liệu đang dùng của doanh nghiệp.");
+        return Map.of("removed",documentId);
     }
     /** Khóa campaign, kiểm tra version/quyền/URL/kích thước thật rồi tạo creative version mới. */
     @Transactional(rollbackFor=Exception.class) @PreAuthorize("hasRole('BUSINESS')")

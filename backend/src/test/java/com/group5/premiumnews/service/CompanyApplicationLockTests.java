@@ -15,6 +15,38 @@ import static org.mockito.Mockito.*;
 class CompanyApplicationLockTests {
     private final AuthenticatedUserPrincipal user=new AuthenticatedUserPrincipal(1L,"test","test@example.com","unused","Test",4L,true,List.of(new SimpleGrantedAuthority("ROLE_BUSINESS")));
 
+    @Test void sixthDocumentIsRejectedBeforeWritingFile() {
+        var jdbc=mock(JdbcTemplate.class);var business=mock(BusinessWorkspaceService.class);var storage=mock(BusinessAssetStorage.class);
+        when(business.requireCompany(user)).thenReturn(4L);
+        when(jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,4L)).thenReturn("DRAFT");
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM company_documents WHERE company_id=? AND document_type='LEGAL' AND status='ACTIVE'",Integer.class,4L)).thenReturn(5);
+        assertThrows(InvalidStateTransitionException.class,()->new BusinessFileService(jdbc,business,storage).document(user,new MockMultipartFile("file","legal.pdf","application/pdf",new byte[]{1})));
+        verifyNoInteractions(storage);
+    }
+
+    @Test void removalKeepsStorageAndIsScopedToCompany() {
+        for(String state:List.of("DRAFT","NEEDS_REVISION")) {
+            var jdbc=mock(JdbcTemplate.class);var business=mock(BusinessWorkspaceService.class);var storage=mock(BusinessAssetStorage.class);
+            when(business.requireCompany(user)).thenReturn(4L);
+            when(jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,4L)).thenReturn(state);
+            when(jdbc.update("UPDATE company_documents SET status='REPLACED' WHERE document_id=? AND company_id=? AND document_type='LEGAL' AND status='ACTIVE'",8L,4L)).thenReturn(1);
+            var service=new BusinessFileService(jdbc,business,storage);
+            assertEquals(8L,service.removeDocument(user,8L).get("removed"));
+            assertThrows(org.springframework.web.server.ResponseStatusException.class,()->service.removeDocument(user,9L));
+            verifyNoInteractions(storage);
+        }
+    }
+
+    @Test void lockedApplicationCannotRemoveDocuments() {
+        for(String state:List.of("PENDING_REVIEW","RESUBMITTED","APPROVED","REJECTED")) {
+            var jdbc=mock(JdbcTemplate.class);var business=mock(BusinessWorkspaceService.class);var storage=mock(BusinessAssetStorage.class);
+            when(business.requireCompany(user)).thenReturn(4L);
+            when(jdbc.queryForObject("SELECT application_status FROM companies WHERE company_id=? FOR UPDATE",String.class,4L)).thenReturn(state);
+            assertThrows(InvalidStateTransitionException.class,()->new BusinessFileService(jdbc,business,storage).removeDocument(user,8L));
+            verify(jdbc,never()).update(anyString(),any(Object[].class));
+        }
+    }
+
     @Test void submittedAndReviewedProfilesCannotBeUpdated() {
         for(String state:List.of("PENDING_REVIEW","RESUBMITTED","APPROVED","REJECTED")) {
             var jdbc=mock(JdbcTemplate.class);

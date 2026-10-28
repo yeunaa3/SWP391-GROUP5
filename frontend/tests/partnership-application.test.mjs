@@ -5,6 +5,13 @@ import { applicationSubmitBlockReason, legalDocumentError } from "../src/utils/p
 const company = { company_id: 3, application_status: "DRAFT", company_name: "Công ty thử nghiệm", tax_code: "1234567890", industry: "Công nghệ", contact_person: "Người liên hệ", email: "qa@example.com", phone: "0901234567", address: "Địa chỉ", billing_address: "Địa chỉ hóa đơn" };
 const file = { name: "legal.png", type: "image/png", size: 1024 };
 
+test("cho gửi năm tài liệu nhưng chặn sáu, gỡ hết thì phải tải lại", () => {
+  const documents=Array.from({length:5},(_,i)=>({document_id:i+1}));
+  assert.equal(applicationSubmitBlockReason(company,documents,null),"");
+  assert.match(applicationSubmitBlockReason(company,[...documents,{document_id:6}],null),/tối đa 5/);
+  assert.match(applicationSubmitBlockReason(company,[],null),/Chưa có tài liệu/);
+});
+
 test("chỉ chọn tệp chưa được gửi, kể cả trước đó có tài liệu đã lưu", () => {
   assert.match(applicationSubmitBlockReason(company, [], file), /chưa tải lên/);
   assert.match(applicationSubmitBlockReason(company, [{document_id: 1}], file), /chưa tải lên/);
