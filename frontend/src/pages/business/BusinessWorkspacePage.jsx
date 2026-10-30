@@ -130,10 +130,12 @@ export default function BusinessWorkspacePage({ screen }) {
   const navigate = useNavigate();
   const [query] = useSearchParams();
 
+  // Dữ liệu workspace: hồ sơ công ty, hợp đồng, chiến dịch, tài liệu pháp lý
   const [data, setData] = useState(empty);
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Các trạng thái thao tác: đang gửi, lỗi, thông báo thành công
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -148,6 +150,7 @@ export default function BusinessWorkspacePage({ screen }) {
     billingAddress: "",
   });
 
+  // UC-25/BUS-07: dữ liệu đang chỉnh sửa của yêu cầu đặt quảng cáo, độc lập với dữ liệu hợp đồng/campaign.
   const [booking, setBooking] = useState({
     name: "",
     slotId: query.get("slotId") || "",
@@ -156,11 +159,13 @@ export default function BusinessWorkspacePage({ screen }) {
     endDate: query.get("endDate") || "",
   });
 
+  // UC-25/BUS-07: trạng thái kiểm tra lịch đặt quảng cáo, xung đột hay hợp lệ.
   const [calendarError, setCalendarError] = useState("");
   const [calendarValid, setCalendarValid] = useState(false);
   const [editingBooking, setEditingBooking] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
 
+  // UC-25/BUS-07: dữ liệu đang chỉnh sửa của chiến dịch, độc lập với dữ liệu hợp đồng.
   const [campaignForm, setCampaignForm] = useState({
     name: "",
     description: "",
@@ -169,6 +174,8 @@ export default function BusinessWorkspacePage({ screen }) {
     endTime: "",
   });
 
+
+  // UC-25/BUS-07: dữ liệu file upload và URL đích của chiến dịch, không lưu trong DB.
   const [file, setFile] = useState(null);
   const [documentError, setDocumentError] = useState("");
   const [applicationConfirm, setApplicationConfirm] = useState(false);
@@ -178,6 +185,7 @@ export default function BusinessWorkspacePage({ screen }) {
   const [targetUrl, setTargetUrl] = useState("");
 
   const queryString = query.toString();
+
 
   useEffect(() => {
     if (screen.id === "BUS-07") {
@@ -193,6 +201,7 @@ export default function BusinessWorkspacePage({ screen }) {
     }
   }, [screen.id, queryString]);
 
+  
   const current = data.campaigns.find(
     (campaign) => String(campaign.campaign_id) === params.campaignId,
   );
@@ -207,6 +216,7 @@ export default function BusinessWorkspacePage({ screen }) {
     return result;
   }
 
+  // Nạp dữ liệu thật từ backend khi vào trang, đồng thời nạp catalog quảng cáo để hiển thị giá/ID gói và vị trí.
   useEffect(() => {
     let alive = true;
 
@@ -354,6 +364,7 @@ export default function BusinessWorkspacePage({ screen }) {
     }
   }
 
+  // UC-25/BUS-07: tìm thông tin vị trí và gói đã chọn để tính toán và validate
   const json = (path, body, method = "POST") =>
     apiRequest(path, {
       method,
@@ -845,6 +856,7 @@ export default function BusinessWorkspacePage({ screen }) {
             </section>
           )}
 
+          // UC-25/BUS-07: form tạo yêu cầu đặt quảng cáo, hiển thị khi hồ sơ hợp tác đã được duyệt.
           {screen.id === "BUS-07" &&
             (() => {
               // Tìm thông tin vị trí và gói đã chọn để tính toán và validate
@@ -1214,6 +1226,7 @@ export default function BusinessWorkspacePage({ screen }) {
               );
             })()}
 
+          // UC-25/BUS-11: danh sách hợp đồng và yêu cầu đã gửi, hiển thị khi khách đã có hợp đồng.
           {screen.id === "BUS-11" && (
             <section className="dashboard-section">
               <div className="section-heading">
