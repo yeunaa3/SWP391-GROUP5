@@ -899,7 +899,7 @@ public class AdManagerPartnershipService {
                 reason);
     }
 
-    private BigDecimal slotMonthlyPriceSnapshot(
+    private BigDecimal slotPriceSnapshot(
             long contractId,
             Map<String, Object> contract) {
         BigDecimal savedSnapshot = jdbc.queryForObject("""
@@ -915,24 +915,18 @@ public class AdManagerPartnershipService {
             return savedSnapshot;
         }
 
-        LocalDateTime originalStart = contractDateTime(contract.get("start_at"));
-        LocalDateTime originalEnd = contractDateTime(contract.get("end_at"));
-        long originalDays = ChronoUnit.DAYS.between(
-                originalStart.toLocalDate(),
-                originalEnd.toLocalDate());
+        long slotId = ((Number) contract.get("slot_id")).longValue();
+        BigDecimal currentSlotPrice = jdbc.queryForObject(
+                "SELECT base_price FROM ad_slots WHERE slot_id=?",
+                BigDecimal.class,
+                slotId);
 
-        BigDecimal savedTotal = (BigDecimal) contract.get("total_value");
-        BigDecimal packagePrice = (BigDecimal) contract.get("package_price_snapshot");
-        BigDecimal originalSlotAmount = savedTotal.subtract(packagePrice);
-
-        if (originalDays <= 0 || originalSlotAmount.signum() < 0) {
+        if (currentSlotPrice == null) {
             throw new InvalidStateTransitionException(
-                    "Không thể xác định giá vị trí đã lưu cho booking cũ.");
+                    "Không tìm thấy giá vị trí quảng cáo cho booking cũ.");
         }
 
-        return originalSlotAmount
-                .multiply(BigDecimal.valueOf(30))
-                .divide(BigDecimal.valueOf(originalDays), 0, RoundingMode.HALF_UP);
+        return currentSlotPrice;
     }
 
     private BigDecimal calculateProposalAmount(
@@ -958,12 +952,8 @@ public class AdManagerPartnershipService {
         }
 
         BigDecimal packagePrice = (BigDecimal) contract.get("package_price_snapshot");
-        BigDecimal slotMonthlyPrice = slotMonthlyPriceSnapshot(contractId, contract);
-        BigDecimal slotAmount = slotMonthlyPrice
-                .multiply(BigDecimal.valueOf(proposedDays))
-                .divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP);
-
-        return packagePrice.add(slotAmount).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal slotPrice = slotPriceSnapshot(contractId, contract);
+        return packagePrice.add(slotPrice).setScale(2, RoundingMode.HALF_UP);
     }
 
     private LocalDateTime contractDateTime(Object value) {

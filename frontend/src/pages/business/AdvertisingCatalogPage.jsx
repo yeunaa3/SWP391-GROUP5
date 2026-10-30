@@ -402,7 +402,7 @@ export default function AdvertisingCatalogPage() {
         )}
 
         <p className="bus05-footnote">
-          Giá vị trí là giá cơ sở theo 30 ngày, phân bổ theo số ngày thực tế và cộng giá gói.
+          Giá vị trí được tính cố định, không phân bổ theo số ngày; tổng bằng giá gói + giá vị trí.
           Vị trí đang hoạt động không đồng nghĩa với việc
           vị trí đó chắc chắn còn trống trong lịch.
         </p>

@@ -222,8 +222,9 @@ public class BusinessWorkspaceService {
         }
         LocalDateTime start = request.startDate().atStartOfDay(), end = request.endDate().plusDays(1).atStartOfDay();
         requireAvailable(request.slotId(), start, end);
-        BigDecimal price = ((BigDecimal) pack.get("price")).add(((BigDecimal) slot.get("base_price"))
-                .multiply(BigDecimal.valueOf(days)).divide(BigDecimal.valueOf(30), 2, RoundingMode.HALF_UP));
+        BigDecimal price = ((BigDecimal) pack.get("price"))
+                .add((BigDecimal) slot.get("base_price"))
+                .setScale(2, RoundingMode.HALF_UP);
         // Báo giá UI không có quyền quyết định giá; nếu giá catalog đổi thì yêu cầu xác
         // nhận lại.
         if (request.quotedAmount() != null

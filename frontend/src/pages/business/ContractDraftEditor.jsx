@@ -15,7 +15,8 @@ export default function ContractDraftEditor({ contract, catalog, busy, onSave, o
   const pack = catalog?.offers?.find(item => String(item.id) === form.packageId);
   const days = form.startDate && form.endDate ? dayCount(form.startDate, form.endDate) : 0;
   const price = slot && pack && days > 0
-    ? Math.round((Number(pack.price) + Number(slot.base_price ?? slot.basePrice ?? 0) * days / 30) * 100) / 100 : 0;
+    ? Math.round((Number(pack.price) + Number(slot.base_price ?? slot.basePrice ?? 0)) * 100) / 100
+    : 0;
   const valid = Boolean(form.name.trim() && slot && pack && days > 0 && calendar.valid && !calendar.error && Number.isFinite(price));
   const locked = busy || Boolean(confirmation);
   // Đổi vị trí/gói/ngày phải kiểm tra lại lịch trước khi được lưu.

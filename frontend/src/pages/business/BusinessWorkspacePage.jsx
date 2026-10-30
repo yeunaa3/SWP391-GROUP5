@@ -107,7 +107,7 @@ function QuoteSummary({ quote }) {
       <dl className="business-details">
         <dt>Giá gói</dt>
         <dd>{currency(saved.packagePrice)}</dd>
-        <dt>Đơn giá vị trí / 30 ngày</dt>
+        <dt>Giá vị trí</dt>
         <dd>{currency(saved.slotMonthlyPrice)}</dd>
         <dt>Số ngày</dt>
         <dd>{saved.days}</dd>
@@ -117,7 +117,7 @@ function QuoteSummary({ quote }) {
         <dd>{time(saved.quotedAt)}</dd>
       </dl>
       <p>
-        Tổng = giá gói + giá vị trí × số ngày / 30. Gửi yêu cầu chưa đồng nghĩa
+        Tổng = giá gói + giá vị trí. Gửi yêu cầu chưa đồng nghĩa
         giữ chỗ hoặc đã thanh toán.
       </p>
     </section>
@@ -880,17 +880,10 @@ export default function BusinessWorkspacePage({ screen }) {
                   )
                   : 0;
 
-              // Tính giá dự kiến theo công thức: Giá gói + (Giá vị trí * Số ngày / 30)
               const estimatedPrice =
                 selectedSlotObj && selectedPackObj && bookingDays > 0
                   ? Number(selectedPackObj.price) +
-                  (Number(
-                    selectedSlotObj.base_price ||
-                    selectedSlotObj.basePrice ||
-                    0,
-                  ) *
-                    bookingDays) /
-                  30
+                  Number(selectedSlotObj.base_price || selectedSlotObj.basePrice || 0)
                   : 0;
 
               // ĐIỀU KIỆN HỢP LỆ ĐỂ MỞ NÚT "LƯU BẢN NHÁP" VÀ "GỬI YÊU CẦU ĐẶT QUẢNG CÁO":
@@ -1071,11 +1064,9 @@ export default function BusinessWorkspacePage({ screen }) {
                                 selectedSlotObj.basePrice ||
                                 selectedSlotObj.base_price ||
                                 0,
-                              ) *
-                              (bookingDays / 30),
+                              ),
                             )}{" "}
-                            ({bookingDays}/30 ngày). Server xác nhận lại báo giá
-                            khi lưu.
+                            (Server xác nhận lại báo giá khi lưu.)
                           </p>
                         )}
                       </div>
