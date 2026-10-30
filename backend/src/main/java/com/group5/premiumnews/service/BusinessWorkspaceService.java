@@ -50,8 +50,32 @@ public class BusinessWorkspaceService {
         List<Map<String, Object>> documents = jdbc.queryForList(
                 "SELECT document_id,original_file_name,document_type,version_no,uploaded_at FROM company_documents WHERE company_id=? AND status='ACTIVE' ORDER BY uploaded_at DESC",
                 id);
-        List<Map<String, Object>> contracts = jdbc
-                .queryForList("SELECT * FROM contracts WHERE company_id=? ORDER BY created_at DESC", id);
+        List<Map<String, Object>> contracts = jdbc.queryForList("""
+                SELECT c.*,
+                       p.proposal_id AS latest_proposal_id,
+                       p.revision_no AS latest_proposal_revision_no,
+                       p.status AS latest_proposal_status,
+                       p.commercial_terms AS latest_proposal_terms,
+                       p.proposed_amount AS latest_proposal_amount,
+                       p.currency AS latest_proposal_currency,
+                       p.proposed_start_at AS latest_proposal_start_at,
+                       p.proposed_end_at AS latest_proposal_end_at,
+                       p.expires_at AS latest_proposal_expires_at,
+                       p.sent_at AS latest_proposal_sent_at
+                FROM contracts c
+                LEFT JOIN contract_proposals p
+                  ON p.proposal_id = (
+                      SELECT cp.proposal_id
+                      FROM contract_proposals cp
+                      WHERE cp.contract_id = c.contract_id
+                        AND cp.status IN ('SENT', 'REVISION_REQUESTED', 'ACCEPTED')
+                      ORDER BY cp.revision_no DESC
+                      LIMIT 1
+                  )
+                WHERE c.company_id=?
+                ORDER BY c.created_at DESC
+                """, id);
+
         List<Map<String, Object>> campaigns = jdbc.queryForList(
                 """
                         SELECT c.*,ct.contract_code,ct.slot_id,s.width_px,s.height_px,
@@ -65,7 +89,8 @@ public class BusinessWorkspaceService {
         Map<String, Object> result = new HashMap<>();
         result.put("company", company);
         result.put("documents", documents);
-        // BUS-04 lấy đúng quyết định và sự kiện từng lần nộp, không dựng trạng thái giả.
+        // BUS-04 lấy đúng quyết định và sự kiện từng lần nộp, không dựng trạng thái
+        // giả.
         result.put("companyVersions", CompanyApplicationHistory.load(jdbc, company));
         // BUS-13: không trả danh sách chiến dịch khi hồ sơ hợp tác chưa được phê duyệt.
         result.put("contracts", contracts);
@@ -104,9 +129,11 @@ public class BusinessWorkspaceService {
             // Công ty đã tồn tại: kiểm tra trạng thái duyệt trước khi cho sửa thông tin.
             Map<String, Object> company = jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE", id);
             String state = (String) company.get("application_status");
-            // BUS-02 chỉ sửa bản nháp hoặc hồ sơ được yêu cầu bổ sung; không tự mở lại hồ sơ đã duyệt.
+            // BUS-02 chỉ sửa bản nháp hoặc hồ sơ được yêu cầu bổ sung; không tự mở lại hồ
+            // sơ đã duyệt.
             if (!List.of("DRAFT", "NEEDS_REVISION").contains(state)) {
-                throw new InvalidStateTransitionException("Hồ sơ đã gửi hoặc đã xét duyệt bị khóa. Chỉ được sửa bản nháp hoặc khi quản lý yêu cầu bổ sung.");
+                throw new InvalidStateTransitionException(
+                        "Hồ sơ đã gửi hoặc đã xét duyệt bị khóa. Chỉ được sửa bản nháp hoặc khi quản lý yêu cầu bổ sung.");
             }
             jdbc.update(
                     "UPDATE companies SET company_name=?,tax_code=?,email=?,phone=?,address=?,billing_address=? WHERE company_id=?",
@@ -146,7 +173,8 @@ public class BusinessWorkspaceService {
             throw new InvalidStateTransitionException("Cần tải ít nhất một tài liệu doanh nghiệp trước khi gửi.");
         }
         if (count > 5) {
-            throw new InvalidStateTransitionException("Hồ sơ chỉ được gửi tối đa 5 tài liệu. Vui lòng gỡ tài liệu không dùng.");
+            throw new InvalidStateTransitionException(
+                    "Hồ sơ chỉ được gửi tối đa 5 tài liệu. Vui lòng gỡ tài liệu không dùng.");
         }
         int nextVersion = ((Number) c.get("application_version")).intValue() + 1;
         String nextStatus = "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW";
@@ -327,6 +355,221 @@ public class BusinessWorkspaceService {
                 "amount", price,
                 "status", resultStatus,
                 "revisionNo", savedRevision);
+    }
+
+    @Transactional
+    public Map<String, Object> decideContractProposal(
+            AuthenticatedUserPrincipal user,
+            Long contractId,
+            BusinessRequests.ContractProposalDecision request) {
+
+        Long companyId = requireCompany(user);
+        Map<String, Object> contract = one(
+                "SELECT * FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",
+                contractId,
+                companyId);
+
+        int currentRevision = ((Number) contract.get("revision_no")).intValue();
+
+        if (!"PROPOSED".equals(contract.get("status"))) {
+            throw new InvalidStateTransitionException(
+                    "Booking hiện không có đề xuất đang chờ phản hồi.");
+        }
+        if (currentRevision != request.expectedRevisionNo()) {
+            throw new ConflictException(
+                    "Booking đã thay đổi. Hãy tải lại trước khi phản hồi.");
+        }
+
+        List<Map<String, Object>> proposals = jdbc.queryForList("""
+                SELECT *
+                FROM contract_proposals
+                WHERE contract_id=? AND status='SENT'
+                ORDER BY revision_no DESC
+                LIMIT 1
+                FOR UPDATE
+                """, contractId);
+
+        if (proposals.isEmpty()
+                || ((Number) proposals.getFirst().get("revision_no")).intValue() != request.proposalRevisionNo()) {
+            throw new ConflictException(
+                    "Đề xuất đã thay đổi hoặc đã được phản hồi. Hãy tải lại.");
+        }
+
+        Map<String, Object> proposal = proposals.getFirst();
+        LocalDateTime expiresAt = dateTime(proposal.get("expires_at"));
+
+        if (!expiresAt.isAfter(LocalDateTime.now(ZoneId.of("Asia/Bangkok")))) {
+            throw new InvalidStateTransitionException(
+                    "Đề xuất đã hết hạn. Hãy liên hệ Ad Manager để nhận đề xuất mới.");
+        }
+
+        long proposalId = ((Number) proposal.get("proposal_id")).longValue();
+
+        if ("REQUEST_REVISION".equals(request.decision())) {
+            String reason = request.reason() == null ? "" : request.reason().trim();
+            if (reason.isBlank()) {
+                throw new InvalidStateTransitionException(
+                        "Cần nhập lý do yêu cầu sửa điều khoản.");
+            }
+
+            int contractChanged = jdbc.update("""
+                    UPDATE contracts
+                    SET status='PENDING_REVIEW',
+                        revision_no=revision_no+1
+                    WHERE contract_id=?
+                      AND company_id=?
+                      AND revision_no=?
+                      AND status='PROPOSED'
+                    """, contractId, companyId, currentRevision);
+
+            if (contractChanged != 1) {
+                throw new ConflictException(
+                        "Booking đã thay đổi. Hãy tải lại trước khi yêu cầu sửa điều khoản.");
+            }
+
+            int changed = jdbc.update("""
+                    UPDATE contract_proposals
+                    SET status='REVISION_REQUESTED',
+                        business_response_reason=?
+                    WHERE proposal_id=? AND status='SENT'
+                    """, reason, proposalId);
+
+            if (changed != 1) {
+                throw new ConflictException(
+                        "Đề xuất đã được phản hồi. Hãy tải lại.");
+            }
+
+            jdbc.update("""
+                    INSERT INTO audit_logs(
+                        actor_id, action, entity_type, entity_id,
+                        old_value, new_value, reason
+                    )
+                    VALUES(
+                        ?, 'BUSINESS_REQUEST_PROPOSAL_REVISION',
+                        'CONTRACT', ?,
+                        JSON_OBJECT(
+                            'status', 'PROPOSED',
+                            'proposalRevisionNo', ?
+                        ),
+                        JSON_OBJECT(
+                            'status', 'PENDING_REVIEW',
+                            'proposalStatus', 'REVISION_REQUESTED',
+                            'revisionNo', ?
+                        ),
+                        ?
+                    )
+                    """,
+                    user.id(),
+                    String.valueOf(contractId),
+                    request.proposalRevisionNo(),
+                    currentRevision + 1,
+                    reason);
+
+            jdbc.update("""
+                    INSERT INTO notifications(
+                        user_id, title, content, notification_type,
+                        related_entity_type, related_entity_id,
+                        delivery_status, sent_at
+                    )
+                    SELECT DISTINCT
+                        u.user_id,
+                        'Business yêu cầu sửa điều khoản',
+                        ?,
+                        'WORKFLOW',
+                        'CONTRACT',
+                        ?,
+                        'SENT',
+                        CURRENT_TIMESTAMP(6)
+                    FROM users u
+                    JOIN user_roles ur ON ur.user_id=u.user_id
+                    JOIN roles r ON r.role_id=ur.role_id
+                    WHERE r.role_name='AD_MANAGER'
+                      AND r.status='ACTIVE'
+                      AND u.status='ACTIVE'
+                    """,
+                    "Booking " + contract.get("contract_code")
+                            + " cần sửa điều khoản. Lý do: " + reason,
+                    String.valueOf(contractId));
+
+            return overview(user);
+        }
+
+        LocalDateTime proposedStartAt = dateTime(proposal.get("proposed_start_at"));
+        LocalDateTime proposedEndAt = dateTime(proposal.get("proposed_end_at"));
+        long slotId = ((Number) contract.get("slot_id")).longValue();
+
+        one("SELECT slot_id FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",
+                slotId);
+        requireAvailable(slotId, proposedStartAt, proposedEndAt);
+
+        int proposalChanged = jdbc.update("""
+                UPDATE contract_proposals
+                SET status='ACCEPTED',
+                    accepted_at=CURRENT_TIMESTAMP(6)
+                WHERE proposal_id=? AND status='SENT'
+                """, proposalId);
+
+        if (proposalChanged != 1) {
+            throw new ConflictException(
+                    "Đề xuất đã được phản hồi. Hãy tải lại.");
+        }
+
+        int contractChanged = jdbc.update("""
+                UPDATE contracts
+                SET status='ACCEPTED',
+                    total_value=?,
+                    start_at=?,
+                    end_at=?,
+                    payment_status='PENDING',
+                    accepted_at=CURRENT_TIMESTAMP(6),
+                    payment_due_at=DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 48 HOUR),
+                    reservation_expires_at=DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 48 HOUR),
+                    revision_no=revision_no+1
+                WHERE contract_id=?
+                  AND company_id=?
+                  AND revision_no=?
+                  AND status='PROPOSED'
+                """,
+                proposal.get("proposed_amount"),
+                proposedStartAt,
+                proposedEndAt,
+                contractId,
+                companyId,
+                currentRevision);
+
+        if (contractChanged != 1) {
+            throw new ConflictException(
+                    "Booking đã thay đổi. Hãy tải lại trước khi đồng ý.");
+        }
+
+        jdbc.update("""
+                UPDATE contracts
+                SET status='PENDING_PAYMENT'
+                WHERE contract_id=?
+                  AND revision_no=?
+                  AND status='ACCEPTED'
+                """, contractId, currentRevision + 1);
+
+        jdbc.update("""
+                INSERT INTO audit_logs(
+                    actor_id, action, entity_type, entity_id,
+                    old_value, new_value
+                )
+                VALUES(
+                    ?, 'BUSINESS_ACCEPT_CONTRACT_PROPOSAL',
+                    'CONTRACT', ?,
+                    JSON_OBJECT('status', 'PROPOSED',
+                                'revisionNo', ?),
+                    JSON_OBJECT('status', 'PENDING_PAYMENT',
+                                'proposalRevisionNo', ?)
+                )
+                """,
+                user.id(),
+                String.valueOf(contractId),
+                currentRevision,
+                request.proposalRevisionNo());
+
+        return overview(user);
     }
 
     @Transactional
@@ -617,15 +860,17 @@ public class BusinessWorkspaceService {
 
     private void audit(AuthenticatedUserPrincipal user, String action, String type, Long id) {
         if ("SUBMIT_APPLICATION".equals(action)) {
-            // Lưu trạng thái lúc nộp theo version; mở vòng mới/reset company sau này không làm mất dấu gửi lại.
+            // Lưu trạng thái lúc nộp theo version; mở vòng mới/reset company sau này không
+            // làm mất dấu gửi lại.
             jdbc.update("""
-                INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,new_value)
-                SELECT ?,?,?,?,JSON_OBJECT('application_version',application_version,
-                    'submission_status',application_status,'application_code',application_code)
-                FROM companies WHERE company_id=?
-                """,user.id(),action,type,String.valueOf(id),id);
+                    INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,new_value)
+                    SELECT ?,?,?,?,JSON_OBJECT('application_version',application_version,
+                        'submission_status',application_status,'application_code',application_code)
+                    FROM companies WHERE company_id=?
+                    """, user.id(), action, type, String.valueOf(id), id);
         } else {
-            jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES(?,?,?,?)", user.id(), action,
+            jdbc.update("INSERT INTO audit_logs(actor_id,action,entity_type,entity_id) VALUES(?,?,?,?)", user.id(),
+                    action,
                     type, String.valueOf(id));
         }
         String title = switch (action) {

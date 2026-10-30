@@ -24,7 +24,7 @@ public final class WorkflowPolicy {
             ContractStatus.class,
             entry(ContractStatus.DRAFT, ContractStatus.PENDING_REVIEW, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
             entry(ContractStatus.PENDING_REVIEW, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
-            entry(ContractStatus.PROPOSED, ContractStatus.REVISION_REQUESTED, ContractStatus.ACCEPTED, ContractStatus.EXPIRED, ContractStatus.CANCELLED),
+                        entry(ContractStatus.PROPOSED, ContractStatus.PENDING_REVIEW, ContractStatus.REVISION_REQUESTED, ContractStatus.ACCEPTED, ContractStatus.EXPIRED, ContractStatus.CANCELLED),
             entry(ContractStatus.REVISION_REQUESTED, ContractStatus.PROPOSED, ContractStatus.CANCELLED),
             entry(ContractStatus.ACCEPTED, ContractStatus.PENDING_PAYMENT, ContractStatus.CANCELLED),
             entry(ContractStatus.PENDING_PAYMENT, ContractStatus.ACTIVE, ContractStatus.PAYMENT_FAILED, ContractStatus.EXPIRED, ContractStatus.CANCELLED),

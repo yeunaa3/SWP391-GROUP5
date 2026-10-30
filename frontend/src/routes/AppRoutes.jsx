@@ -39,6 +39,7 @@ import PartnershipDetailPage from "../pages/adManager/PartnershipDetailPage.jsx"
 import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorPage.jsx";
 import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
 import AdManagerBookingQueuePage from "../pages/adManager/AdManagerBookingQueuePage.jsx";
+import AdManagerBookingProposalPage from "../pages/adManager/AdManagerBookingProposalPage.jsx";
 import AdSlotManagementPage from "../pages/admin/AdSlotManagementPage.jsx";
 import B2bPackageManagementPage from "../pages/admin/B2bPackageManagementPage.jsx";
 
@@ -47,6 +48,7 @@ const specialPages = {
   "ADM-02": <PartnershipQueuePage />,
   "ADM-03": <PartnershipDetailPage />,
   "ADM-04": <AdManagerBookingQueuePage />,
+  "ADM-05": <AdManagerBookingProposalPage />,
   "ADM-07": <CampaignReviewPage />,
   "ADM-08": <CampaignReviewPage />,
   "ADM-09": <ActiveCampaignMonitorPage />,

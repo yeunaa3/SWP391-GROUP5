@@ -29,6 +29,43 @@ export function getBookingQueue(filters, signal) {
     return apiRequest("/api/ad-manager/bookings?" + query.toString(), { signal });
 }
 
+export function getBookingDetail(contractId, signal) {
+    return apiRequest(
+        `/api/ad-manager/bookings/${encodeURIComponent(contractId)}`,
+        { signal },
+    );
+}
+
+export function saveBookingProposal(contractId, payload) {
+    return apiRequest(
+        `/api/ad-manager/bookings/${encodeURIComponent(contractId)}/proposal`,
+        {
+            method: "PUT",
+            body: JSON.stringify(payload),
+        },
+    );
+}
+
+export function sendBookingProposal(contractId, expectedRevisionNo) {
+    return apiRequest(
+        `/api/ad-manager/bookings/${encodeURIComponent(contractId)}/proposal/send`,
+        {
+            method: "POST",
+            body: JSON.stringify({ expectedRevisionNo }),
+        },
+    );
+}
+
+export function requestAnotherBookingPeriod(contractId, expectedRevisionNo, reason) {
+    return apiRequest(
+        `/api/ad-manager/bookings/${encodeURIComponent(contractId)}/request-another-period`,
+        {
+            method: "POST",
+            body: JSON.stringify({ expectedRevisionNo, reason }),
+        },
+    );
+}
+
 export function getPartnership(companyId, signal) {
     return apiRequest(`/api/ad-manager/partnerships/${encodeURIComponent(companyId)}`, { signal });
 }

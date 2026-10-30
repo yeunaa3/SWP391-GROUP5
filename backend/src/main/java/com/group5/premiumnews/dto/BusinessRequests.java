@@ -34,6 +34,13 @@ public final class BusinessRequests {
                         @NotNull @Positive Integer expectedRevisionNo) {
         }
 
+        public record ContractProposalDecision(
+                        @NotNull @Positive Integer expectedRevisionNo,
+                        @NotNull @Positive Integer proposalRevisionNo,
+                        @NotBlank @Pattern(regexp = "ACCEPT|REQUEST_REVISION") String decision,
+                        @Size(max = 2000) String reason) {
+        }
+
         public record Campaign(@NotNull @Positive Long contractId,
                         @NotBlank @Size(max = 150) String name, @Size(max = 2000) String description,
                         @NotNull LocalDateTime startTime, @NotNull LocalDateTime endTime,

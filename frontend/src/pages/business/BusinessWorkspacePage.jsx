@@ -139,6 +139,7 @@ export default function BusinessWorkspacePage({ screen }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [proposalRevisionReason, setProposalRevisionReason] = useState("");
 
   // UC-38/BUS-02: dữ liệu đang chỉnh sửa của hồ sơ công ty, độc lập với hồ sơ cá nhân ở UC-08.
   const [companyForm, setCompanyForm] = useState({
@@ -201,7 +202,7 @@ export default function BusinessWorkspacePage({ screen }) {
     }
   }, [screen.id, queryString]);
 
-  
+
   const current = data.campaigns.find(
     (campaign) => String(campaign.campaign_id) === params.campaignId,
   );
@@ -314,6 +315,7 @@ export default function BusinessWorkspacePage({ screen }) {
   }, [screen.id, params.campaignId, params.contractId]);
 
 
+
   // Bao thao tác API: khóa gửi lặp, hiển thị lỗi/thành công, đồng bộ workspace rồi gọi callback nếu có.
   async function action(task, success, after) {
     if (busy) {
@@ -339,6 +341,32 @@ export default function BusinessWorkspacePage({ screen }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleProposalDecision(decision, reason = "") {
+    if (!contract) return;
+
+    action(
+      () =>
+        apiRequest(
+          `/api/business/bookings/${contract.contract_id}/proposal/decision`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              expectedRevisionNo: Number(contract.revision_no),
+              proposalRevisionNo: Number(contract.latest_proposal_revision_no),
+              decision,
+              reason: decision === "REQUEST_REVISION" ? reason.trim() : null,
+            }),
+          },
+        ),
+      decision === "ACCEPT"
+        ? "Đã đồng ý đề xuất. Hợp đồng đang chờ thanh toán."
+        : "Đã gửi yêu cầu sửa điều khoản cho Ad Manager.",
+      decision === "REQUEST_REVISION"
+        ? () => setProposalRevisionReason("")
+        : undefined,
+    );
   }
 
   // Làm mới bỏ phần đang sửa và tải thông tin đã lưu, không ghi dữ liệu form.
@@ -388,14 +416,14 @@ export default function BusinessWorkspacePage({ screen }) {
     event.preventDefault();
     if (busy || documentSaving.current) return;
     const validation = legalDocumentError(file);
-    setDocumentError(validation);setDocumentNotice("");
+    setDocumentError(validation); setDocumentNotice("");
     if (validation) return;
     if (data.documents.length >= 5) { setDocumentError("Tối đa 5 tài liệu. Hãy gỡ tệp không dùng trước khi tải thêm."); return; }
-    documentSaving.current=true;setBusy(true);setError("");setMessage("");
+    documentSaving.current = true; setBusy(true); setError(""); setMessage("");
     try {
-      const body=new FormData();body.append("file",file);
-      await apiRequest("/api/business/documents",{method:"POST",body});
-      setFile(null);setDocumentInputKey(value=>value+1);
+      const body = new FormData(); body.append("file", file);
+      await apiRequest("/api/business/documents", { method: "POST", body });
+      setFile(null); setDocumentInputKey(value => value + 1);
       try {
         await refresh();
         setDocumentNotice("Đã tải tài liệu lên máy chủ. Kiểm tra tài liệu trong danh sách rồi bấm Gửi đăng ký hợp tác.");
@@ -404,7 +432,7 @@ export default function BusinessWorkspacePage({ screen }) {
       }
     } catch (e) {
       setDocumentError(e.message); // Giữ tệp để người dùng sửa lỗi/thử lại, không báo thành công giả.
-    } finally { documentSaving.current=false;setBusy(false); }
+    } finally { documentSaving.current = false; setBusy(false); }
   }
 
   // BUS-13 hiển thị danh sách ở nhánh riêng; isCampaign dùng cho màn tạo/sửa/banner/gửi/chi tiết.
@@ -445,7 +473,7 @@ export default function BusinessWorkspacePage({ screen }) {
             </Link>
           </div>
         </section>
-    </main>
+      </main>
     );
   }
 
@@ -727,8 +755,8 @@ export default function BusinessWorkspacePage({ screen }) {
             </form>
           )}
 
-          {isPartnership && <nav className="partnership-tabs" aria-label="Đăng ký hợp tác"><Link to="/business/partnership/apply" aria-current={isApplication?"page":undefined}>Đăng ký hợp tác</Link><Link to="/business/partnership/status" aria-current={screen.id==="BUS-04"?"page":undefined}>Trạng thái xử lý</Link></nav>}
-          {screen.id === "BUS-04" && <PartnershipStatus company={data.company} versions={data.companyVersions || []}/>}
+          {isPartnership && <nav className="partnership-tabs" aria-label="Đăng ký hợp tác"><Link to="/business/partnership/apply" aria-current={isApplication ? "page" : undefined}>Đăng ký hợp tác</Link><Link to="/business/partnership/status" aria-current={screen.id === "BUS-04" ? "page" : undefined}>Trạng thái xử lý</Link></nav>}
+          {screen.id === "BUS-04" && <PartnershipStatus company={data.company} versions={data.companyVersions || []} />}
           {isApplication && (
             <section className="dashboard-section">
               <h2>Hồ sơ hợp tác</h2>
@@ -791,9 +819,9 @@ export default function BusinessWorkspacePage({ screen }) {
                         Phiên bản {document.version_no} ·{" "}
                         {time(document.uploaded_at)}
                       </small>
-                      {editable(data.company.application_status) && <button type="button" className="secondary-button" disabled={busy} onClick={()=>{
+                      {editable(data.company.application_status) && <button type="button" className="secondary-button" disabled={busy} onClick={() => {
                         // Chỉ gỡ sau xác nhận; file thuộc lịch sử đã nộp vẫn được giữ ở backend.
-                        if(window.confirm(`Gỡ tài liệu “${document.original_file_name}” khỏi hồ sơ chuẩn bị gửi?`)) action(()=>apiRequest(`/api/business/documents/${document.document_id}`,{method:"DELETE"}),"Đã gỡ tài liệu khỏi hồ sơ chuẩn bị gửi.");
+                        if (window.confirm(`Gỡ tài liệu “${document.original_file_name}” khỏi hồ sơ chuẩn bị gửi?`)) action(() => apiRequest(`/api/business/documents/${document.document_id}`, { method: "DELETE" }), "Đã gỡ tài liệu khỏi hồ sơ chuẩn bị gửi.");
                       }}>Gỡ tài liệu</button>}
                     </li>
                   ))}
@@ -818,9 +846,9 @@ export default function BusinessWorkspacePage({ screen }) {
                         required
                         disabled={busy}
                         onChange={(event) => {
-                          const selected=event.target.files?.[0] || null;
-                          setFile(selected);setDocumentNotice("");
-                          setDocumentError(selected?legalDocumentError(selected):"");
+                          const selected = event.target.files?.[0] || null;
+                          setFile(selected); setDocumentNotice("");
+                          setDocumentError(selected ? legalDocumentError(selected) : "");
                         }}
                       />
                     </Field>
@@ -832,7 +860,7 @@ export default function BusinessWorkspacePage({ screen }) {
                     </button>
                     {file && <>
                       <p className="info-note" role="status">Đã chọn “{file.name}”, chưa tải lên máy chủ. Bấm Tải tài liệu lên để lưu tệp.</p>
-                      <button type="button" className="outline-button" disabled={busy} onClick={()=>{setFile(null);setDocumentError("");setDocumentInputKey(value=>value+1);}}>Bỏ tệp đã chọn</button>
+                      <button type="button" className="outline-button" disabled={busy} onClick={() => { setFile(null); setDocumentError(""); setDocumentInputKey(value => value + 1); }}>Bỏ tệp đã chọn</button>
                     </>}
                   </form>
                   {documentError && <p className="form-error" role="alert">{documentError}</p>}
@@ -1307,7 +1335,129 @@ export default function BusinessWorkspacePage({ screen }) {
                   )}
 
                   {!editingBooking && <QuoteSummary quote={contract.quote_snapshot} />}
-                  {contract.status === "REVISION_REQUESTED" ? (
+                  {contract.latest_proposal_status === "ACCEPTED" && (
+                    <section className="dashboard-section">
+                      <h3>Điều khoản đã chấp thuận</h3>
+
+                      <dl className="business-details">
+                        <div>
+                          <dt>Thời gian quảng cáo</dt>
+                          <dd>
+                            {time(contract.latest_proposal_start_at)}
+                            {" đến "}
+                            {time(contract.latest_proposal_end_at)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Giá đã chấp thuận</dt>
+                          <dd>{currency(contract.latest_proposal_amount)}</dd>
+                        </div>
+                        <div>
+                          <dt>Hạn thanh toán</dt>
+                          <dd>{time(contract.payment_due_at)}</dd>
+                        </div>
+                      </dl>
+
+                      <p><strong>Điều khoản thương mại</strong></p>
+                      <p style={{ whiteSpace: "pre-wrap" }}>
+                        {contract.latest_proposal_terms}
+                      </p>
+                    </section>
+                  )}
+                  {contract.status === "PROPOSED" ? (
+                    <>
+                      <h3>Đề xuất hợp đồng từ Ad Manager</h3>
+                      {contract.latest_proposal_id ? (
+                        <>
+                          <dl className="business-details">
+                            <div>
+                              <dt>Phiên bản đề xuất</dt>
+                              <dd>{contract.latest_proposal_revision_no}</dd>
+                            </div>
+                            <div>
+                              <dt>Thời gian đề xuất</dt>
+                              <dd>
+                                {time(contract.latest_proposal_start_at)}
+                                {" đến "}
+                                {time(contract.latest_proposal_end_at)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Giá đề xuất</dt>
+                              <dd>{currency(contract.latest_proposal_amount)}</dd>
+                            </div>
+                            <div>
+                              <dt>Hạn phản hồi</dt>
+                              <dd>{time(contract.latest_proposal_expires_at)}</dd>
+                            </div>
+                          </dl>
+
+                          <p><strong>Điều khoản thương mại</strong></p>
+                          <p style={{ whiteSpace: "pre-wrap" }}>
+                            {contract.latest_proposal_terms}
+                          </p>
+
+                          {contract.latest_proposal_status === "SENT"
+                            && new Date(
+                              String(contract.latest_proposal_expires_at).replace(" ", "T"),
+                            ).getTime() > Date.now() ? (
+                            <>
+                              <p role="status" className="info-note">
+                                Đề xuất đang chờ doanh nghiệp xem xét và phản hồi.
+                              </p>
+
+                              <div className="form-actions">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => handleProposalDecision("ACCEPT")}
+                                >
+                                  Đồng ý đề xuất
+                                </button>
+                              </div>
+
+                              <form
+                                onSubmit={(event) => {
+                                  event.preventDefault();
+                                  handleProposalDecision("REQUEST_REVISION", proposalRevisionReason);
+                                }}
+                              >
+                                <label className="business-field">
+                                  <span>Lý do yêu cầu sửa điều khoản</span>
+                                  <textarea
+                                    required
+                                    maxLength={2000}
+                                    rows={4}
+                                    value={proposalRevisionReason}
+                                    onChange={(event) => setProposalRevisionReason(event.target.value)}
+                                  />
+                                </label>
+
+                                <button
+                                  type="submit"
+                                  disabled={busy || !proposalRevisionReason.trim()}
+                                >
+                                  Yêu cầu sửa điều khoản
+                                </button>
+                              </form>
+                            </>
+                          ) : contract.latest_proposal_status === "REVISION_REQUESTED" ? (
+                            <p role="status" className="info-note">
+                              Đã gửi yêu cầu sửa điều khoản. Đang chờ Ad Manager gửi đề xuất mới.
+                            </p>
+                          ) : (
+                            <p role="status" className="info-note">
+                              Đề xuất đã hết hạn hoặc không còn chờ phản hồi. Hãy tải lại workspace.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p role="alert" className="info-note">
+                          Chưa tải được nội dung đề xuất. Hãy tải lại trang.
+                        </p>
+                      )}
+                    </>
+                  ) : contract.status === "REVISION_REQUESTED" ? (
                     <>
                       <p role="status" className="info-note">
                         Quản lý yêu cầu chọn thời gian khác. Hãy sửa lịch booking, lưu thay đổi,
@@ -1854,17 +2004,17 @@ export default function BusinessWorkspacePage({ screen }) {
           )}
         </>
       )}
-      {applicationConfirm && <div className="campaign-dialog-backdrop"><section className="campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="application-confirm-title" style={{maxHeight:"85vh",overflowY:"auto"}}>
+      {applicationConfirm && <div className="campaign-dialog-backdrop"><section className="campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="application-confirm-title" style={{ maxHeight: "85vh", overflowY: "auto" }}>
         <h2 id="application-confirm-title">Xác nhận gửi đăng ký hợp tác</h2>
         <p>Thông tin doanh nghiệp đã lưu và tài liệu sau sẽ được gửi xét duyệt. Sau khi gửi, BUS-02 và BUS-03 bị khóa sửa.</p>
-        <dl className="business-details">{[["Doanh nghiệp","company_name"],["Mã số thuế","tax_code"],["Ngành nghề","industry"],["Người liên hệ","contact_person"],["Email","email"],["Điện thoại","phone"],["Địa chỉ","address"],["Địa chỉ xuất hóa đơn","billing_address"]].map(([label,key])=><div key={key}><dt>{label}</dt><dd>{data.company[key] || "—"}</dd></div>)}</dl>
-        <h3>Tài liệu pháp lý</h3><ul>{data.documents.map(doc=><li key={doc.document_id}><a href={`/api/media/document/${doc.document_id}`} target="_blank" rel="noreferrer">{doc.original_file_name}</a> · Phiên bản {doc.version_no}</li>)}</ul>
+        <dl className="business-details">{[["Doanh nghiệp", "company_name"], ["Mã số thuế", "tax_code"], ["Ngành nghề", "industry"], ["Người liên hệ", "contact_person"], ["Email", "email"], ["Điện thoại", "phone"], ["Địa chỉ", "address"], ["Địa chỉ xuất hóa đơn", "billing_address"]].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{data.company[key] || "—"}</dd></div>)}</dl>
+        <h3>Tài liệu pháp lý</h3><ul>{data.documents.map(doc => <li key={doc.document_id}><a href={`/api/media/document/${doc.document_id}`} target="_blank" rel="noreferrer">{doc.original_file_name}</a> · Phiên bản {doc.version_no}</li>)}</ul>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <div className="form-actions"><button type="button" className="secondary-button" disabled={busy} autoFocus onClick={()=>setApplicationConfirm(false)}>Hủy</button><button type="button" disabled={busy || Boolean(submitBlockReason)} onClick={()=>action(async()=>{
+        <div className="form-actions"><button type="button" className="secondary-button" disabled={busy} autoFocus onClick={() => setApplicationConfirm(false)}>Hủy</button><button type="button" disabled={busy || Boolean(submitBlockReason)} onClick={() => action(async () => {
           // BUS-03 chỉ gửi dữ liệu đã lưu; hủy xác nhận không phát sinh POST hay thay đổi DB.
-          const result=await apiRequest("/api/business/application/submit",{method:"POST"});
-          setApplicationConfirm(false);return result;
-        },"Đã gửi hồ sơ chờ quản lý xét duyệt.")}>{busy?"Đang gửi…":"Xác nhận gửi"}</button></div>
+          const result = await apiRequest("/api/business/application/submit", { method: "POST" });
+          setApplicationConfirm(false); return result;
+        }, "Đã gửi hồ sơ chờ quản lý xét duyệt.")}>{busy ? "Đang gửi…" : "Xác nhận gửi"}</button></div>
       </section></div>}
     </main>
   );

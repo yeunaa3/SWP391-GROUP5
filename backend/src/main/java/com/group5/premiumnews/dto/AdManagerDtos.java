@@ -65,6 +65,7 @@ public final class AdManagerDtos {
                         LocalDateTime startAt,
                         LocalDateTime endAt,
                         BigDecimal totalValue,
+                        BigDecimal calculatedProposalAmount,
                         String currency,
                         String status,
                         int revisionNo) {
@@ -81,6 +82,7 @@ public final class AdManagerDtos {
                         long proposalId,
                         int revisionNo,
                         String status,
+                        String businessResponseReason,
                         String commercialTerms,
                         BigDecimal proposedAmount,
                         String currency,

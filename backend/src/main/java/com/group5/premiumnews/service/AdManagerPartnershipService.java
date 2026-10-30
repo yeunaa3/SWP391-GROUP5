@@ -176,6 +176,9 @@ public class AdManagerPartnershipService {
                         contractDateTime(contract.get("start_at")),
                         contractDateTime(contract.get("end_at")),
                         (BigDecimal) contract.get("total_value"),
+                        ((BigDecimal) contract.get("package_price_snapshot"))
+                                .add(slotPriceSnapshot(contractId, contract))
+                                .setScale(2, RoundingMode.HALF_UP),
                         (String) contract.get("currency"),
                         status,
                         ((Number) contract.get("revision_no")).intValue()),
@@ -809,7 +812,7 @@ public class AdManagerPartnershipService {
 
     private AdManagerDtos.ProposalSnapshot latestProposal(long contractId) {
         List<AdManagerDtos.ProposalSnapshot> rows = jdbc.query("""
-                SELECT proposal_id, revision_no, status, commercial_terms,
+                SELECT proposal_id, revision_no, status, business_response_reason, commercial_terms,
                        proposed_amount, currency, proposed_start_at, proposed_end_at,
                        expires_at, created_at, sent_at, accepted_at
                 FROM contract_proposals
@@ -821,6 +824,7 @@ public class AdManagerPartnershipService {
                         rs.getLong("proposal_id"),
                         rs.getInt("revision_no"),
                         rs.getString("status"),
+                        rs.getString("business_response_reason"),
                         rs.getString("commercial_terms"),
                         rs.getBigDecimal("proposed_amount"),
                         rs.getString("currency"),
@@ -852,11 +856,12 @@ public class AdManagerPartnershipService {
                   AND start_at<?
                   AND end_at>?
                   AND (
-                        (status='ACTIVE' AND payment_status='PAID')
-                        OR (
-                            status IN ('ACCEPTED','PENDING_PAYMENT')
-                            AND reservation_expires_at>CURRENT_TIMESTAMP(6)
-                        )
+                  status = 'PENDING_REVIEW'
+                  OR (status = 'ACTIVE' AND payment_status = 'PAID')
+                  OR (
+                  status IN ('ACCEPTED', 'PENDING_PAYMENT')
+                  AND reservation_expires_at > CURRENT_TIMESTAMP(6)
+                  )
                   )
                 ORDER BY start_at
                 """,

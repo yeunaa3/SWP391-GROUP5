@@ -66,6 +66,14 @@ public class BusinessWorkspaceController {
                 request == null ? null : request.expectedRevisionNo());
     }
 
+    @PostMapping("/bookings/{id}/proposal/decision")
+    public Map<String, Object> decideContractProposal(
+            @AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id,
+            @Valid @RequestBody BusinessRequests.ContractProposalDecision request) {
+        return service.decideContractProposal(user, id, request);
+    }
+
     @PostMapping("/bookings/drafts")
     public Map<String, Object> draft(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @Valid @RequestBody BusinessRequests.Booking request) {
