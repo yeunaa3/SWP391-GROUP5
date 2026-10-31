@@ -71,7 +71,7 @@ public class PasswordResetService {
         }
 
         // Vô hiệu hóa các mã token chưa dùng trước đó của tài khoản này
-        tokenRepository.invalidateActiveTokensForUser(user.getId());
+        tokenRepository.invalidateActiveTokensForUser(user.getId(), Instant.now());
 
         // Sinh token ngẫu nhiên bảo mật 32 bytes (64 ký tự hex)
         byte[] randomBytes = new byte[32];
