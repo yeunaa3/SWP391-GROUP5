@@ -78,18 +78,19 @@ public class EmailService {
 
     /**
      * Gửi email hướng dẫn đặt lại mật khẩu an toàn cho người dùng kèm liên kết dùng 1 lần.
+     * Trả về chuỗi kết quả: "SUCCESS", "SIMULATED_NO_SMTP_CONFIG", hoặc "FAILED: <chi tiết lỗi>"
      */
-    public void sendPasswordResetEmail(String recipient, String recipientName, String resetUrl, int expiryMinutes) {
+    public String sendPasswordResetEmail(String recipient, String recipientName, String resetUrl, int expiryMinutes) {
         if (recipient == null || recipient.isBlank() || !recipient.contains("@")) {
             log.info("[EmailService] Bỏ qua gửi email reset mật khẩu: Email không hợp lệ (recipient: '{}')", recipient);
-            return;
+            return "SKIPPED_INVALID_EMAIL";
         }
 
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null || mailUsername == null || mailUsername.isBlank()) {
             log.warn("[EmailService] Chưa cấu hình MAIL_USERNAME/MAIL_PASSWORD trong môi trường. Mô phỏng gửi email đặt lại mật khẩu:");
             log.warn("[EmailService] Gửi tới: {} <{}> | Thời hạn: {} phút | Reset URL: {}", recipientName, recipient, expiryMinutes, resetUrl);
-            return;
+            return "SIMULATED_NO_SMTP_CONFIG";
         }
 
         try {
@@ -115,8 +116,14 @@ public class EmailService {
 
             mailSender.send(message);
             log.info("[EmailService] Đã gửi email đặt lại mật khẩu thành công tới: {}", recipient);
+            return "SUCCESS";
         } catch (Exception e) {
-            log.error("[EmailService] Lỗi khi gửi email đặt lại mật khẩu tới {}: {}", recipient, e.getMessage());
+            String msg = e.getMessage();
+            if (e.getCause() != null) {
+                msg += " (Cause: " + e.getCause().getMessage() + ")";
+            }
+            log.error("[EmailService] Lỗi khi gửi email đặt lại mật khẩu tới {}: {}", recipient, msg);
+            return "FAILED: " + msg;
         }
     }
 
