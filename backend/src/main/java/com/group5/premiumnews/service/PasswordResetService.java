@@ -31,13 +31,6 @@ public class PasswordResetService {
     private static final int TOKEN_EXPIRY_MINUTES = 15;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    public record RequestResetResult(
-            boolean userFound,
-            String email,
-            String resetUrl,
-            String emailStatus
-    ) {}
-
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
@@ -58,22 +51,23 @@ public class PasswordResetService {
     }
 
     @Transactional
-    public RequestResetResult requestPasswordReset(String identifier, String originHeader) {
+    public void requestPasswordReset(String identifier, String originHeader) {
         if (identifier == null || identifier.isBlank()) {
-            return new RequestResetResult(false, null, null, "Identifier is blank");
+            return;
         }
 
         String trimmed = identifier.trim();
         Optional<User> userOpt = userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(trimmed, trimmed);
         if (userOpt.isEmpty()) {
-            log.warn("[PasswordReset] Yêu cầu đặt lại mật khẩu: Không tìm thấy tài khoản với tên đăng nhập hoặc email '{}'", trimmed);
-            return new RequestResetResult(false, null, null, "User not found");
+            // OWASP: Không tiết lộ sự tồn tại của tài khoản cho bên ngoài
+            log.warn("[PasswordReset] Yêu cầu đặt lại mật khẩu: Không tìm thấy tài khoản với identifier '{}'", trimmed);
+            return;
         }
 
         User user = userOpt.get();
         if (user.getEmail() == null || user.getEmail().isBlank()) {
             log.warn("[PasswordReset] Người dùng '{}' không có email hợp lệ để nhận liên kết", user.getUsername());
-            return new RequestResetResult(true, null, null, "User has no email");
+            return;
         }
 
         // Vô hiệu hóa các mã token chưa dùng trước đó của tài khoản này
@@ -99,10 +93,13 @@ public class PasswordResetService {
         String displayName = (user.getFullName() != null && !user.getFullName().isBlank()) ? user.getFullName() : user.getUsername();
         String emailStatus = emailService.sendPasswordResetEmail(user.getEmail(), displayName, resetUrl, TOKEN_EXPIRY_MINUTES);
 
-        log.info("[PasswordReset] Đã tạo mã đặt lại mật khẩu cho user '{}' (email: {}, emailStatus: {}). Link: {}",
-                user.getUsername(), user.getEmail(), emailStatus, resetUrl);
+        log.info("[PasswordReset] Đã xử lý yêu cầu đặt lại mật khẩu cho user '{}' (email: {}, emailStatus: {}).",
+                user.getUsername(), user.getEmail(), emailStatus);
 
-        return new RequestResetResult(true, user.getEmail(), resetUrl, emailStatus);
+        if (emailStatus != null && emailStatus.startsWith("FAILED")) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Không thể gửi email lúc này do máy chủ gửi thư gặp sự cố kết nối. Vui lòng thử lại sau hoặc liên hệ quản trị viên.");
+        }
     }
 
     @Transactional(readOnly = true)

@@ -29,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -97,7 +96,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<Map<String, Object>> forgotPassword(
+    public ResponseEntity<Map<String, String>> forgotPassword(
             @Valid @RequestBody ForgotPasswordRequest request,
             HttpServletRequest httpRequest) {
         String origin = httpRequest.getHeader("Origin");
@@ -111,18 +110,11 @@ public class AuthenticationController {
                 }
             }
         }
-        PasswordResetService.RequestResetResult result = passwordResetService.requestPasswordReset(request.identifier(), origin);
+        passwordResetService.requestPasswordReset(request.identifier(), origin);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Nếu thông tin khớp với tài khoản trên hệ thống The Pluse, hướng dẫn đặt lại mật khẩu đã được xử lý.");
-        if (result != null && result.userFound()) {
-            response.put("userFound", true);
-            response.put("resetUrl", result.resetUrl());
-            response.put("emailStatus", result.emailStatus());
-        } else {
-            response.put("userFound", false);
-        }
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+                "message", "Nếu thông tin khớp với tài khoản trên hệ thống The Pluse, hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn."
+        ));
     }
 
     @GetMapping("/verify-reset-token")
