@@ -75,6 +75,7 @@ public class User {
     public String getUsername() { return username; }
     public String getEmail() { return email; }
     public String getHashedPassword() { return hashedPassword; }
+    public void setHashedPassword(String hashedPassword) { this.hashedPassword = hashedPassword; }
     public String getFullName() { return fullName; }
     public String getPhoneNumber() { return phoneNumber; }
     public Long getCompanyId() { return companyId; }

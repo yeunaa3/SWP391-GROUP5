@@ -52,9 +52,9 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/articles/**",
+                .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/verify-reset-token", "/api/articles/**",
                         "/api/payment/status/**", "/api/payment/payos-check/**", "/api/subscription-packages/**", "/api/public/packages/**", "/api/advertising/offers", "/api/advertising/slots", "/api/advertising/banners", "/api/advertising/click/**", "/api/media/creative/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/payments/webhooks/**", "/api/payment/webhook/**", "/api/payment/payos/webhook/**", "/api/advertising/events/**").permitAll()
                 // Public HTML shell/assets only. Data stays behind /api authorization above/below.
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
                         "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",

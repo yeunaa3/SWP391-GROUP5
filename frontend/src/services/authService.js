@@ -17,3 +17,21 @@ export function registerAccount(account) {
 export function logout() {
     return apiRequest("/api/auth/logout", {method: "POST"});
 }
+
+export function requestPasswordReset(identifier) {
+    return apiRequest("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ identifier })
+    });
+}
+
+export function verifyResetToken(token) {
+    return apiRequest(`/api/auth/verify-reset-token?token=${encodeURIComponent(token)}`);
+}
+
+export function resetPassword({ token, newPassword }) {
+    return apiRequest("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ token, newPassword })
+    });
+}

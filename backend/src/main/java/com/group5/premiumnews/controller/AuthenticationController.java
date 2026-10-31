@@ -2,10 +2,14 @@ package com.group5.premiumnews.controller;
 
 import com.group5.premiumnews.dto.auth.AuthenticatedUserResponse;
 import com.group5.premiumnews.dto.auth.CsrfResponse;
+import com.group5.premiumnews.dto.auth.ForgotPasswordRequest;
 import com.group5.premiumnews.dto.auth.LoginRequest;
 import com.group5.premiumnews.dto.auth.RegistrationRequest;
+import com.group5.premiumnews.dto.auth.ResetPasswordRequest;
+import com.group5.premiumnews.dto.auth.ResetTokenStatusResponse;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import com.group5.premiumnews.service.AuthenticationService;
+import com.group5.premiumnews.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -22,7 +26,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -31,13 +38,17 @@ public class AuthenticationController {
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final AuthenticationService authenticationService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthenticationController(AuthenticationManager authenticationManager,
+    public AuthenticationController(
+            AuthenticationManager authenticationManager,
             SecurityContextRepository securityContextRepository,
-            AuthenticationService authenticationService) {
+            AuthenticationService authenticationService,
+            PasswordResetService passwordResetService) {
         this.authenticationManager = authenticationManager;
         this.securityContextRepository = securityContextRepository;
         this.authenticationService = authenticationService;
+        this.passwordResetService = passwordResetService;
     }
 
     @GetMapping("/csrf")
@@ -82,5 +93,36 @@ public class AuthenticationController {
         }
         SecurityContextHolder.clearContext();
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest) {
+        String origin = httpRequest.getHeader("Origin");
+        if (origin == null || origin.isBlank()) {
+            origin = httpRequest.getHeader("Referer");
+            if (origin != null && origin.contains("/")) {
+                try {
+                    java.net.URI uri = java.net.URI.create(origin);
+                    origin = uri.getScheme() + "://" + uri.getAuthority();
+                } catch (Exception ignored) {
+                }
+            }
+        }
+        passwordResetService.requestPasswordReset(request.identifier(), origin);
+        return ResponseEntity.ok(Map.of("message", "Nếu tài khoản tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn."));
+    }
+
+    @GetMapping("/verify-reset-token")
+    public ResponseEntity<ResetTokenStatusResponse> verifyResetToken(@RequestParam("token") String token) {
+        ResetTokenStatusResponse response = passwordResetService.verifyResetToken(token);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok(Map.of("message", "Mật khẩu đã được cập nhật thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
     }
 }
