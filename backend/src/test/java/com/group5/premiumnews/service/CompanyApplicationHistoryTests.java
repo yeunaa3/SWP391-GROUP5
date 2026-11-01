@@ -70,7 +70,10 @@ class CompanyApplicationHistoryTests {
         when(jdbc.queryForObject("SELECT company_id FROM users WHERE user_id=? AND status='ACTIVE'",Long.class,1L)).thenReturn(4L);
         when(jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE",4L)).thenReturn(company);
         when(jdbc.queryForObject("SELECT COUNT(*) FROM company_documents WHERE company_id=? AND status='ACTIVE'",Integer.class,4L)).thenReturn(1);
-        new BusinessWorkspaceService(jdbc).submitApplication(user);
+        var storage=mock(BusinessAssetStorage.class);
+        when(jdbc.queryForList("SELECT document_id,storage_object_key FROM company_documents WHERE company_id=? AND status='ACTIVE'",4L)).thenReturn(List.of(Map.of("document_id",8L,"storage_object_key","legal.png")));
+        when(storage.available("legal.png")).thenReturn(true);
+        new BusinessWorkspaceService(jdbc,storage).submitApplication(user);
         verify(jdbc).update(contains("JSON_OBJECT('application_version'"),eq(1L),eq("SUBMIT_APPLICATION"),eq("COMPANY"),eq("4"),eq(4L));
     }
 }

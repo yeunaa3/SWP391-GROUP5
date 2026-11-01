@@ -20,7 +20,8 @@ test("internal navigation helper permits authorized plan paths and safe query st
 test("login always opens the news homepage and ignores stale returnTo", () => {
   assert.equal(LOGIN_SUCCESS_PATH, "/");
   const source = readFileSync(new URL("../src/pages/auth/LoginPage.jsx",import.meta.url),"utf8");
-  assert.match(source,/navigate\(LOGIN_SUCCESS_PATH,\s*\{ replace: true \}\)/);
+  // Định dạng khoảng trắng không thay đổi hành vi điều hướng của UC-06.
+  assert.match(source,/navigate\(\s*LOGIN_SUCCESS_PATH\s*,\s*\{\s*replace\s*:\s*true\s*\}\s*\)/);
   assert.doesNotMatch(source,/safeReturnTo|location\.state|useLocation/);
   for (const role of ["READER","SUBSCRIBER","BUSINESS","AD_MANAGER","ADMINISTRATOR"]) {
     assert.notEqual(workspaceHome({roles:[role]}),LOGIN_SUCCESS_PATH);

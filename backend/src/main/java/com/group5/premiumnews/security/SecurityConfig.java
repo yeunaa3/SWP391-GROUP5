@@ -24,7 +24,7 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             DaoAuthenticationProvider authenticationProvider,
-            SecurityContextRepository securityContextRepository) throws Exception {
+            SecurityContextRepository securityContextRepository, LiveAccountAccess liveAccess) throws Exception {
         CookieCsrfTokenRepository csrfRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfRepository.setCookiePath("/");
 
@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .securityContext(context -> context.securityContextRepository(securityContextRepository))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authenticationProvider(authenticationProvider)
+                .addFilterBefore(new LiveAccountAccessFilter(liveAccess), org.springframework.security.web.access.intercept.AuthorizationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/verify-reset-token", "/api/articles/**",

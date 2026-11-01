@@ -83,14 +83,16 @@ export function AuthProvider({ children }) {
   /**
    * UC-06: Xác nhận phiên đăng nhập từ cookie / token
    */
-  async function refresh() {
+  async function refresh({ silent = false } = {}) {
     const generation = ++sessionGeneration.current;
     premiumGeneration.current++;
 
-    setUser(null);
+    // Sau khi lưu hồ sơ/quyền, cập nhật identity tại chỗ để không unmount form và mất thông báo thành công.
+    // Lỗi xác thực bên dưới vẫn xóa user; login/chuyển tài khoản giữ luồng tải đầy đủ như trước.
+    if (!silent) setUser(null);
     setAccess(null);
     setPremiumError(false);
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     try {
       const current = await getCurrentUser();

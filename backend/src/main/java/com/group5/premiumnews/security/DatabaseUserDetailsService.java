@@ -12,9 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class DatabaseUserDetailsService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final LiveAccountAccess access;
 
-    public DatabaseUserDetailsService(UserRepository userRepository) {
+    public DatabaseUserDetailsService(UserRepository userRepository, LiveAccountAccess access) {
         this.userRepository = userRepository;
+        this.access = access;
     }
 
     @Override
@@ -24,6 +26,6 @@ public class DatabaseUserDetailsService implements UserDetailsService {
         // Hàm chỉ nạp dữ liệu user; DaoAuthenticationProvider chịu trách nhiệm so mật khẩu.
         User user = userRepository.findByUsernameIgnoreCaseOrEmailIgnoreCase(login, login)
                 .orElseThrow(() -> new UsernameNotFoundException("Invalid username/email or password"));
-        return AuthenticatedUserPrincipal.from(user);
+        return access.load(user.getId());
     }
 }

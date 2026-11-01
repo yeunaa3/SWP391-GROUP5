@@ -14,4 +14,9 @@ class AccountProfileServiceTests {
         assertDoesNotThrow(()->AccountProfileService.validatePasswords(encoder,hash,request("Original123","Next12345","Next12345")));
     }
     @Test void profileOnlyUpdateDoesNotRequireNewPassword(){assertDoesNotThrow(()->AccountProfileService.validatePasswords(encoder,hash,request("Original123","","")));}
+    @Test void unicodePasswordOverBcryptByteLimitReturnsValidationError(){
+        String unicode="ệ".repeat(25);
+        assertThrows(ResponseStatusException.class,()->AccountProfileService.validatePasswords(encoder,hash,request("Original123",unicode,unicode)));
+        assertDoesNotThrow(()->AccountProfileService.validatePasswords(encoder,hash,request("Original123","ệ".repeat(24),"ệ".repeat(24))));
+    }
 }

@@ -22,6 +22,8 @@ import TransactionHistoryPage from "../pages/premium/TransactionHistoryPage.jsx"
 import ReceiptDetailPage from "../pages/premium/ReceiptDetailPage.jsx";
 import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
+import AccessManagementPage from "../pages/admin/AccessManagementPage.jsx";
+import SystemSettingsPage from "../pages/admin/SystemSettingsPage.jsx";
 import SubscriptionPackagesPage from "../pages/admin/SubscriptionPackagesPage.jsx";
 import NotificationsPage from "../pages/account/NotificationsPage.jsx";
 import BookmarksPage from "../pages/account/BookmarksPage.jsx";
@@ -73,6 +75,8 @@ const specialPages = {
   "CFG-04": <AdSlotManagementPage />,
   "CFG-05": <B2bPackageManagementPage />,
   "CFG-01": <AdminDashboardPage />,
+  "CFG-02": <AccessManagementPage />,
+  "CFG-06": <SystemSettingsPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,
   "BUS-18": <PerformancePage />,

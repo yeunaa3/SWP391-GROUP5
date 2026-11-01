@@ -21,9 +21,14 @@ import java.util.*;
 public class BusinessFileService {
     private final JdbcTemplate jdbc; private final BusinessWorkspaceService business;
     private final BusinessAssetStorage storage;
+    private final SystemSettingsService settings;
     /** Service quản lý metadata/quyền; storage adapter chịu trách nhiệm vị trí và cách lưu bytes. */
     public BusinessFileService(JdbcTemplate jdbc,BusinessWorkspaceService business,BusinessAssetStorage storage) {
-        this.jdbc=jdbc;this.business=business;this.storage=storage;
+        this(jdbc,business,storage,new SystemSettingsService(jdbc,new com.fasterxml.jackson.databind.ObjectMapper()));
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public BusinessFileService(JdbcTemplate jdbc,BusinessWorkspaceService business,BusinessAssetStorage storage,SystemSettingsService settings) {
+        this.jdbc=jdbc;this.business=business;this.storage=storage;this.settings=settings;
     }
     /** Dùng storage adapter để checklist/review kiểm tra cả asset local và cloud. */
     public boolean available(String key){return storage.available(key);}
@@ -124,6 +129,8 @@ public class BusinessFileService {
             }
             mime=png?"image/png":"image/jpeg";extension=png?"png":"jpg";
         }
+        // CFG-06 chỉ ảnh hưởng creative mới, không giảm giới hạn giấy tờ pháp lý hoặc xóa tệp cũ.
+        if(!pdfAllowed && file.getSize()>settings.uploadLimit(mime.startsWith("video/")))throw new InvalidStateTransitionException("Tệp vượt giới hạn cấu hình upload quảng cáo hiện tại.");
         String key=storage.put(bytes,mime,extension);
         String sha=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));return new Stored(key,mime,sha,width,height);
     }

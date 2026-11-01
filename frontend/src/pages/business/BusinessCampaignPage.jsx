@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient.js";
 import CampaignReviewChecklist from "./CampaignReviewChecklist.jsx";
+import CreativeMedia from "../../components/CreativeMedia.jsx";
 import "../../assets/campaign-flow.css";
 import CampaignList from "./CampaignList.jsx";
 import CompanyApplicationHistory from "./CompanyApplicationHistory.jsx";
@@ -21,7 +22,7 @@ import "../../assets/business-campaign.css";
         return <label className="business-field"><span>{label}</span>{children}</label>;
         }
         function Media({creative, ...props}){
-        return creative?.mime_type?.startsWith("video/") || creative?.creative_type === "VIDEO" ? <video controls preload="metadata" src={creative.media_url} {...props}/> : creative?.media_url ? <img src={creative.media_url} alt={creative.title || "Banner xem trước"} {...props}/> : <p>Chưa có creative.</p>;
+        return <CreativeMedia creative={creative} {...props}/>;
         }
         /** Xác nhận cụ thể trước mutation; hủy chỉ đóng dialog, không gọi API. */
         function Confirm({value, onCancel, onConfirm, busy, error}){

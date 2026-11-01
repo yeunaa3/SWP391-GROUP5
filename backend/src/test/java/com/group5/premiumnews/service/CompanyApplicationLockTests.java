@@ -53,7 +53,7 @@ class CompanyApplicationLockTests {
             when(jdbc.queryForObject("SELECT company_id FROM users WHERE user_id=? FOR UPDATE",Long.class,1L)).thenReturn(4L);
             when(jdbc.queryForMap("SELECT * FROM companies WHERE company_id=? FOR UPDATE",4L)).thenReturn(Map.of("application_status",state));
             var request=new BusinessRequests.Company("Company","0312345678","qa@example.com","0901234567","Address","Billing","Industry","Contact");
-            assertThrows(InvalidStateTransitionException.class,()->new BusinessWorkspaceService(jdbc).saveCompany(user,request),state);
+            assertThrows(InvalidStateTransitionException.class,()->new BusinessWorkspaceService(jdbc,mock(BusinessAssetStorage.class)).saveCompany(user,request),state);
             verify(jdbc,never()).update(anyString(),any(Object[].class));
         }
     }

@@ -20,7 +20,7 @@ export default function ProfilePage(){
   async function save(){if(busy)return;setBusy(true);setError("");try{
     const body={...form,fullName:form.fullName.trim().replace(/\s+/g," "),email:form.email.trim().toLowerCase()};
     const data=await apiRequest("/api/account/profile",{method:"PUT",body:JSON.stringify(body)});
-    setForm({...data,phoneNumber:(data.phoneNumber || "").replace(/^\+/,""),...passwords});setConfirm(false);setMessage(t("Đã lưu thay đổi.","Changes saved."));await refresh();
+    setForm({...data,phoneNumber:(data.phoneNumber || "").replace(/^\+/,""),...passwords});setConfirm(false);setMessage(t("Đã lưu thay đổi.","Changes saved."));await refresh({silent:true});
   }catch(e){setError(e.message);setConfirm(false);}finally{setBusy(false);}}
   return <main className="page-content"><div className="page-heading"><div><p className="eyebrow">ACC-01 · ACCOUNT</p><h1>{t("Hồ sơ và bảo mật","Profile and Security")}</h1></div></div>
     {error && <p className="form-error" role="alert">{error}</p>}{message && <p className="success-message" role="status">{message}</p>}

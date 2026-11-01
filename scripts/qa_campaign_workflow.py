@@ -16,6 +16,7 @@ import uuid
 import zlib
 
 BASE = "http://127.0.0.1:18080"
+UPLOAD_ROOT = Path(__file__).resolve().parents[1]/".runtime/workflow-qa-uploads"
 MYSQL = r"C:/Program Files/MySQL/MySQL Server 8.4/bin/mysql.exe"
 
 
@@ -234,12 +235,13 @@ class CampaignWorkflowQA(unittest.TestCase):
         self.assertFalse(detail["forecast"]["available"])
         self.assertEqual(0,detail["delivery"]["impressions"])
 
-    def test_09_company_legal_change_and_snapshot(self):
-        # Mọi thay đổi chỉ trong company QA vừa tạo; đưa lại APPROVED để các test khác độc lập.
+    def test_09_approved_company_is_locked(self):
+        # Quy tắc BUS-02 mới: đã duyệt cũng khóa sửa; không tự chuyển hồ sơ về NEEDS_REVISION.
         form={**self.company_form,"name":"QA Legal Revision"}
-        code,data=self.business.call("/api/business/company","PUT",form);self.assertEqual(200,code,data)
-        self.assertEqual("NEEDS_REVISION",data["company"]["application_status"])
-        sql(f"UPDATE companies SET application_status='APPROVED' WHERE company_id={self.company_id}")
+        code,data=self.business.call("/api/business/company","PUT",form);self.assertEqual(422,code,data)
+        persisted=self.business.call("/api/business/workspace")[1]["company"]
+        self.assertEqual("APPROVED",persisted["application_status"])
+        self.assertEqual(self.company_form["name"],persisted["company_name"])
 
     def test_10_replacement_keeps_original_until_activation(self):
         original,_=self.ready()
@@ -282,7 +284,8 @@ class CampaignWorkflowQA(unittest.TestCase):
         from decimal import Decimal
         pack=next(p for p in self.business.call("/api/advertising/offers")[1] if int(p["durationDays"])>=3)
         start=dt.date.today()+dt.timedelta(days=105);end=start+dt.timedelta(days=2)
-        quoted=Decimal(str(pack["price"]))+Decimal(str(self.slot["basePrice"]))*3/30
+        # Công thức báo giá hiện hành của nhóm: giá gói + giá vị trí, không chia theo ngày.
+        quoted=Decimal(str(pack["price"]))+Decimal(str(self.slot["basePrice"]))
         payload=dict(slotId=self.slot["id"],packageId=pack["id"],name="QA booking",startDate=start.isoformat(),endDate=end.isoformat(),quotedAmount=0)
         code,result=self.business.call("/api/business/bookings/drafts","POST",payload);self.assertEqual(409,code,result)
         code,result=self.business.call("/api/business/bookings/drafts","POST",{**payload,"quotedAmount":float(quoted)});self.assertEqual(200,code,result)
@@ -295,6 +298,8 @@ class CampaignWorkflowQA(unittest.TestCase):
 
     def test_13_company_document_and_application_versions(self):
         company=self.company_id
+        # Chỉ fixture QA: bắt đầu vòng hồ sơ nháp; không upload vào hồ sơ đã được duyệt.
+        sql(f"UPDATE companies SET application_status='DRAFT' WHERE company_id={company}")
         code,doc1=self.business.document(self.asset);self.assertEqual(200,code,doc1)
         code,result=self.business.call("/api/business/application/submit","POST");self.assertEqual(200,code,result)
         first=result["company"]["application_version"]
@@ -303,6 +308,8 @@ class CampaignWorkflowQA(unittest.TestCase):
         self.assertEqual("Công nghệ",review["company"]["industry"])
         self.assertEqual(200,self.manager.call(path+"/note","PUT",dict(applicationVersion=first,note="Đã xem hồ sơ QA"))[0])
         code,result=self.manager.call(path+"/decision","POST",dict(applicationVersion=first,decision="NEEDS_REVISION",reason="Cần bổ sung tài liệu"));self.assertEqual(200,code,result)
+        # Upload giờ thêm vào bộ tối đa 5 tệp. Gỡ chủ động nếu muốn thay tệp; snapshot cũ vẫn giữ.
+        self.assertEqual(200,self.business.call(f"/api/business/documents/{doc1['id']}","DELETE")[0])
         code,doc2=self.business.document(png(int(self.slot["width"]),int(self.slot["height"])));self.assertEqual(200,code,doc2)
         self.assertNotEqual(doc1["id"],doc2["id"])
         code,result=self.business.call("/api/business/application/submit","POST");self.assertEqual(200,code,result)
@@ -355,7 +362,7 @@ class CampaignWorkflowQA(unittest.TestCase):
         key=sql(f"SELECT media_object_key FROM ad_creatives WHERE creative_id={creative}")
         import re
         self.assertRegex(key,r"^[a-f0-9-]+\.png$")
-        root=Path(__file__).resolve().parents[1]/".runtime"/"workflow-qa-uploads"
+        root=UPLOAD_ROOT
         file=(root/key).resolve();self.assertEqual(root.resolve(),file.parent)
         backup=file.with_suffix(".quarantine")
         file.rename(backup)
@@ -369,6 +376,112 @@ class CampaignWorkflowQA(unittest.TestCase):
             code,result=self.manager.call(f"/api/ad-manager/campaign-submissions/{campaign}/decision","POST",decision);self.assertEqual(422,code,result)
         finally:backup.rename(file)
         self.assertEqual("PENDING_REVIEW",sql(f"SELECT status FROM ad_campaigns WHERE campaign_id={campaign}"))
+
+    def fresh_company(self):
+        """Mỗi ca BUS-03 có company riêng, tránh phụ thuộc trạng thái do testcase khác để lại."""
+        client=Client();suffix=uuid.uuid4().hex[:12]
+        name="qa.iter2."+suffix
+        registration=dict(username=name,email=name+"@example.com",fullName="Kiểm Thử Hồ Sơ",password=self.password,
+            confirmPassword=self.password,acceptedTerms=True,accountType="BUSINESS")
+        code,result=client.call("/api/auth/register","POST",registration);self.assertEqual(201,code,result)
+        self.assertEqual(200,client.call("/api/auth/login","POST",dict(login=name,password=self.password))[0])
+        form={**self.company_form,"name":"QA Iter2 "+suffix,"taxCode":str(int(suffix,16)%9000000000+1000000000)}
+        code,result=client.call("/api/business/company","PUT",form);self.assertEqual(200,code,result)
+        return client,int(result["company"]["company_id"]),form
+
+    def test_16_document_limit_remove_and_locked_states(self):
+        client,company,form=self.fresh_company()
+        self.assertEqual(422,client.call("/api/business/application/submit","POST")[0])
+        self.assertEqual(422,client.document(b"not a document")[0])
+        self.assertEqual(422,client.document(b"")[0])
+        docs=[]
+        for _ in range(5):
+            code,result=client.document(self.asset);self.assertEqual(200,code,result);docs.append(result)
+        self.assertEqual(422,client.document(self.asset)[0])
+        self.assertIn(self.other.call(f"/api/business/documents/{docs[0]['id']}","DELETE")[0],[403,404,422])
+        self.assertEqual(5,len(client.call("/api/business/workspace")[1]["documents"]))
+        self.assertEqual(200,client.call(f"/api/business/documents/{docs[0]['id']}","DELETE")[0])
+        self.assertEqual(200,client.document(self.asset)[0])
+        self.assertEqual(5,len(client.call("/api/business/workspace")[1]["documents"]))
+        self.assertEqual(200,client.call("/api/business/application/submit","POST")[0])
+        for state in ["PENDING_REVIEW","RESUBMITTED","APPROVED","REJECTED"]:
+            sql(f"UPDATE companies SET application_status='{state}' WHERE company_id={company}")
+            self.assertEqual(422,client.call("/api/business/company","PUT",form)[0],state)
+            self.assertEqual(422,client.document(self.asset)[0],state)
+            self.assertEqual(422,client.call(f"/api/business/documents/{docs[1]['id']}","DELETE")[0],state)
+
+    def test_17_missing_legal_file_does_not_submit_or_freeze_profile(self):
+        client,company,_=self.fresh_company()
+        code,doc=client.document(self.asset);self.assertEqual(200,code,doc)
+        key=sql(f"SELECT storage_object_key FROM company_documents WHERE document_id={int(doc['id'])}")
+        root=UPLOAD_ROOT
+        file=(root/key).resolve();self.assertEqual(root.resolve(),file.parent)
+        backup=file.with_suffix(".quarantine");file.rename(backup)
+        try:
+            code,result=client.call("/api/business/application/submit","POST")
+            self.assertEqual(422,code,result)
+            state=client.call("/api/business/workspace")[1]["company"]
+            self.assertEqual("DRAFT",state["application_status"])
+            self.assertEqual(0,int(state["application_version"]))
+        finally:backup.rename(file)
+        self.assertEqual(200,client.call("/api/business/application/submit","POST")[0])
+
+    def test_18_upload_boundaries_do_not_write_metadata(self):
+        client,company,_=self.fresh_company()
+        before=sql(f"SELECT COUNT(*) FROM company_documents WHERE company_id={company}")
+        code,result=client.document(b"x"*(8*1024*1024+1));self.assertEqual(413,code,result)
+        self.assertEqual(before,sql(f"SELECT COUNT(*) FROM company_documents WHERE company_id={company}"))
+        campaign,_=self.draft()
+        before=sql(f"SELECT COUNT(*) FROM ad_creatives WHERE campaign_id={campaign}")
+        self.assertEqual(413,self.business.upload(campaign,b"x"*(8*1024*1024+1))[0])
+        self.assertEqual(before,sql(f"SELECT COUNT(*) FROM ad_creatives WHERE campaign_id={campaign}"))
+
+    def test_19_profile_required_fields_and_session_persistence(self):
+        client,company,form=self.fresh_company()
+        for key in form:
+            code,result=client.call("/api/business/company","PUT",{**form,key:" "})
+            self.assertIn(code,[400,422],(key,code,result))
+        changed={**form,"industry":"Truyền thông","contactPerson":"Người Liên Hệ Mới","billingAddress":"Địa chỉ mới"}
+        self.assertEqual(200,client.call("/api/business/company","PUT",changed)[0])
+        for path in ["/api/business/workspace","/api/business/campaign-workspace"]:
+            persisted=client.call(path)[1]["company"]
+            self.assertEqual(company,int(persisted["company_id"]))
+            self.assertEqual(changed["billingAddress"],persisted["billing_address"])
+
+    def test_20_campaign_targeting_persists_and_submission_locks_upload(self):
+        campaign,payload=self.ready();path=f"/api/business/campaigns/{campaign}"
+        detail=self.business.call(path)[1]
+        self.assertEqual({"VN","US"},set(detail["targeting"]["geo_scope"].split(",")))
+        self.assertEqual("ALL",detail["targeting"]["device_type"])
+        self.assertEqual(200,self.business.call(detail["creatives"][0]["media_url"])[0])
+        self.assertEqual(200,self.submit(path)[0])
+        self.assertEqual(422,self.business.upload(campaign,self.asset)[0])
+        self.assertEqual(422,self.business.call(path+"/targeting","PUT",dict(categoryIds=[],tagIds=[],geoScope="VN",deviceType="MOBILE",editVersion=self.business.call(path)[1]["campaign"]["edit_version"]))[0])
+
+    def test_21_concurrent_uploads_cannot_exceed_five_documents(self):
+        # Hai phiên thật cùng upload khi còn một chỗ: khóa company phải chỉ cho đúng một lượt ghi.
+        from concurrent.futures import ThreadPoolExecutor
+        client,company,_=self.fresh_company()
+        for _ in range(4):self.assertEqual(200,client.document(self.asset)[0])
+        username=sql(f"SELECT username FROM users WHERE company_id={company}")
+        clients=[Client(),Client()]
+        for session in clients:
+            self.assertEqual(200,session.call("/api/auth/login","POST",dict(login=username,password=self.password))[0])
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results=list(pool.map(lambda session:session.document(self.asset)[0],clients))
+        self.assertEqual(1,results.count(200),results)
+        # MySQL có thể phát hiện xung đột phiên bản trước lỗi giới hạn; cả 409/422 đều phải rollback.
+        self.assertIn(next(code for code in results if code!=200),[409,422],results)
+        self.assertEqual("5",sql(f"SELECT COUNT(*) FROM company_documents WHERE company_id={company} AND status='ACTIVE'"))
+
+    def test_22_failed_creative_dimensions_leave_no_orphan_or_metadata(self):
+        campaign,_=self.draft()
+        root=UPLOAD_ROOT
+        before={file.name for file in root.iterdir() if file.is_file()}
+        metadata=sql(f"SELECT COUNT(*) FROM ad_creatives WHERE campaign_id={campaign}")
+        self.assertEqual(422,self.business.upload(campaign,png(2,2))[0])
+        self.assertEqual(metadata,sql(f"SELECT COUNT(*) FROM ad_creatives WHERE campaign_id={campaign}"))
+        self.assertEqual(before,{file.name for file in root.iterdir() if file.is_file()})
 
 
 if __name__ == "__main__":
