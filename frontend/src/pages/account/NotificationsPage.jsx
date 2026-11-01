@@ -3,76 +3,439 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../store/AuthContext.jsx";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 import { apiRequest } from "../../services/apiClient.js";
-import { filterNotifications, notificationCategory, notificationDestination } from "../../utils/notifications.js";
+import {
+  filterNotifications,
+  notificationCategory,
+  notificationDestination,
+} from "../../utils/notifications.js";
 import "../../assets/notifications.css";
-import { workspaceHome } from "../../utils/sessionRouting.js";
 
-const categories = {
-  all:["Tất cả chủ đề","All topics","◎"], premium:["Premium","Premium","✦"], partnership:["Hồ sơ doanh nghiệp","Partnership","▣"],
-  payment:["Hợp đồng & thanh toán","Contracts & payments","↔"], campaign:["Chiến dịch","Campaigns","↗"], account:["Tài khoản & bảo mật","Account & security","◇"], system:["Hệ thống","System","◉"],
+/**
+ * Metadata thông tin hiển thị của từng nhóm danh mục thông báo
+ */
+const categoryMeta = {
+  premium: { vi: "Gói Premium", en: "Premium", icon: "✦", colorClass: "cat-premium" },
+  partnership: { vi: "Doanh nghiệp", en: "Partnership", icon: "▣", colorClass: "cat-partnership" },
+  payment: { vi: "Thanh toán & Hóa đơn", en: "Payment & Invoice", icon: "↔", colorClass: "cat-payment" },
+  campaign: { vi: "Chiến dịch quảng cáo", en: "Campaign", icon: "↗", colorClass: "cat-campaign" },
+  account: { vi: "Tài khoản & Bảo mật", en: "Account & Security", icon: "◇", colorClass: "cat-account" },
+  system: { vi: "Hệ thống The Pluse", en: "System", icon: "◉", colorClass: "cat-system" },
 };
 
+/**
+ * ============================================================================
+ * [ACC-02] TRANG TRUNG TÂM THÔNG BÁO (NOTIFICATION CENTER)
+ * - Tinh gọn, trực quan, loại bỏ các nút điều hướng thừa thãi.
+ * - Hiển thị danh sách thông báo dạng thẻ (Feed Cards) dễ đọc trực tiếp nội dung.
+ * - Hỗ trợ lọc theo trạng thái (Tất cả / Chưa đọc / Đã đọc) và tìm kiếm từ khóa.
+ * - Thao tác 1-chạm: Đánh dấu đã đọc/chưa đọc, Mở trang liên quan, Đánh dấu tất cả.
+ * ============================================================================
+ */
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const account = useRef(user?.id);
-  account.current = user?.id;
+  const accountRef = useRef(user?.id);
+  accountRef.current = user?.id;
+
   const { t, language } = usePreferences();
-  const [inbox, setInbox] = useState({items:[],unreadCount:0,nextCursor:null});
-  const [loading,setLoading] = useState(true), [error,setError] = useState(""), [busy,setBusy] = useState(false);
-  const [state,setState] = useState("all"), [category,setCategory] = useState("all"), [query,setQuery] = useState("");
-  const [selected,setSelected] = useState(null), [attempt,setAttempt] = useState(0);
-  const [feedback,setFeedback] = useState("");
-  const detailRef = useRef(null), feedRef = useRef(null);
-  function selectNotice(id) {
-    setSelected(id);
-    if (window.matchMedia("(max-width:760px)").matches) requestAnimationFrame(() => detailRef.current?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"}));
-  }
-  const roles=user?.roles || [];
+  const [inbox, setInbox] = useState({ items: [], unreadCount: 0, nextCursor: null });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState("all"); // "all" | "unread" | "read"
+  const [query, setQuery] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const [feedback, setFeedback] = useState("");
+
+  const roles = user?.roles || [];
+
+  // Tải danh sách thông báo của tài khoản hiện tại từ backend
   useEffect(() => {
-    let alive=true;
-    setLoading(true); setBusy(false); setError(""); setFeedback(""); setInbox({items:[],unreadCount:0,nextCursor:null}); setSelected(null);
-    apiRequest("/api/notifications").then(data => { if(alive) setInbox(data); })
-      .catch(() => { if(alive) setError(t("Không tải được thông báo. Vui lòng thử lại.","Unable to load notifications. Please retry.")); })
-      .finally(() => { if(alive) setLoading(false); });
-    return () => { alive=false; };
-  },[user?.id,attempt,language]);
-  const filtered=filterNotifications(inbox.items,{state,category,query});
-  const active=filtered.find(n=>n.id===selected) || filtered[0];
-  const destination=active ? notificationDestination(active,roles) : null;
-  const roleLabel=roles.includes("ADMINISTRATOR") ? t("Quản trị viên","Administrator") : roles.includes("AD_MANAGER") ? t("Quản lý quảng cáo","Ad manager") : roles.includes("BUSINESS") ? t("Doanh nghiệp","Business") : t("Độc giả","Reader");
-  const date=value => new Date(value).toLocaleString(language === "vi" ? "vi-VN" : "en-GB",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
-  async function mark(item,read) {
-    const owner = user.id;
-    setBusy(true); setFeedback("");
-    try { await apiRequest(`/api/notifications/${item.id}/read`,{method:"PATCH",body:JSON.stringify({read})}); if(account.current!==owner) return;
-      setInbox(prev=>({...prev,items:prev.items.map(n=>n.id===item.id?{...n,read}:n),unreadCount:Math.max(0,prev.unreadCount+(item.read===read?0:read?-1:1))}));
+    let alive = true;
+    setLoading(true);
+    setBusy(false);
+    setError("");
+    setFeedback("");
+
+    apiRequest("/api/notifications")
+      .then((data) => {
+        if (alive) {
+          setInbox(data || { items: [], unreadCount: 0, nextCursor: null });
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setError(
+            t(
+              "Không thể tải thông báo vào lúc này. Vui lòng thử lại sau.",
+              "Unable to load notifications at this time. Please retry."
+            )
+          );
+        }
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [user?.id, attempt, language]);
+
+  // Lọc thông báo dựa trên tab và thanh tìm kiếm
+  const filtered = filterNotifications(inbox.items, { state, category: "all", query });
+
+  // Định dạng ngày giờ hiển thị
+  const formatDate = (val) => {
+    if (!val) return "—";
+    return new Date(val).toLocaleString(language === "vi" ? "vi-VN" : "en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // Đánh dấu 1 thông báo là đã đọc / chưa đọc
+  async function handleToggleRead(item, read) {
+    const owner = user?.id;
+    setBusy(true);
+    setFeedback("");
+    try {
+      await apiRequest(`/api/notifications/${item.id}/read`, {
+        method: "PATCH",
+        body: JSON.stringify({ read }),
+      });
+
+      if (accountRef.current !== owner) return;
+
+      setInbox((prev) => ({
+        ...prev,
+        items: prev.items.map((n) => (n.id === item.id ? { ...n, read } : n)),
+        unreadCount: Math.max(
+          0,
+          prev.unreadCount + (item.read === read ? 0 : read ? -1 : 1)
+        ),
+      }));
+
+      // Kích hoạt event thông báo để chuông NotificationBell trên topbar cập nhật ngay
       window.dispatchEvent(new Event("notifications-updated"));
-      setFeedback(read?t("Đã đánh dấu là đã đọc.","Marked as read."):t("Đã đánh dấu là chưa đọc.","Marked as unread."));
-    } catch { if(account.current===owner) setFeedback(t("Chưa lưu được trạng thái. Hãy thử lại.","Unable to save read status. Retry.")); }
-    finally { if(account.current===owner) setBusy(false); }
+      setFeedback(
+        read
+          ? t("Đã đánh dấu là đã đọc.", "Marked as read.")
+          : t("Đã đánh dấu là chưa đọc.", "Marked as unread.")
+      );
+    } catch {
+      if (accountRef.current === owner) {
+        setFeedback(
+          t("Chưa lưu được trạng thái. Vui lòng thử lại.", "Failed to update read status. Retry.")
+        );
+      }
+    } finally {
+      if (accountRef.current === owner) setBusy(false);
+    }
   }
-  async function allRead() {
-    const owner = user.id;
+
+  // Đánh dấu tất cả thông báo là đã đọc
+  async function handleMarkAllRead() {
+    if (!inbox.unreadCount || busy || loading) return;
+    const owner = user?.id;
     setBusy(true);
-    try { await apiRequest("/api/notifications/read-all",{method:"POST"}); if(account.current!==owner) return; setInbox(prev=>({...prev,unreadCount:0,items:prev.items.map(n=>({...n,read:true}))})); window.dispatchEvent(new Event("notifications-updated")); setFeedback(t("Đã đánh dấu tất cả là đã đọc.","All notifications marked as read.")); }
-    catch { if(account.current===owner) setFeedback(t("Chưa cập nhật được. Vui lòng thử lại.","Update failed. Please retry.")); }
-    finally { if(account.current===owner) setBusy(false); }
+    setFeedback("");
+    try {
+      await apiRequest("/api/notifications/read-all", { method: "POST" });
+      if (accountRef.current !== owner) return;
+
+      setInbox((prev) => ({
+        ...prev,
+        unreadCount: 0,
+        items: prev.items.map((n) => ({ ...n, read: true })),
+      }));
+
+      window.dispatchEvent(new Event("notifications-updated"));
+      setFeedback(t("Đã đánh dấu tất cả là đã đọc.", "All notifications marked as read."));
+    } catch {
+      if (accountRef.current === owner) {
+        setFeedback(t("Cập nhật thất bại. Vui lòng thử lại.", "Update failed. Please retry."));
+      }
+    } finally {
+      if (accountRef.current === owner) setBusy(false);
+    }
   }
-  async function loadMore() {
-    const owner = user.id;
+
+  // Tải thêm thông báo cũ hơn (phân trang theo cursor)
+  async function handleLoadMore() {
+    if (!inbox.nextCursor || busy) return;
+    const owner = user?.id;
     setBusy(true);
-    try { const next=await apiRequest(`/api/notifications?before=${inbox.nextCursor}`); if(account.current!==owner) return; setInbox(prev=>({...next,items:[...prev.items,...next.items.filter(n=>!prev.items.some(old=>old.id===n.id))]})); }
-    catch { if(account.current===owner) setFeedback(t("Chưa tải được thông báo cũ hơn.","Unable to load older notifications.")); }
-    finally { if(account.current===owner) setBusy(false); }
+    try {
+      const next = await apiRequest(`/api/notifications?before=${inbox.nextCursor}`);
+      if (accountRef.current !== owner) return;
+
+      setInbox((prev) => ({
+        ...next,
+        items: [
+          ...prev.items,
+          ...next.items.filter((n) => !prev.items.some((old) => old.id === n.id)),
+        ],
+      }));
+    } catch {
+      if (accountRef.current === owner) {
+        setFeedback(
+          t("Chưa tải được thông báo cũ hơn.", "Unable to load older notifications.")
+        );
+      }
+    } finally {
+      if (accountRef.current === owner) setBusy(false);
+    }
   }
-  return <main className="page-content notification-page">
-    <header className="notification-hero"><div><span className="notification-eyebrow">ACC-02 · {roleLabel}</span><h1>{t("Điều quan trọng, ở một nơi.","Everything important, in one place.")}</h1><p>{t("Theo dõi cập nhật dành riêng cho bạn. Chọn thông báo để đọc chi tiết và mở công việc liên quan.","Follow your updates. Select a notification to read details and open the related task.")}</p><Link className="notification-back" to={workspaceHome(user)}>← {t("Về không gian của bạn","Back to your workspace")}</Link></div><div className="notification-total"><span aria-hidden="true">◉</span><strong>{inbox.unreadCount}</strong><small>{t("thông báo chưa đọc","unread notifications")}</small></div></header>
-    <div className="notification-actionbar"><div className="notification-tabs" aria-label={t("Trạng thái thông báo","Read status")}>{[["all","Tất cả","All"],["unread","Chưa đọc","Unread"],["read","Đã đọc","Read"]].map(([key,vi,en])=><button key={key} aria-pressed={state===key} onClick={()=>setState(key)}>{t(vi,en)}{key==="unread" && <span>{inbox.unreadCount}</span>}</button>)}</div><div><button className="secondary-button" disabled={loading||busy} onClick={()=>setAttempt(a=>a+1)}>↻ {t("Làm mới","Refresh")}</button><button className="secondary-button" disabled={!inbox.unreadCount||busy||loading} onClick={allRead}>✓ {t("Đánh dấu tất cả đã đọc","Mark all read")}</button></div></div>
-    {feedback && <p className="notification-feedback" role="status">{feedback}</p>}
-    <div className="notification-layout"><aside className="notification-topics"><h2>{t("CHỦ ĐỀ","TOPICS")}</h2>{Object.entries(categories).filter(([key])=>key==="all"||key==="system"||key==="account"||inbox.items.some(n=>notificationCategory(n)===key)||(roles.includes("BUSINESS")||roles.includes("AD_MANAGER")?["partnership","payment","campaign"].includes(key):roles.includes("ADMINISTRATOR")||key==="premium")).map(([key,[vi,en,symbol]])=><button key={key} aria-pressed={category===key} onClick={()=>setCategory(key)}><span aria-hidden="true">{symbol}</span>{t(vi,en)}<small>{key==="all"?inbox.items.length:inbox.items.filter(n=>notificationCategory(n)===key).length}</small></button>)}<div className="notification-tip"><strong>{t("Cách sử dụng","How it works")}</strong><p>{t("1. Lọc chủ đề hoặc tìm nội dung.\n2. Chọn một thông báo.\n3. Đánh dấu đã đọc hoặc mở trang liên quan.","1. Filter or search.\n2. Select a notification.\n3. Mark it read or open the related page.")}</p><small>{t("Đã đọc không có nghĩa là công việc đã hoàn thành.","Read does not mean the task is completed.")}</small></div></aside>
-    <section ref={feedRef} className="notification-feed" aria-label={t("Danh sách thông báo","Notification list")}><label className="notification-search"><span>⌕</span><input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder={t("Tìm trong thông báo…","Search notifications…")} aria-label={t("Tìm trong thông báo","Search notifications")}/></label><div className="notification-list-caption"><strong>{t("HỘP THƯ CỦA BẠN","YOUR INBOX")}</strong><span>{filtered.length} {t("kết quả đã tải","loaded results")}</span></div>
-      {loading?<div className="notification-empty" role="status">{t("Đang tải thông báo…","Loading notifications…")}</div>:error?<div className="notification-empty" role="alert"><h2>{t("Chưa kết nối được hộp thư","Inbox unavailable")}</h2><p>{error}</p><button onClick={()=>setAttempt(a=>a+1)}>{t("Thử lại","Retry")}</button></div>:!filtered.length?<div className="notification-empty"><span aria-hidden="true">✓</span><h2>{inbox.items.length?t("Không có thông báo phù hợp","No matching notifications"):t("Bạn đang bắt đầu một hộp thư mới","Your inbox is ready")}</h2><p>{inbox.items.length?t("Thử đổi bộ lọc hoặc từ khóa.","Try another filter or search."):t("Khi có cập nhật về tài khoản hoặc nghiệp vụ, thông báo sẽ xuất hiện tại đây. Không có dữ liệu mẫu được hiển thị như thông báo thật.","Account and workflow updates will appear here. No sample records are shown as real notifications.")}</p>{inbox.items.length>0&&<button onClick={()=>{setState("all");setCategory("all");setQuery("");}}>{t("Xóa bộ lọc","Clear filters")}</button>}</div>:<div className="notification-list">{filtered.map(item=><button key={item.id} className={`notification-item ${!item.read?"is-unread":""} ${active?.id===item.id?"is-selected":""}`} aria-pressed={active?.id===item.id} onClick={()=>selectNotice(item.id)}><span className={`notice-icon type-${notificationCategory(item)}`} aria-hidden="true">{categories[notificationCategory(item)][2]}</span><span className="notice-preview"><span className="notice-meta">{t(...categories[notificationCategory(item)].slice(0,2))}<span>{item.read?t("Đã đọc","Read"):t("Chưa đọc","Unread")}</span></span><strong>{item.title}</strong><span className="notice-excerpt">{item.content}</span><time dateTime={item.createdAt}>{date(item.createdAt)}</time></span>{!item.read&&<i className="notice-dot" aria-label={t("Chưa đọc","Unread")}/>}</button>)}</div>}
-      {inbox.nextCursor&&!loading&&<button className="notification-load-more secondary-button" disabled={busy} onClick={loadMore}>{t("Tải thông báo cũ hơn","Load older notifications")}</button>}</section>
-    <section ref={detailRef} className="notification-detail" aria-label={t("Chi tiết thông báo","Notification details")}>{active&&!loading&&!error?<><button className="notification-back-to-list secondary-button" onClick={()=>feedRef.current?.scrollIntoView({block:"start"})}>← {t("Về danh sách","Back to list")}</button><div className="notification-detail-top"><span className={`notice-icon type-${notificationCategory(active)}`} aria-hidden="true">{categories[notificationCategory(active)][2]}</span><span>{t(...categories[notificationCategory(active)].slice(0,2))}</span><small>{active.read?t("Đã đọc","Read"):t("Chưa đọc","Unread")}</small></div><h2>{active.title}</h2><time dateTime={active.createdAt}>{date(active.createdAt)}</time><p className="notification-body">{active.content}</p>{active.entityId&&<div className="notification-record">{t("Mã tham chiếu","Reference")} <strong>#{active.entityId}</strong></div>}<div className="notification-detail-actions">{destination?<Link className="button-link" to={destination}>{t("Mở trang liên quan","Open related page")} ↗</Link>:<p>{t("Thông báo này không cần mở trang khác.","No related page is required for this notification.")}</p>}<button className="secondary-button" disabled={busy} onClick={()=>mark(active,!active.read)}>{active.read?t("Đánh dấu chưa đọc","Mark unread"):t("Đánh dấu đã đọc","Mark read")}</button></div><small className="notification-privacy">{t("Chỉ bạn nhìn thấy hộp thư này. Mở trang liên quan không tự duyệt, thanh toán hay thay đổi hồ sơ.","This inbox is private. Opening a page does not approve, pay or modify a record.")}</small></>:<div className="notification-detail-placeholder"><span aria-hidden="true">◇</span><h2>{t("Đọc rõ. Thao tác đúng.","Read clearly. Act confidently.")}</h2><p>{t("Nội dung đầy đủ và thao tác sẽ hiện ở đây khi bạn chọn một thông báo.","Select a notification to see its full message and actions.")}</p></div>}</section></div>
-  </main>;
+
+  return (
+    <main className="page-content notification-page">
+      {/* Header trung tâm thông báo tinh gọn */}
+      <header className="notification-clean-header">
+        <div className="notification-header-info">
+          <span className="notification-eyebrow">
+            {t("TRUNG TÂM THÔNG BÁO", "NOTIFICATION CENTER")}
+          </span>
+          <h1>{t("Thông báo của bạn", "Your Notifications")}</h1>
+          <p>
+            {t(
+              "Theo dõi các cập nhật quan trọng về tài khoản, gói đọc và quy trình làm việc.",
+              "Stay updated on account activity, subscriptions, and important workflows."
+            )}
+          </p>
+        </div>
+
+        {/* Thao tác nhanh ở góc trên */}
+        <div className="notification-header-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={loading || busy}
+            onClick={() => setAttempt((a) => a + 1)}
+            title={t("Làm mới danh sách", "Refresh list")}
+          >
+            ↻ {t("Làm mới", "Refresh")}
+          </button>
+          <button
+            type="button"
+            className="primary-button notification-mark-all-btn"
+            disabled={!inbox.unreadCount || busy || loading}
+            onClick={handleMarkAllRead}
+          >
+            ✓ {t("Đánh dấu tất cả đã đọc", "Mark all read")}
+          </button>
+        </div>
+      </header>
+
+      {/* Thông báo kết quả thao tác (toast/feedback) */}
+      {feedback && (
+        <div className="notification-feedback-toast" role="status">
+          <span>{feedback}</span>
+          <button
+            type="button"
+            onClick={() => setFeedback("")}
+            aria-label={t("Đóng", "Close")}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Thanh lọc & tìm kiếm tối giản */}
+      <div className="notification-toolbar">
+        {/* Bộ lọc tab: Tất cả / Chưa đọc / Đã đọc */}
+        <div className="notification-tabs-clean" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={state === "all"}
+            className={state === "all" ? "active" : ""}
+            onClick={() => setState("all")}
+          >
+            {t("Tất cả", "All")}
+            <span className="tab-count">{inbox.items.length}</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={state === "unread"}
+            className={state === "unread" ? "active" : ""}
+            onClick={() => setState("unread")}
+          >
+            {t("Chưa đọc", "Unread")}
+            {inbox.unreadCount > 0 && (
+              <span className="tab-count tab-count-unread">{inbox.unreadCount}</span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={state === "read"}
+            className={state === "read" ? "active" : ""}
+            onClick={() => setState("read")}
+          >
+            {t("Đã đọc", "Read")}
+          </button>
+        </div>
+
+        {/* Ô tìm kiếm thông báo nhanh */}
+        <div className="notification-search-box">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("Tìm kiếm thông báo…", "Search notifications…")}
+            aria-label={t("Tìm kiếm thông báo", "Search notifications")}
+          />
+          {query && (
+            <button
+              type="button"
+              className="clear-search-btn"
+              onClick={() => setQuery("")}
+              aria-label={t("Xóa tìm kiếm", "Clear search")}
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Vùng hiển thị danh sách thông báo */}
+      {loading ? (
+        <div className="notification-status-card" role="status">
+          <div className="notification-spinner" />
+          <p>{t("Đang tải thông báo…", "Loading notifications…")}</p>
+        </div>
+      ) : error ? (
+        <div className="notification-status-card is-error" role="alert">
+          <h2>{t("Không thể kết nối", "Connection Error")}</h2>
+          <p>{error}</p>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setAttempt((a) => a + 1)}
+          >
+            {t("Thử lại", "Retry")}
+          </button>
+        </div>
+      ) : !filtered.length ? (
+        <div className="notification-status-card">
+          <span className="empty-icon" aria-hidden="true">✓</span>
+          <h2>
+            {inbox.items.length
+              ? t("Không tìm thấy thông báo phù hợp", "No matching notifications found")
+              : t("Hộp thư thông báo của bạn đang trống", "Your notification inbox is empty")}
+          </h2>
+          <p>
+            {inbox.items.length
+              ? t("Hãy thử đổi bộ lọc hoặc từ khóa tìm kiếm.", "Try changing the filter or search keyword.")
+              : t(
+                  "Khi có cập nhật mới về tài khoản, quyền lợi đọc bài hoặc nghiệp vụ, thông báo sẽ xuất hiện tại đây.",
+                  "Updates on your account, articles, and workflows will appear here."
+                )}
+          </p>
+          {inbox.items.length > 0 && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => {
+                setState("all");
+                setQuery("");
+              }}
+            >
+              {t("Xem tất cả thông báo", "View all notifications")}
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="notification-feed-list">
+          {filtered.map((item) => {
+            const catKey = notificationCategory(item);
+            const cat = categoryMeta[catKey] || categoryMeta.system;
+            const destination = notificationDestination(item, roles);
+
+            return (
+              <article
+                key={item.id}
+                className={`notification-card ${!item.read ? "is-unread" : "is-read"}`}
+              >
+                {/* Header của thẻ thông báo: Danh mục, Trạng thái & Thời gian */}
+                <div className="notification-card-header">
+                  <div className="notification-card-meta">
+                    <span className={`notification-category-badge ${cat.colorClass}`}>
+                      <span aria-hidden="true">{cat.icon}</span>{" "}
+                      {t(cat.vi, cat.en)}
+                    </span>
+                    {!item.read && (
+                      <span className="unread-indicator-badge">
+                        ● {t("Mới", "New")}
+                      </span>
+                    )}
+                    {item.entityId && (
+                      <span className="notification-ref-badge">
+                        #{item.entityId}
+                      </span>
+                    )}
+                  </div>
+
+                  <time dateTime={item.createdAt} className="notification-card-time">
+                    {formatDate(item.createdAt)}
+                  </time>
+                </div>
+
+                {/* Nội dung thông báo hiển thị đầy đủ, trực tiếp */}
+                <h2 className="notification-card-title">{item.title}</h2>
+                <p className="notification-card-body">{item.content}</p>
+
+                {/* Thanh hành động trực tiếp ngay trên thẻ */}
+                <div className="notification-card-actions">
+                  {destination ? (
+                    <Link to={destination} className="notification-cta-btn">
+                      {t("Mở trang liên quan", "Open related page")} →
+                    </Link>
+                  ) : <span />}
+
+                  <button
+                    type="button"
+                    className="notification-toggle-read-btn"
+                    disabled={busy}
+                    onClick={() => handleToggleRead(item, !item.read)}
+                    title={
+                      item.read
+                        ? t("Đánh dấu chưa đọc", "Mark unread")
+                        : t("Đánh dấu đã đọc", "Mark read")
+                    }
+                  >
+                    {item.read
+                      ? t("Đánh dấu chưa đọc", "Mark unread")
+                      : `✓ ${t("Đánh dấu đã đọc", "Mark read")}`}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+
+          {/* Nút tải thêm thông báo cũ hơn */}
+          {inbox.nextCursor && !loading && (
+            <div className="notification-load-more-wrap">
+              <button
+                type="button"
+                className="secondary-button notification-load-more-btn"
+                disabled={busy}
+                onClick={handleLoadMore}
+              >
+                {busy
+                  ? t("Đang tải…", "Loading…")
+                  : t("Tải thêm thông báo cũ hơn", "Load older notifications")}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </main>
+  );
 }

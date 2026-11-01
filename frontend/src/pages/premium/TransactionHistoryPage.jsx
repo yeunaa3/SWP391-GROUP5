@@ -44,10 +44,6 @@ export default function TransactionHistoryPage() {
 
   return (
     <main className="page-content premium-page">
-      <Link className="premium-back" to="/premium/my-subscription">
-        ← {t("Quay lại Gói của tôi", "Back to My Subscription")}
-      </Link>
-
       <header className="premium-checkout-heading">
         <span className="premium-kicker">THE PLUSE PREMIUM · PRE-06</span>
         <h1>{t("Lịch sử giao dịch & Hóa đơn", "Transaction History & Invoices")}</h1>
@@ -58,19 +54,6 @@ export default function TransactionHistoryPage() {
           )}
         </p>
       </header>
-
-      {/* Navigation tabs */}
-      <nav className="premium-nav-tabs" aria-label="Subscription Navigation">
-        <Link to="/premium/my-subscription" className="premium-nav-tab">
-          ✦ {t("Gói của tôi", "My Subscription")}
-        </Link>
-        <Link to="/premium/transactions" className="premium-nav-tab is-active">
-          🧾 {t("Lịch sử giao dịch & Biên lai", "Transactions & Receipts")}
-        </Link>
-        <Link to="/premium/payment-result" className="premium-nav-tab">
-          ◷ {t("Yêu cầu chờ duyệt", "Pending Requests")}
-        </Link>
-      </nav>
 
       {loading && <p role="status">{t("Đang tải lịch sử giao dịch…", "Loading transactions…")}</p>}
       {error && (

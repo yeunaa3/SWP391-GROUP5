@@ -20,7 +20,7 @@ import PremiumRequestsPage from "../pages/premium/PremiumRequestsPage.jsx";
 import MySubscriptionPage from "../pages/premium/MySubscriptionPage.jsx";
 import TransactionHistoryPage from "../pages/premium/TransactionHistoryPage.jsx";
 import ReceiptDetailPage from "../pages/premium/ReceiptDetailPage.jsx";
-import PremiumReviewPage from "../pages/premium/PremiumReviewPage.jsx";
+
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage.jsx";
 import AccessManagementPage from "../pages/admin/AccessManagementPage.jsx";
 import SystemSettingsPage from "../pages/admin/SystemSettingsPage.jsx";

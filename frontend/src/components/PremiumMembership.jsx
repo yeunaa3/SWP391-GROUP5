@@ -127,9 +127,6 @@ export default function PremiumMembership() {
         <Link className="button-link" to="/search">
           {t("Bắt đầu đọc báo", "Start reading")} →
         </Link>
-        <Link to="/premium/my-subscription">
-          {t("Xem gói & lịch sử duyệt", "Membership & request history")}
-        </Link>
         <button className="secondary-button" onClick={refreshPremium}>
           {t("Cập nhật trạng thái", "Refresh status")}
         </button>

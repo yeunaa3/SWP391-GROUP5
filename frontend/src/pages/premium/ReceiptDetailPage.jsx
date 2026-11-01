@@ -189,9 +189,6 @@ export default function ReceiptDetailPage() {
             <Link to="/premium/transactions" className="secondary-button" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", padding: "14px 20px", borderRadius: "12px" }}>
               ← {t("Về danh sách giao dịch", "Back to list")}
             </Link>
-            <Link to="/premium/my-subscription" className="secondary-button" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", padding: "14px 20px", borderRadius: "12px" }}>
-              ✦ {t("Về gói của tôi", "My Subscription")}
-            </Link>
           </div>
         </>
       )}

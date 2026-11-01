@@ -1,49 +1,570 @@
-.notification-page { max-width:1600px; margin:auto; }
-.notification-back { display:inline-block; margin-top:16px; font-size:12px; color:#246958; text-decoration:underline; text-underline-offset:4px; }.notification-back-to-list { display:none; }
-@media(max-width:760px) { .notification-back-to-list { display:inline-block; margin-bottom:20px; } }
-.workspace-notification-link { display:flex; align-items:center; gap:8px; padding:9px 12px; border:1px solid var(--line); border-radius:12px; font-size:12px; white-space:nowrap; }
-.notification-hero { display:flex; justify-content:space-between; align-items:center; gap:30px; padding:32px 36px; border:1px solid #d8e6e1; border-radius:24px; background:radial-gradient(ellipse at right top,#d3e9de,transparent 65%),linear-gradient(120deg,#f6f7f1,#eaf3ef); }
-.notification-eyebrow { font-size:11px; font-weight:750; color:#246958; text-transform:uppercase; letter-spacing:.14em; }
-.notification-hero h1 { font-size:clamp(26px,2.6vw,40px); line-height:1.2; letter-spacing:-.035em; margin:16px 0; color:#183d34; }
-.notification-hero p { max-width:630px; font-size:14px; line-height:1.8; color:#60736b; margin:0; }
-.notification-total { min-width:140px; text-align:center; padding:20px; background:#ffffff9c; border:1px solid #ffffff; border-radius:18px; display:grid; gap:5px; color:#246958; }
-.notification-total > span { font-size:22px; }.notification-total strong { font-size:38px; line-height:1.1; }.notification-total small { font-size:11px; }
-.notification-actionbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin:24px 0; }
-.notification-actionbar > div:last-child { display:flex; gap:8px; flex-wrap:wrap; }
-.notification-tabs { display:flex; gap:5px; padding:5px; border:1px solid var(--line); border-radius:13px; background:var(--surface); }
-.notification-tabs button { background:transparent; color:var(--muted); padding:10px 16px; border-radius:9px; font-size:12px; }
-.notification-tabs button[aria-pressed="true"] { background:#1c6553; color:#fff; box-shadow:0 3px 9px #1c655322; }
-.notification-tabs button span { margin-left:8px; padding:2px 6px; border-radius:20px; background:#ffffff28; font-size:10px; }
-.notification-layout { display:grid; grid-template-columns:210px minmax(270px,1.1fr) minmax(290px,1fr); gap:20px; align-items:start; }
-.notification-topics h2 { color:var(--muted); font-size:10px; letter-spacing:.16em; margin:12px 0 16px; }
-.notification-topics > button { display:flex; align-items:center; gap:10px; text-align:left; width:100%; padding:12px 10px; background:transparent; color:var(--muted); font-size:12px; border-radius:10px; margin:3px 0; }
-.notification-topics > button[aria-pressed="true"] { background:#e1eee7; color:#1c6553; font-weight:700; }.notification-topics > button small { margin-left:auto; }
-.notification-tip { padding:18px; margin-top:28px; background:var(--surface); border:1px solid var(--line); border-radius:14px; font-size:11px; }
-.notification-tip strong { font-size:12px; }.notification-tip p { white-space:pre-line; line-height:2; color:var(--muted); }.notification-tip small { color:var(--muted); line-height:1.7; display:block; border-top:1px solid var(--line); padding-top:12px; }
-.notification-feed,.notification-detail { min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:18px; overflow:hidden; }
-.notification-search { display:flex; align-items:center; gap:10px; padding:16px; border-bottom:1px solid var(--line); }.notification-search > span { font-size:25px; color:var(--muted); }
-.notification-search input { width:100%; min-width:0; border:none; background:transparent; padding:8px 0; font-size:13px; color:var(--ink); }
-.notification-list-caption { display:flex; justify-content:space-between; gap:8px; padding:16px; font-size:10px; color:var(--muted); }.notification-list-caption strong { letter-spacing:.08em; }
-.notification-item { display:flex; gap:12px; width:100%; text-align:left; padding:20px 16px; color:var(--ink); background:transparent; border-radius:0; border:0; border-bottom:1px solid var(--line); border-left:3px solid transparent; transition:background .18s,border-color .18s; }
-.notification-item:hover { background:#718e790a; }.notification-item.is-unread { background:#eaf3ec66; }.notification-item.is-selected { border-left-color:#267e65; background:#eaf3ec; }
-.notice-icon { flex-shrink:0; display:grid; place-items:center; width:38px; height:38px; border-radius:12px; background:#eaeef4; color:#65758c; font-size:19px; }
-.notice-icon.type-premium { background:#f9efda; color:#9b751f; }.notice-icon.type-campaign { background:#ede7fa; color:#7955ad; }.notice-icon.type-partnership { background:#dfeee9; color:#2c7a61; }.notice-icon.type-payment { background:#e6edfb; color:#476ca3; }
-.notice-preview { display:grid; gap:8px; flex:1; min-width:0; }.notice-meta { display:flex; justify-content:space-between; gap:8px; font-size:9px; color:#6c8277; }.notice-meta > span { white-space:nowrap; }
-.notice-preview strong { font-size:14px; line-height:1.5; font-weight:650; }.is-unread .notice-preview strong { font-weight:800; }
-.notice-excerpt { color:var(--muted); font-size:12px; line-height:1.6; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }.notice-preview time { color:var(--muted); font-size:10px; }
-.notice-dot { width:7px; height:7px; border-radius:50%; background:#238364; flex-shrink:0; margin-top:16px; }
-.notification-detail { padding:26px; position:sticky; top:20px; }
-.notification-detail-top { display:flex; align-items:center; gap:10px; color:var(--muted); font-size:11px; }.notification-detail-top small { margin-left:auto; color:#28725c; background:#e2f1e9; padding:5px 8px; border-radius:20px; }
-.notification-detail h2 { font-size:23px; line-height:1.4; margin:24px 0 12px; letter-spacing:-.02em; overflow-wrap:anywhere; }.notification-detail > time { font-size:11px; color:var(--muted); }
-.notification-body { font-size:14px; line-height:1.9; margin:26px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
-.notification-record { display:flex; justify-content:space-between; padding:14px; background:#7080740a; border:1px solid var(--line); border-radius:10px; font-size:11px; overflow-wrap:anywhere; gap:12px; }
-.notification-detail-actions { display:grid; gap:10px; margin:24px 0; }.notification-detail-actions .button-link { text-align:center; background:#1e6855; }.notification-detail-actions > p { font-size:12px; color:var(--muted); }
-.notification-privacy { display:block; font-size:11px; line-height:1.8; color:var(--muted); border-top:1px solid var(--line); padding-top:18px; }
-.notification-empty,.notification-detail-placeholder { text-align:center; padding:48px 24px; }.notification-empty > span,.notification-detail-placeholder > span { display:block; color:#328269; font-size:38px; }.notification-empty h2,.notification-detail-placeholder h2 { font-size:18px; line-height:1.5; }.notification-empty p,.notification-detail-placeholder p { color:var(--muted); font-size:12px; line-height:1.8; }
-.notification-load-more { display:block; margin:20px auto; }.notification-feedback { background:#e8f3ed; color:#27694f; padding:12px 16px; border-radius:12px; font-size:12px; }
-.notification-page :is(button,a,input):focus-visible { outline:3px solid #b78d4a; outline-offset:3px; }
-[data-theme="dark"] .notification-hero { background:linear-gradient(120deg,#20372f,#21302d); border-color:#3a5149; }[data-theme="dark"] .notification-hero h1 { color:#e8f1e9; }[data-theme="dark"] .notification-hero :is(p,.notification-eyebrow) { color:#b1c7ba; }[data-theme="dark"] .notification-total { background:#233f34; border-color:#466c58; color:#c7e5d5; }
-[data-theme="dark"] .notification-item.is-selected,[data-theme="dark"] .notification-topics > button[aria-pressed="true"],[data-theme="dark"] .notification-feedback { background:#253b30; color:#c0e0cd; }[data-theme="dark"] .notification-item.is-unread { background:#263b3222; }
-@media(max-width:1200px) { .notification-layout { grid-template-columns:minmax(250px,1fr) minmax(280px,1fr); }.notification-topics { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }.notification-topics > button { width:auto; margin:0; }.notification-topics > button small { margin-left:8px; }.notification-topics h2 { margin:0 12px 0 0; }.notification-tip { display:none; } }
-@media(max-width:760px) { .notification-layout { display:flex; flex-direction:column; }.notification-topics,.notification-feed,.notification-detail { width:100%; }.notification-hero { padding:24px; align-items:flex-start; }.notification-total { min-width:85px; padding:12px; }.notification-total strong { font-size:28px; }.notification-hero p { font-size:12px; }.notification-detail { position:static; }.notification-actionbar { align-items:flex-start; }.notification-actionbar .secondary-button { font-size:11px; padding:10px; }.notification-tabs button { padding:10px 12px; }.notification-hero h1 { font-size:25px; } }
-@media(prefers-reduced-motion:reduce) { .notification-item { transition:none; } }
+/* ============================================================================
+ * THE PLUSE - TRUNG TÂM THÔNG BÁO (NOTIFICATION CENTER STYLES)
+ * Thiết kế tinh gọn, hiện đại, thoáng đãng, dễ đọc trực tiếp nội dung thẻ
+ * ============================================================================ */
+
+.notification-page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 16px 20px 60px;
+}
+
+/* 1. Header tinh gọn */
+.notification-clean-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, rgba(235, 245, 240, 0.75), rgba(246, 248, 246, 0.95));
+  border: 1px solid rgba(28, 101, 83, 0.15);
+  border-radius: 20px;
+  margin-bottom: 24px;
+}
+
+.notification-header-info {
+  max-width: 620px;
+}
+
+.notification-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 750;
+  color: #1c6553;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.notification-clean-header h1 {
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 800;
+  line-height: 1.25;
+  color: #13392f;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+
+.notification-clean-header p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #556c64;
+  margin: 0;
+}
+
+.notification-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.notification-header-actions button {
+  font-size: 13px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-mark-all-btn {
+  background: #1c6553 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 600;
+}
+
+.notification-mark-all-btn:hover:not(:disabled) {
+  background: #144f41 !important;
+  box-shadow: 0 4px 12px rgba(28, 101, 83, 0.25);
+}
+
+.notification-mark-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 2. Toast thông báo kết quả (feedback banner) */
+.notification-feedback-toast {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  background: #edf8f2;
+  border: 1px solid #a3d9be;
+  color: #165643;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.notification-feedback-toast button {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  opacity: 0.7;
+}
+
+.notification-feedback-toast button:hover {
+  opacity: 1;
+}
+
+/* 3. Toolbar: Tabs trạng thái & Tìm kiếm */
+.notification-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.notification-tabs-clean {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+}
+
+.notification-tabs-clean button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.notification-tabs-clean button:hover {
+  color: var(--ink, #0f172a);
+}
+
+.notification-tabs-clean button.active {
+  background: #1c6553;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(28, 101, 83, 0.2);
+}
+
+.tab-count {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.06);
+  font-size: 11px;
+}
+
+.notification-tabs-clean button.active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.tab-count-unread {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.notification-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+}
+
+.notification-search-box input {
+  width: 100%;
+  padding: 9px 34px 9px 14px;
+  font-size: 13px;
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 10px;
+  background: var(--surface, #ffffff);
+  color: var(--ink, #0f172a);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.notification-search-box input:focus {
+  outline: none;
+  border-color: #1c6553;
+  box-shadow: 0 0 0 3px rgba(28, 101, 83, 0.12);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 10px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: var(--muted, #94a3b8);
+  cursor: pointer;
+}
+
+/* 4. Danh sách thông báo dạng Feed Cards */
+.notification-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notification-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 16px;
+  padding: 22px 24px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.notification-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
+
+/* Thẻ chưa đọc: Có viền xanh nổi bật và nền hơi sáng nhẹ */
+.notification-card.is-unread {
+  border-left: 4px solid #1c6553;
+  background: #fbfdfc;
+  box-shadow: 0 2px 8px rgba(28, 101, 83, 0.04);
+}
+
+/* Thẻ đã đọc: Viền mờ, hiển thị dịu mắt */
+.notification-card.is-read {
+  border-left: 4px solid transparent;
+}
+
+/* Header bên trong từng thẻ */
+.notification-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.notification-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Huy hiệu danh mục */
+.notification-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cat-premium {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.cat-partnership {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cat-payment {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.cat-campaign {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+
+.cat-account {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.cat-system {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+/* Huy hiệu tin mới */
+.unread-indicator-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #e6f4ea;
+  color: #137333;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Huy hiệu mã tham chiếu */
+.notification-ref-badge {
+  font-family: monospace;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: var(--surface-muted, #f1f5f9);
+  color: var(--muted, #64748b);
+  border-radius: 6px;
+}
+
+.notification-card-time {
+  font-size: 12px;
+  color: var(--muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tiêu đề & Nội dung thẻ */
+.notification-card-title {
+  font-size: 1.15rem;
+  font-weight: 750;
+  line-height: 1.4;
+  color: var(--ink, #0f172a);
+  margin: 0 0 8px;
+}
+
+.notification-card.is-unread .notification-card-title {
+  color: #13392f;
+}
+
+.notification-card-body {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-secondary, #334155);
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Thao tác ở đáy thẻ */
+.notification-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line, #f1f5f9);
+}
+
+.notification-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1c6553;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: #eef6f2;
+  transition: all 0.2s ease;
+}
+
+.notification-cta-btn:hover {
+  background: #1c6553;
+  color: #ffffff;
+  transform: translateX(2px);
+}
+
+.notification-toggle-read-btn {
+  background: transparent;
+  border: 1px solid var(--line, #cbd5e1);
+  color: var(--muted, #64748b);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.notification-toggle-read-btn:hover:not(:disabled) {
+  background: var(--surface-muted, #f8fafc);
+  color: var(--ink, #0f172a);
+  border-color: #94a3b8;
+}
+
+/* 5. Trạng thái rỗng / Tải / Lỗi */
+.notification-status-card {
+  text-align: center;
+  padding: 56px 24px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 16px;
+  margin: 20px 0;
+}
+
+.notification-status-card .empty-icon {
+  display: block;
+  font-size: 44px;
+  color: #1c6553;
+  margin-bottom: 12px;
+}
+
+.notification-status-card h2 {
+  font-size: 20px;
+  font-weight: 750;
+  color: var(--ink, #0f172a);
+  margin: 0 0 8px;
+}
+
+.notification-status-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted, #64748b);
+  max-width: 500px;
+  margin: 0 auto 20px;
+}
+
+.notification-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(28, 101, 83, 0.15);
+  border-top-color: #1c6553;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.notification-status-card.is-error h2 {
+  color: #b91c1c;
+}
+
+/* 6. Nút phân trang Tải thêm */
+.notification-load-more-wrap {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.notification-load-more-btn {
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 7. Dark Mode Support */
+[data-theme="dark"] .notification-clean-header {
+  background: linear-gradient(135deg, #1b2f29, #1a2522);
+  border-color: #2b453d;
+}
+
+[data-theme="dark"] .notification-clean-header h1 {
+  color: #e8f5f0;
+}
+
+[data-theme="dark"] .notification-clean-header p,
+[data-theme="dark"] .notification-eyebrow {
+  color: #a8cfc0;
+}
+
+[data-theme="dark"] .notification-card {
+  background: #182320;
+  border-color: #253732;
+}
+
+[data-theme="dark"] .notification-card.is-unread {
+  background: #1c2b26;
+  border-left-color: #38a17f;
+}
+
+[data-theme="dark"] .notification-card-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .notification-card-body {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .notification-cta-btn {
+  background: #253b34;
+  color: #6ee7b7;
+}
+
+[data-theme="dark"] .cat-premium {
+  background: #452a0a;
+  color: #fde68a;
+}
+
+[data-theme="dark"] .cat-partnership {
+  background: #0f3d23;
+  color: #86efac;
+}
+
+[data-theme="dark"] .cat-payment {
+  background: #1e265c;
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .cat-campaign {
+  background: #3b1659;
+  color: #d8b4fe;
+}
+
+[data-theme="dark"] .cat-account {
+  background: #232c38;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .cat-system {
+  background: #262c33;
+  color: #9ca3af;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .notification-clean-header {
+    flex-direction: column;
+    padding: 20px;
+    align-items: stretch;
+  }
+
+  .notification-header-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .notification-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .notification-search-box {
+    width: 100%;
+  }
+
+  .notification-card {
+    padding: 16px 18px;
+  }
+
+  .notification-card-title {
+    font-size: 1.05rem;
+  }
+}

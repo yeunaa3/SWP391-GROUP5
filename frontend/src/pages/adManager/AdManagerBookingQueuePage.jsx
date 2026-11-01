@@ -76,7 +76,7 @@ export default function AdManagerBookingQueuePage() {
                 <h1>Yêu cầu đặt quảng cáo chờ xem xét</h1>
                 <p className="page-subtitle">Danh sách yêu cầu mới đang chờ Ad Manager xử lý.</p>
             </div>
-            <Link className="secondary-button" to="/ad-manager">Về tổng quan</Link>
+
         </header>
         <section className="dashboard-section">
             <form className="review-filters" key={params.toString()} onSubmit={applyFilters}>

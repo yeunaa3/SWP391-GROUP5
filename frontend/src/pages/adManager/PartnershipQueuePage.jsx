@@ -53,7 +53,7 @@ export default function PartnershipQueuePage() {
     return <main className="page-content ad-manager-page">
         <header className="page-heading"><div><p className="eyebrow">ADM-02 · UC-19</p><h1>Hồ sơ hợp tác chờ xem xét</h1>
             <p className="page-subtitle">Danh sách chỉ gồm hồ sơ mới gửi và hồ sơ Business đã chỉnh sửa, gửi lại.</p></div>
-            <Link className="secondary-button" to="/ad-manager">Về tổng quan</Link>
+
         </header>
         <section className="dashboard-section">
             <form className="review-filters" key={params.toString()} onSubmit={applyFilters}>

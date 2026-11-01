@@ -62,11 +62,6 @@ export default function AdManagerDashboardPage() {
                     <span>Dữ liệu trực tiếp</span><span>Phân quyền Ad Manager</span><span>Có nhật ký hoạt động</span>
                 </div>
             </div>
-            <div className="review-header-actions">
-                <Link className="button-link" to="/ad-manager/partnerships">Mở hồ sơ hợp tác</Link>
-                <Link className="secondary-button" to="/ad-manager/campaigns">Mở hàng đợi chiến dịch</Link>
-                <Link className="secondary-button" to="/ad-manager/campaign-monitor">Xem cảnh báo</Link>
-            </div>
         </header>
         <RequestState loading={state.loading} error={state.error} onRetry={() => setAttempt(value => value + 1)} />
         {state.data && <>

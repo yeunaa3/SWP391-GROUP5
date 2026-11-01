@@ -42,22 +42,6 @@ export default function MySubscriptionPage() {
         </p>
       </header>
 
-      {/* Navigation tabs */}
-      <nav className="premium-nav-tabs" aria-label="Subscription Navigation">
-        <Link to="/premium/my-subscription" className="premium-nav-tab is-active">
-          ✦ {t("Gói của tôi", "My Subscription")}
-        </Link>
-        <Link to="/premium/transactions" className="premium-nav-tab">
-          🧾 {t("Lịch sử giao dịch & Biên lai", "Transactions & Receipts")}
-        </Link>
-        <Link to="/premium/payment-result" className="premium-nav-tab">
-          ◷ {t("Yêu cầu chờ duyệt", "Pending Requests")} {pendingPackageId ? "●" : ""}
-        </Link>
-        <Link to="/premium/packages" className="premium-nav-tab">
-          🛒 {t("Danh mục gói", "Plan Catalog")}
-        </Link>
-      </nav>
-
       {pendingPackageId ? (
         <section className="premium-panel premium-preview">
           <div className="premium-request-heading">
@@ -116,9 +100,6 @@ export default function MySubscriptionPage() {
                 <Link to={`/premium/checkout/${activeSub.packageId}`} className="button-link">
                   {t("Gia hạn thêm gói này", "Extend this plan")} →
                 </Link>
-                <Link to="/premium/transactions" className="secondary-button" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: "12px" }}>
-                  🧾 {t("Xem lịch sử giao dịch", "View transactions")}
-                </Link>
               </div>
             </section>
 
@@ -153,10 +134,6 @@ export default function MySubscriptionPage() {
             <Link to="/premium/packages" className="premium-change-plan">
               {t("Xem các gói khác", "Explore other plans")}
             </Link>
-            <hr />
-            <Link to="/premium/transactions" style={{ display: "block", textAlign: "center", textDecoration: "none", fontWeight: "600", color: "var(--premium-green)" }}>
-              🧾 {t("Xem lịch sử hóa đơn & biên lai", "Invoices & receipts history")} →
-            </Link>
           </aside>
         </div>
       ) : (
@@ -172,9 +149,6 @@ export default function MySubscriptionPage() {
           <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
             <Link to="/premium/packages" className="button-link">
               {t("Xem các gói Premium", "View Premium plans")} →
-            </Link>
-            <Link to="/premium/transactions" className="secondary-button" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", padding: "12px 18px", borderRadius: "12px" }}>
-              🧾 {t("Xem lịch sử giao dịch cũ", "Past transactions")}
             </Link>
           </div>
         </section>
