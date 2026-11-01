@@ -85,9 +85,38 @@ const specialPages = {
 };
 const publicAreas = new Set(["public"]);
 
+/**
+ * Hàm quyết định màn hình tương ứng cho từng screen:
+ * Thay vì viết dồn các toán tử 3 ngôi (ternary) lồng nhau trên 1 dòng,
+ * chúng ta tách ra thành các nhánh if...else rõ ràng, có chú thích bằng tiếng Việt.
+ */
 function screenElement(screen) {
-  const page = specialPages[screen.id] || (["BUS-01", "BUS-02", "BUS-13", "BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id) ? <BusinessCampaignPage screen={screen} /> : screen.area === "business" ? <BusinessWorkspacePage screen={screen} /> : <ScreenWorkspacePage screen={screen} />);
-  return screen.roles?.length ? <ProtectedRoute roles={screen.roles}>{page}</ProtectedRoute> : page;
+  let pageComponent = null;
+
+  // 1. Nếu màn hình này có trang chuyên biệt đã được khai báo trong specialPages
+  if (specialPages[screen.id]) {
+    pageComponent = specialPages[screen.id];
+  } 
+  // 2. Các trang chỉnh sửa và nộp chiến dịch quảng cáo của doanh nghiệp
+  else if (["BUS-01", "BUS-02", "BUS-13", "BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id)) {
+    pageComponent = <BusinessCampaignPage screen={screen} />;
+  } 
+  // 3. Không gian làm việc chung của doanh nghiệp
+  else if (screen.area === "business") {
+    pageComponent = <BusinessWorkspacePage screen={screen} />;
+  } 
+  // 4. Màn hình mặc định mẫu chuẩn (specification)
+  else {
+    pageComponent = <ScreenWorkspacePage screen={screen} />;
+  }
+
+  // 5. Kiểm tra phân quyền: Nếu màn hình này yêu cầu Roles thì bọc qua ProtectedRoute
+  if (screen.roles && screen.roles.length > 0) {
+    return <ProtectedRoute roles={screen.roles}>{pageComponent}</ProtectedRoute>;
+  }
+
+  // Nếu là màn công khai (không cần role) thì trả về component trực tiếp
+  return pageComponent;
 }
 
 export default function AppRoutes() {

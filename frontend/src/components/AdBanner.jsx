@@ -31,8 +31,19 @@ export default function AdBanner({ position = "HOME_HERO", compact = false, arti
   const { showAdvertising } = useReaderPolicy();
   const { t } = usePreferences();
   const format = adFormat(position);
-  const house = !preview && !banners.length;
-  const displayBanners = preview ? previewBanners : house ? adsForPosition(position) : banners;
+
+  // Xác định danh sách banner quảng cáo sẽ hiển thị (viết bằng if...else rõ ràng):
+  let displayBanners = [];
+  if (preview) {
+    // 1. Nếu đang bật chế độ xem thử (Preview)
+    displayBanners = previewBanners;
+  } else if (banners.length > 0) {
+    // 2. Nếu đã lấy được danh sách banner của đối tác từ database
+    displayBanners = banners;
+  } else {
+    // 3. Nếu vị trí này chưa có đối tác mua -> Hiển thị quảng cáo tự giới thiệu của tòa soạn (House Ad)
+    displayBanners = adsForPosition(position);
+  }
   const trackedImpressions = useRef(new Set());
   const element = useRef(null);
 

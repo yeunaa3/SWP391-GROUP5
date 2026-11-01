@@ -84,21 +84,41 @@ export default function PackagesPage() {
       {/* Danh sách thẻ gói cước Premium */}
       <div className="premium-plans">
         {state.packages.map((item) => {
+          // 1. Kiểm tra trạng thái sở hữu của gói này
           const owned = ownedPremium(premium?.subscriptions, item.id);
           const pending = Number(premium?.pendingPackageId) === Number(item.id);
+
+          // 2. Tính toán nhãn Kicker hiển thị trên đầu thẻ (dùng if...else rõ ràng):
+          let kickerLabel = `${item.durationDays} ${t("NGÀY TRẢI NGHIỆM", "DAYS OF ACCESS")}`;
+          if (owned) {
+            kickerLabel = t("✓ ĐÃ MUA GÓI NÀY", "✓ PURCHASED");
+          } else if (pending) {
+            kickerLabel = t("◷ ĐANG CHỜ DUYỆT", "◷ PENDING REVIEW");
+          }
+
+          // 3. Tính toán nhãn nút bấm và đường dẫn chuyển trang:
+          let buttonText = t("Khám phá quyền lợi", "Explore benefits") + " →";
+          let targetUrl = `/premium/packages/${item.id}`; // Mặc định chuyển sang trang chi tiết PRE-02
+
+          if (owned) {
+            buttonText = t("Xem gói đã mua", "View purchased plan") + " →";
+            targetUrl = `/premium/packages/${item.id}`;
+          } else if (pending) {
+            buttonText = t("Xem trạng thái duyệt", "View request status") + " →";
+            targetUrl = "/premium/payment-result"; // Đang chờ duyệt thì chuyển sang PRE-04
+          }
+
+          // 4. Định dạng ngày hết hạn nếu đã mua
+          const expiryDateFormatted = owned
+            ? new Date(owned.endAt).toLocaleDateString(language === "vi" ? "vi-VN" : "en-GB")
+            : "";
 
           return (
             <article
               className={`premium-plan ${owned ? "is-owned" : ""}`}
               key={item.id}
             >
-              <span className="premium-kicker">
-                {owned
-                  ? t("✓ ĐÃ MUA GÓI NÀY", "✓ PURCHASED")
-                  : pending
-                  ? t("◷ ĐANG CHỜ DUYỆT", "◷ PENDING REVIEW")
-                  : `${item.durationDays} ${t("NGÀY TRẢI NGHIỆM", "DAYS OF ACCESS")}`}
-              </span>
+              <span className="premium-kicker">{kickerLabel}</span>
 
               <h2>{item.name}</h2>
               <p>{item.description}</p>
@@ -108,13 +128,8 @@ export default function PackagesPage() {
 
               <small>
                 {owned
-                  ? `${t("Thời hạn đã cấp đến", "Granted until")} ${new Date(
-                      owned.endAt
-                    ).toLocaleDateString(language === "vi" ? "vi-VN" : "en-GB")}`
-                  : t(
-                      "Thanh toán một lần cho toàn bộ thời hạn",
-                      "One payment for the full period"
-                    )}
+                  ? `${t("Thời hạn đã cấp đến", "Granted until")} ${expiryDateFormatted}`
+                  : t("Thanh toán một lần cho toàn bộ thời hạn", "One payment for the full period")}
               </small>
 
               <ul>
@@ -126,20 +141,8 @@ export default function PackagesPage() {
                 ))}
               </ul>
 
-              <Link
-                className="button-link"
-                to={
-                  pending
-                    ? "/premium/payment-result"
-                    : `/premium/packages/${item.id}`
-                }
-              >
-                {owned
-                  ? t("Xem gói đã mua", "View purchased plan")
-                  : pending
-                  ? t("Xem trạng thái duyệt", "View request status")
-                  : t("Khám phá quyền lợi", "Explore benefits")}{" "}
-                →
+              <Link className="button-link" to={targetUrl}>
+                {buttonText}
               </Link>
             </article>
           );

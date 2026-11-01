@@ -21,15 +21,24 @@ export default function LoginPage() {
         setError("");
         setSubmitting(true);
         try {
+            // 1. Gửi thông tin đăng nhập lên Backend (POST /api/auth/login)
             await login(form);
+
+            // 2. Gọi hàm refresh() trong AuthContext để lấy thông tin user và lưu vào State
             const current = await refresh();
-            if (!current)
+            if (!current) {
                 throw new Error(t("Không thể xác nhận phiên đăng nhập. Vui lòng thử lại.", "Unable to verify your session. Please try again."));
-            navigate(LOGIN_SUCCESS_PATH, {replace: true});
+            }
+
+            // 3. Đăng nhập thành công -> Chuyển về trang chủ (LOGIN_SUCCESS_PATH = "/")
+            navigate(LOGIN_SUCCESS_PATH, { replace: true });
         } catch (requestError) {
-            setError(requestError.message === "Invalid username/email or password"
-                    ? t("Tên đăng nhập hoặc mật khẩu chưa đúng. Vui lòng kiểm tra và thử lại.", "Incorrect username or password. Please check and try again.")
-                    : requestError.message);
+            // Tách rõ ràng thông báo lỗi bằng if...else thay vì dùng toán tử 3 ngôi
+            if (requestError.message === "Invalid username/email or password") {
+                setError(t("Tên đăng nhập hoặc mật khẩu chưa đúng. Vui lòng kiểm tra và thử lại.", "Incorrect username or password. Please check and try again."));
+            } else {
+                setError(requestError.message);
+            }
         } finally {
             setSubmitting(false);
         }

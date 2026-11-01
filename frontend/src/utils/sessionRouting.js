@@ -1,28 +1,64 @@
 import { matchPath } from "react-router-dom";
 import { screens } from "../routes/screenCatalog.js";
 
-// UC-06: all roles land on the news homepage after a verified login.
-// Never reuse returnTo from a previous account as the post-login destination.
+// Trang chủ mặc định sau khi đăng nhập thành công
 export const LOGIN_SUCCESS_PATH = "/";
 
+/**
+ * Chọn trang chủ mặc định (Workspace) theo Role của người dùng:
+ * - Tài khoản có nhiều Role thì ưu tiên: ADMIN -> MANAGER -> BUSINESS -> PROFILE (READER)
+ */
 export function workspaceHome(user) {
-    // UC-06: chọn trang mặc định theo role; tài khoản nhiều role ưu tiên Admin, Manager rồi Business.
     const roles = user?.roles || [];
-    if (roles.includes("ADMINISTRATOR"))
+
+    // 1. Quản trị viên hệ thống
+    if (roles.includes("ADMINISTRATOR")) {
         return "/admin";
-    if (roles.includes("AD_MANAGER"))
+    }
+
+    // 2. Quản lý quảng cáo
+    if (roles.includes("AD_MANAGER")) {
         return "/ad-manager";
-    if (roles.includes("BUSINESS"))
+    }
+
+    // 3. Doanh nghiệp đối tác
+    if (roles.includes("BUSINESS")) {
         return "/business";
+    }
+
+    // 4. Độc giả bình thường (Reader / Subscriber)
     return "/account/profile";
 }
 
+/**
+ * Kiểm tra đường dẫn quay lại (returnTo) có an toàn và đúng quyền Role không:
+ * Nếu hợp lệ thì quay lại đúng trang đó, nếu không thì đưa về workspaceHome.
+ */
 export function safeReturnTo(path, user) {
-    // Chỉ quay lại đường dẫn nội bộ đã khai báo và phù hợp role; nếu không thì về trang mặc định.
-    if (!path || !path.startsWith("/") || path.startsWith("//"))
+    // 1. Kiểm tra đường dẫn có bắt đầu bằng "/" hợp lệ không
+    if (!path || !path.startsWith("/") || path.startsWith("//")) {
         return workspaceHome(user);
-    const screen = screens.find(item => matchPath({path: item.path, end: true}, path.split(/[?#]/)[0]));
-    if (!screen || screen.area === "auth")
+    }
+
+    // 2. Tìm màn hình trong catalog khớp với path này
+    const cleanPath = path.split(/[?#]/)[0];
+    const screen = screens.find((item) =>
+        matchPath({ path: item.path, end: true }, cleanPath)
+    );
+
+    // 3. Nếu không tìm thấy màn hoặc là trang auth (login/register) thì về trang chủ role
+    if (!screen || screen.area === "auth") {
         return workspaceHome(user);
-    return !screen.roles?.length || screen.roles.some(role => user?.roles?.includes(role)) ? path : workspaceHome(user);
+    }
+
+    // 4. Kiểm tra quyền role:
+    // Màn hình không yêu cầu role HOẶC user có role phù hợp thì cho phép quay lại
+    const isPublic = !screen.roles || screen.roles.length === 0;
+    const hasRole = screen.roles && screen.roles.some((role) => user?.roles?.includes(role));
+
+    if (isPublic || hasRole) {
+        return path;
+    }
+
+    return workspaceHome(user);
 }

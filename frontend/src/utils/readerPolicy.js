@@ -1,29 +1,36 @@
 /**
  * ============================================================================
- * [BF-01][BF-08] READER ACCESS & ADVERTISING POLICY
- * Phụ trách: Cường (Chính sách phân quyền trải nghiệm đọc báo & Tắt quảng cáo)
- * 
- * Quy tắc nghiệp vụ cốt lõi:
- * 1. Độc giả Miễn phí (Free Reader / Guest):
- *    - showAdvertising = true: Hiển thị các banner quảng cáo [BF-08][UC-31]
- *    - Đọc bản tóm tắt nội dung chính; nội dung bài báo gốc bị khóa
- * 2. Độc giả Thuê bao Premium (SUBSCRIBER, premiumActive = true):
- *    - showAdvertising = false: HOÀN TOÀN KHÔNG HIỂN THỊ QUẢNG CÁO (Đặc quyền đọc sạch)
- *    - Mở khóa toàn văn 100% bài báo gốc, mở tính năng Đọc tập trung và Nghe đọc AI
- * 3. Tài khoản nội bộ tòa soạn (ADMINISTRATOR, AD_MANAGER, BUSINESS):
- *    - Không hiển thị quảng cáo thương mại của độc giả, mở thanh điều hướng chuyên biệt
+ * [BF-01][BF-08] CHÍNH SÁCH ĐỌC BÁO & QUY TẮC HIỂN THỊ QUẢNG CÁO
+ * Phụ trách: Cường (Phân quyền trải nghiệm đọc báo & Tắt quảng cáo khi mua VIP)
  * ============================================================================
  */
 export function readerPolicy(user, premiumActive = false) {
   const roles = user?.roles || [];
-  const workplaceRole = roles.some((role) =>
-    ["ADMINISTRATOR", "AD_MANAGER", "BUSINESS"].includes(role)
+
+  // 1. Kiểm tra xem người này có phải là nhân viên nội bộ tòa soạn không:
+  const isWorkplaceStaff = roles.some((role) =>
+    role === "ADMINISTRATOR" || role === "AD_MANAGER" || role === "BUSINESS"
   );
-  const reader = !user || roles.some((role) => ["READER", "SUBSCRIBER"].includes(role));
+
+  // 2. Kiểm tra xem có phải là độc giả không:
+  // - Khách vãng lai (chưa đăng nhập: !user)
+  // - Tài khoản có vai trò READER hoặc SUBSCRIBER
+  const isReader = !user || roles.includes("READER") || roles.includes("SUBSCRIBER");
+
+  // 3. Menu điều hướng công cộng dành cho độc giả:
+  const readerNavigation = !isWorkplaceStaff && isReader;
+
+  // 4. QUY TẮC CỐT LÕI: CÓ HIỂN THỊ QUẢNG CÁO KHÔNG?
+  // - Nếu là nhân viên tòa soạn: KHÔNG hiện quảng cáo
+  // - Nếu là độc giả ĐÃ MUA GÓI VIP (premiumActive = true): KHÔNG hiện quảng cáo (Đặc quyền đọc sạch!)
+  // - Chỉ hiển thị khi là Độc giả thường và CHƯA có gói VIP còn hạn:
+  let showAdvertising = false;
+  if (!isWorkplaceStaff && isReader && !premiumActive) {
+    showAdvertising = true;
+  }
 
   return {
-    readerNavigation: !workplaceRole && reader,
-    // [BF-01][Ad-Free Check]: Chỉ hiển thị quảng cáo khi là độc giả và CHƯA có gói Premium còn hạn
-    showAdvertising: !workplaceRole && reader && !premiumActive,
+    readerNavigation,
+    showAdvertising,
   };
 }
