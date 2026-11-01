@@ -15,7 +15,21 @@ export default function HomePage() {
   const { showAdvertising } = useReaderPolicy();
   const [state, setState] = useState({ articles: [], demo: false, loading: true });
   const [source, setSource] = useState("");
-  useEffect(() => { getArticles({ limit: 40 }).then(({ data, demo }) => setState({ articles: [...data].sort((a, b) => Number(Boolean(b.sourceUrl)) - Number(Boolean(a.sourceUrl))), demo, loading: false })); }, []);
+  useEffect(() => {
+    getArticles({ limit: 40 })
+      .then(({ data, demo }) =>
+        setState({
+          articles: [...(data || [])].sort(
+            (a, b) => Number(Boolean(b.sourceUrl)) - Number(Boolean(a.sourceUrl))
+          ),
+          demo,
+          loading: false,
+        })
+      )
+      .catch(() => {
+        setState({ articles: [], demo: false, loading: false });
+      });
+  }, []);
   const [lead, ...more] = state.articles;
   return <main data-hide-promotions={!showAdvertising || premiumLoading}><DemoNotice show={state.demo} /><div className="public-content">
     {!preview && <AdBanner position="HOME_HERO" />}

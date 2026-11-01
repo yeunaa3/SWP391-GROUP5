@@ -33,6 +33,7 @@ export default function AdBanner({ position = "HOME_HERO", compact = false, arti
   const format = adFormat(position);
 
   // Xác định danh sách banner quảng cáo sẽ hiển thị (viết bằng if...else rõ ràng):
+  const house = !preview && !banners.length;
   let displayBanners = [];
   if (preview) {
     // 1. Nếu đang bật chế độ xem thử (Preview)
