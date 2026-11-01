@@ -1,3 +1,26 @@
+/**
+ * =================================================================================================
+ * PAGE: RESET PASSWORD PAGE (TRANG THIẾT LẬP MẬT KHẨU MỚI TỪ LIÊN KẾT EMAIL)
+ * =================================================================================================
+ * 
+ * Mã màn hình: AUTH-04 (Ca sử dụng UC-07 trong đặc tả SRS).
+ * 
+ * Luồng hoạt động:
+ * 1. Trích xuất mã token bí mật từ query parameter của URL: `/reset-password?token={rawToken}`.
+ * 2. Ngay khi component được tải (useEffect mount), tự động gọi API `verifyResetToken(token)`:
+ *    - Nếu token thiếu hoặc không hợp lệ -> Chuyển trạng thái `missing` hoặc `invalid` và báo lỗi rõ ràng.
+ *    - Nếu token hợp lệ -> Chuyển trạng thái `valid` và hiển thị địa chỉ email đã che giấu (maskedEmail).
+ * 3. Người dùng nhập Mật khẩu mới và Xác nhận mật khẩu mới.
+ * 4. Kiểm tra hợp lệ phía client:
+ *    - Độ dài từ 8 đến 64 ký tự (theo quy chuẩn bảo mật SRS).
+ *    - Mật khẩu xác nhận phải trùng khớp tuyệt đối với mật khẩu mới.
+ * 5. Khi bấm "Xác nhận đặt lại mật khẩu", gọi API `resetPassword({ token, newPassword })`.
+ * 6. Khi thành công, chuyển sang trạng thái `success`, hiển thị thông báo thành công và nút chuyển
+ *    hướng sang trang Đăng nhập (`/login`).
+ * 7. Hỗ trợ đầy đủ song ngữ (Tiếng Việt & English) thông qua hook `usePreferences()`.
+ * =================================================================================================
+ */
+
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import AuthShell from "../../components/AuthShell.jsx";
@@ -5,26 +28,55 @@ import { verifyResetToken, resetPassword } from "../../services/authService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 
 export default function ResetPasswordPage() {
+    // Hook cung cấp hàm dịch đa ngôn ngữ
     const { t } = usePreferences();
+
+    // Hook đọc query parameters từ URL trình duyệt
     const [searchParams] = useSearchParams();
     const token = searchParams.get("token") || "";
 
-    const [status, setStatus] = useState("checking"); // checking | valid | invalid | missing | success
+    /**
+     * State quản lý trạng thái của trang:
+     * - 'checking': Đang gửi request kiểm tra token lên server
+     * - 'valid': Token hợp lệ, sẵn sàng hiển thị form đổi mật khẩu
+     * - 'invalid': Token không tồn tại, đã hết hạn 15 phút hoặc đã dùng trước đó
+     * - 'missing': Không tìm thấy query param ?token= trên URL
+     * - 'success': Đã đổi mật khẩu thành công vào cơ sở dữ liệu
+     */
+    const [status, setStatus] = useState("checking");
+
+    // Địa chỉ email đã được che giấu một phần (ví dụ: b***6@gmail.com) do server trả về
     const [maskedEmail, setMaskedEmail] = useState("");
+
+    // Thông điệp trạng thái chi tiết (dùng khi token bị lỗi/hết hạn)
     const [statusMessage, setStatusMessage] = useState("");
 
+    // Form dữ liệu mật khẩu mới và xác nhận mật khẩu
     const [form, setForm] = useState({ password: "", confirmation: "" });
+
+    // Thông báo lỗi validation hoặc lỗi từ API
     const [formError, setFormError] = useState("");
+
+    // Trạng thái đang gửi yêu cầu lưu mật khẩu
     const [submitting, setSubmitting] = useState(false);
 
+    /**
+     * Tự động xác thực token với Backend ngay khi vừa mở trang.
+     */
     useEffect(() => {
         let isMounted = true;
+
+        // Nếu URL không có tham số token
         if (!token.trim()) {
             setStatus("missing");
-            setStatusMessage(t("Thiếu mã đặt lại mật khẩu trong đường dẫn liên kết.", "Password reset token is missing from the link URL."));
+            setStatusMessage(t(
+                "Thiếu mã đặt lại mật khẩu trong đường dẫn liên kết.",
+                "Password reset token is missing from the link URL."
+            ));
             return;
         }
 
+        // Gọi API kiểm tra tính hợp lệ của token
         verifyResetToken(token.trim())
             .then((res) => {
                 if (!isMounted) return;
@@ -33,13 +85,19 @@ export default function ResetPasswordPage() {
                     setMaskedEmail(res.maskedEmail || "");
                 } else {
                     setStatus("invalid");
-                    setStatusMessage(res?.message || t("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.", "This password reset link is invalid or has expired."));
+                    setStatusMessage(res?.message || t(
+                        "Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.",
+                        "This password reset link is invalid or has expired."
+                    ));
                 }
             })
             .catch((err) => {
                 if (!isMounted) return;
                 setStatus("invalid");
-                setStatusMessage(err.message || t("Không thể xác thực liên kết đặt lại mật khẩu. Vui lòng thử lại sau.", "Unable to verify password reset link. Please try again later."));
+                setStatusMessage(err.message || t(
+                    "Không thể xác thực liên kết đặt lại mật khẩu. Vui lòng thử lại sau.",
+                    "Unable to verify password reset link. Please try again later."
+                ));
             });
 
         return () => {
@@ -47,34 +105,53 @@ export default function ResetPasswordPage() {
         };
     }, [token, t]);
 
+    /**
+     * Xử lý gửi form cập nhật mật khẩu mới.
+     */
     async function submit(event) {
         event.preventDefault();
         setFormError("");
 
+        // 1. Kiểm tra độ dài tối thiểu 8 ký tự
         if (!form.password || form.password.length < 8) {
-            setFormError(t("Mật khẩu mới phải có ít nhất 8 ký tự.", "New password must be at least 8 characters long."));
+            setFormError(t(
+                "Mật khẩu mới phải có ít nhất 8 ký tự.",
+                "New password must be at least 8 characters long."
+            ));
             return;
         }
 
+        // 2. Kiểm tra độ dài tối đa 64 ký tự
         if (form.password.length > 64) {
-            setFormError(t("Mật khẩu không được vượt quá 64 ký tự.", "Password cannot exceed 64 characters."));
+            setFormError(t(
+                "Mật khẩu không được vượt quá 64 ký tự.",
+                "Password cannot exceed 64 characters."
+            ));
             return;
         }
 
+        // 3. Kiểm tra mật khẩu xác nhận trùng khớp
         if (form.password !== form.confirmation) {
-            setFormError(t("Mật khẩu xác nhận không khớp.", "Password confirmation does not match."));
+            setFormError(t(
+                "Mật khẩu xác nhận không khớp.",
+                "Password confirmation does not match."
+            ));
             return;
         }
 
         setSubmitting(true);
         try {
+            // Gửi mật khẩu mới kèm token lên Backend để băm BCrypt và cập nhật
             await resetPassword({
                 token: token.trim(),
                 newPassword: form.password
             });
             setStatus("success");
         } catch (err) {
-            setFormError(err.message || t("Không thể đặt lại mật khẩu. Vui lòng thử lại hoặc yêu cầu liên kết mới.", "Failed to reset password. Please try again or request a new link."));
+            setFormError(err.message || t(
+                "Không thể đặt lại mật khẩu. Vui lòng thử lại hoặc yêu cầu liên kết mới.",
+                "Failed to reset password. Please try again or request a new link."
+            ));
         } finally {
             setSubmitting(false);
         }
@@ -90,6 +167,7 @@ export default function ResetPasswordPage() {
                 "Create a new secure password for your account to continue on The Pluse."
             )}
         >
+            {/* TRƯỜNG HỢP 1: ĐANG KIỂM TRA TÍNH HỢP LỆ CỦA TOKEN */}
             {status === "checking" && (
                 <div className="pulse-form" style={{ marginTop: "24px", textAlign: "center" }}>
                     <div className="info-note" role="status">
@@ -100,6 +178,7 @@ export default function ResetPasswordPage() {
                 </div>
             )}
 
+            {/* TRƯỜNG HỢP 2: TOKEN BỊ THIẾU, HẾT HẠN HOẶC ĐÃ SỬ DỤNG */}
             {(status === "missing" || status === "invalid") && (
                 <div className="pulse-form" style={{ marginTop: "24px" }}>
                     <p className="form-error" role="alert" style={{ marginBottom: "16px" }}>
@@ -124,6 +203,7 @@ export default function ResetPasswordPage() {
                 </div>
             )}
 
+            {/* TRƯỜNG HỢP 3: ĐẶT LẠI MẬT KHẨU THÀNH CÔNG */}
             {status === "success" && (
                 <div className="pulse-form" style={{ marginTop: "24px" }}>
                     <div className="info-note" role="status" style={{ borderLeftColor: "#16a34a", background: "#f0fdf4" }}>
@@ -145,6 +225,7 @@ export default function ResetPasswordPage() {
                 </div>
             )}
 
+            {/* TRƯỜNG HỢP 4: TOKEN HỢP LỆ -> HIỂN THỊ FORM NHẬP MẬT KHẨU MỚI */}
             {status === "valid" && (
                 <form className="pulse-form" onSubmit={submit}>
                     {maskedEmail && (
@@ -188,7 +269,10 @@ export default function ResetPasswordPage() {
                     </label>
 
                     <p className="password-rule">
-                        {t("Mật khẩu phải từ 8 đến 64 ký tự. Nên kết hợp chữ, số và ký tự đặc biệt để an toàn hơn.", "Password must be 8–64 characters. Combine letters, numbers, and symbols for better security.")}
+                        {t(
+                            "Mật khẩu phải từ 8 đến 64 ký tự. Nên kết hợp chữ, số và ký tự đặc biệt để an toàn hơn.",
+                            "Password must be 8–64 characters. Combine letters, numbers, and symbols for better security."
+                        )}
                     </p>
 
                     {formError && (

@@ -1,3 +1,20 @@
+/**
+ * =================================================================================================
+ * PAGE: FORGOT PASSWORD PAGE (TRANG YÊU CẦU KHÔI PHỤC MẬT KHẨU)
+ * =================================================================================================
+ * 
+ * Mã màn hình: AUTH-03 (Ca sử dụng UC-07 trong đặc tả SRS).
+ * 
+ * Luồng hoạt động:
+ * 1. Người dùng nhập tên đăng nhập (username) hoặc địa chỉ email đã đăng ký tài khoản.
+ * 2. Khi bấm gửi, component gọi hàm `requestPasswordReset(identifier)` tới API `/api/auth/forgot-password`.
+ * 3. Backend sinh token ngẫu nhiên bảo mật 32-byte, lưu băm SHA-256 vào database và gửi email tới người dùng.
+ * 4. Hiển thị thông báo hướng dẫn người dùng kiểm tra hộp thư đến (inbox) hoặc thư mục Spam trong 15 phút.
+ * 5. Tuân thủ bảo mật: Không tiết lộ tài khoản có tồn tại hay không, không hiển thị token trên client.
+ * 6. Hỗ trợ song ngữ (Tiếng Việt & English) thông qua hook `usePreferences()`.
+ * =================================================================================================
+ */
+
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import AuthShell from "../../components/AuthShell.jsx";
@@ -5,21 +22,39 @@ import { requestPasswordReset } from "../../services/authService.js";
 import { usePreferences } from "../../store/PreferencesContext.jsx";
 
 export default function ForgotPasswordPage() {
+    // Hook cung cấp hàm dịch đa ngôn ngữ: t("Tiếng Việt", "English")
     const { t } = usePreferences();
+
+    // State quản lý giá trị ô nhập tên đăng nhập hoặc email
     const [identifier, setIdentifier] = useState("");
+
+    // State quản lý trạng thái đang gửi request lên server (hiển thị loading spinner / disable nút)
     const [submitting, setSubmitting] = useState(false);
+
+    // State xác nhận đã gửi yêu cầu thành công để chuyển đổi giao diện sang màn hình hướng dẫn
     const [submitted, setSubmitted] = useState(false);
+
+    // State lưu trữ thông báo lỗi khi API trả về mã lỗi HTTP
     const [error, setError] = useState("");
 
+    /**
+     * Xử lý sự kiện gửi form yêu cầu đặt lại mật khẩu.
+     */
     async function submit(event) {
         event.preventDefault();
         setError("");
         setSubmitting(true);
+
         try {
+            // Gọi API gửi yêu cầu khôi phục mật khẩu
             await requestPasswordReset(identifier.trim());
             setSubmitted(true);
         } catch (err) {
-            setError(err.message || t("Không thể gửi yêu cầu đặt lại mật khẩu lúc này. Vui lòng thử lại sau.", "Unable to send password reset request right now. Please try again later."));
+            // Hiển thị thông báo lỗi chi tiết từ Backend (ví dụ: máy chủ mail gặp sự cố kết nối)
+            setError(err.message || t(
+                "Không thể gửi yêu cầu đặt lại mật khẩu lúc này. Vui lòng thử lại sau.",
+                "Unable to send password reset request right now. Please try again later."
+            ));
         } finally {
             setSubmitting(false);
         }
@@ -35,6 +70,7 @@ export default function ForgotPasswordPage() {
                 "Enter your registered username or email address. We will send a time-limited secure link to your email."
             )}
         >
+            {/* TRƯỜNG HỢP 1: ĐÃ GỬI YÊU CẦU THÀNH CÔNG -> HIỂN THỊ HƯỚNG DẪN KIỂM TRA HỘP THƯ */}
             {submitted ? (
                 <div className="pulse-form" style={{ marginTop: "24px" }}>
                     <div className="info-note" role="status" style={{ borderLeftColor: "#16a34a", background: "#f0fdf4" }}>
@@ -51,12 +87,18 @@ export default function ForgotPasswordPage() {
 
                     <div className="info-note" style={{ marginTop: "12px", borderLeftColor: "#475569", background: "#f8fafc" }}>
                         <p style={{ margin: 0, fontSize: "13px", color: "#334155", lineHeight: 1.5 }}>
-                            🔒 {t("Ràng buộc bảo mật: Chỉ người sở hữu địa chỉ email nhận được mã token liên kết mới có thể tiến hành đặt lại mật khẩu.", "Security constraint: Only the person who owns and accesses the email address receiving the token link can proceed with resetting the password.")}
+                            🔒 {t(
+                                "Ràng buộc bảo mật: Chỉ người sở hữu địa chỉ email nhận được mã token liên kết mới có thể tiến hành đặt lại mật khẩu.",
+                                "Security constraint: Only the person who owns and accesses the email address receiving the token link can proceed with resetting the password."
+                            )}
                         </p>
                     </div>
 
                     <p style={{ fontSize: "13px", color: "#64748b", margin: "12px 0 6px" }}>
-                        ⏱ {t("Liên kết chỉ có hiệu lực trong vòng 15 phút và chỉ được sử dụng một lần duy nhất.", "The link is valid for 15 minutes and can only be used once.")}
+                        ⏱ {t(
+                            "Liên kết chỉ có hiệu lực trong vòng 15 phút và chỉ được sử dụng một lần duy nhất.",
+                            "The link is valid for 15 minutes and can only be used once."
+                        )}
                     </p>
 
                     <div className="form-button-row" style={{ marginTop: "12px" }}>
@@ -76,6 +118,7 @@ export default function ForgotPasswordPage() {
                     </div>
                 </div>
             ) : (
+                /* TRƯỜNG HỢP 2: FORM NHẬP TÊN ĐĂNG NHẬP / EMAIL ĐỂ TIẾP NHẬN YÊU CẦU */
                 <form className="pulse-form" onSubmit={submit}>
                     <label>
                         {t("Tên đăng nhập hoặc email", "Username or email")}
@@ -91,6 +134,7 @@ export default function ForgotPasswordPage() {
                         />
                     </label>
 
+                    {/* Hiển thị lỗi nếu quá trình gửi thất bại */}
                     {error && (
                         <p className="form-error" role="alert">
                             {error}

@@ -10,6 +10,25 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+/**
+ * =================================================================================================
+ * SERVICE: EMAIL SERVICE (DỊCH VỤ GỬI EMAIL THÔNG BÁO HỆ THỐNG THE PLUSE)
+ * =================================================================================================
+ * 
+ * Chức năng:
+ * 1. Gửi email biên lai / hóa đơn thanh toán gói Premium tự động (UC-12 / PRE-07 / API-01).
+ * 2. Gửi email hướng dẫn đặt lại mật khẩu bảo mật kèm token dùng 1 lần (UC-07 / AUTH-03).
+ * 3. Hỗ trợ chẩn đoán kết nối SMTP và gửi email thử nghiệm qua endpoint `/api/payment/payos-check`.
+ * 
+ * Cơ chế hoạt động:
+ * - Tự động phát hiện cấu hình Spring Mail (`spring.mail.username`, `spring.mail.password`).
+ * - Tự động loại bỏ ký tự khoảng trắng thừa từ Gmail App Password (ví dụ: `xxxx yyyy zzzz wwww`).
+ * - Xây dựng nội dung HTML Email dạng responsive, tương thích tối đa với các ứng dụng email
+ *   phổ biến (Gmail, Outlook, Apple Mail, di động).
+ * - Hoạt động an toàn (Safe Failure): Nếu chưa cấu hình SMTP hoặc gặp sự cố kết nối, ghi log
+ *   chi tiết và không làm sập giao dịch nghiệp vụ chính của người dùng.
+ * =================================================================================================
+ */
 @Service
 public class EmailService {
 
@@ -19,6 +38,13 @@ public class EmailService {
     private final String fromEmail;
     private final String mailUsername;
 
+    /**
+     * Khởi tạo EmailService nhận thông tin cấu hình từ file application.yml hoặc biến môi trường.
+     * 
+     * @param mailSenderProvider  Provider cung cấp đối tượng JavaMailSender khi có cấu hình mail
+     * @param fromEmail           Địa chỉ email người gửi hiển thị (mặc định: no-reply@thepluse.vn)
+     * @param mailUsername        Tài khoản đăng nhập SMTP (ví dụ: batman582006@gmail.com)
+     */
     public EmailService(
             ObjectProvider<JavaMailSender> mailSenderProvider,
             @Value("${EMAIL_FROM:${spring.mail.username:no-reply@thepluse.vn}}") String fromEmail,
@@ -28,15 +54,24 @@ public class EmailService {
         this.mailUsername = mailUsername;
     }
 
+    /**
+     * Phương thức gửi email tổng quát dựa trên mã mẫu (templateCode).
+     */
     public void send(String recipient, String templateCode, Map<String, Object> variables) {
         sendReceiptEmail(recipient, String.valueOf(variables.getOrDefault("subject", "The Pluse - Thông báo thanh toán thành công")), variables);
     }
 
     /**
-     * Gửi email biên lai/hóa đơn thanh toán tự động đến người dùng.
-     * Chạy an toàn: nếu người dùng không có email hoặc chưa cấu hình SMTP thì ghi log, không làm fail transaction.
+     * =============================================================================================
+     * GỬI EMAIL BIÊN LAI / HÓA ĐƠN ĐIỆN TỬ SAU KHI THANH TOÁN THÀNH CÔNG
+     * =============================================================================================
+     * 
+     * @param recipient  Địa chỉ email người nhận (độc giả hoặc doanh nghiệp)
+     * @param subject    Tiêu đề email
+     * @param data       Dữ liệu giao dịch (mã txnRef, tên gói cước, số tiền, phương thức)
      */
     public void sendReceiptEmail(String recipient, String subject, Map<String, Object> data) {
+        // Kiểm tra tính hợp lệ của địa chỉ email người nhận
         if (recipient == null || recipient.isBlank() || !recipient.contains("@")) {
             log.info("[EmailService] Bỏ qua gửi email: Người dùng không có địa chỉ email hợp lệ (recipient: '{}')", recipient);
             return;
@@ -49,6 +84,7 @@ public class EmailService {
         }
 
         try {
+            // Tự động làm sạch App Password (xóa khoảng trắng thừa do người dùng copy-paste từ Google Security)
             if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
                 if (impl.getUsername() != null) {
                     impl.setUsername(impl.getUsername().trim());
@@ -61,11 +97,13 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
+            // Thiết lập địa chỉ người gửi chuẩn
             String effectiveFrom = (mailUsername != null && mailUsername.endsWith("@gmail.com")) ? mailUsername : (fromEmail.isBlank() ? mailUsername : fromEmail);
             helper.setFrom(effectiveFrom, "The Pluse Media");
             helper.setTo(recipient);
             helper.setSubject(subject);
 
+            // Tạo nội dung HTML từ template
             String htmlBody = buildHtmlBody(data);
             helper.setText(htmlBody, true);
 
@@ -77,8 +115,15 @@ public class EmailService {
     }
 
     /**
-     * Gửi email hướng dẫn đặt lại mật khẩu an toàn cho người dùng kèm liên kết dùng 1 lần.
-     * Trả về chuỗi kết quả: "SUCCESS", "SIMULATED_NO_SMTP_CONFIG", hoặc "FAILED: <chi tiết lỗi>"
+     * =============================================================================================
+     * GỬI EMAIL HƯỚNG DẪN ĐẶT LẠI MẬT KHẨU KÈM LIÊN KẾT BẢO MẬT DÙNG 1 LẦN (UC-07)
+     * =============================================================================================
+     * 
+     * @param recipient       Địa chỉ email của tài khoản yêu cầu đổi mật khẩu
+     * @param recipientName   Tên hiển thị của người nhận (hoặc username)
+     * @param resetUrl        Đường dẫn đầy đủ chứa token ngẫu nhiên bảo mật
+     * @param expiryMinutes   Thời hạn hiệu lực của liên kết (thường là 15 phút)
+     * @return "SUCCESS" nếu gửi thành công, hoặc chuỗi thông báo lỗi chi tiết khi thất bại
      */
     public String sendPasswordResetEmail(String recipient, String recipientName, String resetUrl, int expiryMinutes) {
         if (recipient == null || recipient.isBlank() || !recipient.contains("@")) {
@@ -94,6 +139,7 @@ public class EmailService {
         }
 
         try {
+            // Tự động làm sạch mật khẩu ứng dụng Gmail
             if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
                 if (impl.getUsername() != null) {
                     impl.setUsername(impl.getUsername().trim());
@@ -127,10 +173,16 @@ public class EmailService {
         }
     }
 
+    /**
+     * Kiểm tra xem thông tin tài khoản SMTP đã được cấu hình trong môi trường chưa.
+     */
     public boolean isConfigured() {
         return mailUsername != null && !mailUsername.isBlank();
     }
 
+    /**
+     * Lấy thông tin chẩn đoán cấu hình email phục vụ kiểm tra và xử lý sự cố.
+     */
     public Map<String, Object> getDiagnostics() {
         Map<String, Object> diag = new java.util.HashMap<>();
         diag.put("configured", isConfigured());
@@ -153,6 +205,9 @@ public class EmailService {
         return diag;
     }
 
+    /**
+     * Gửi email thử nghiệm nhanh để kiểm tra kết nối SMTP với máy chủ đích.
+     */
     public String sendTestEmail(String recipient) {
         if (!isConfigured()) return "MAIL_USERNAME chưa được cấu hình";
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
@@ -184,6 +239,9 @@ public class EmailService {
         }
     }
 
+    /**
+     * Xây dựng nội dung HTML email Đặt lại mật khẩu với giao diện chuẩn nhận diện The Pluse.
+     */
     private String buildPasswordResetHtmlBody(String recipientName, String resetUrl, int expiryMinutes) {
         String safeName = (recipientName != null && !recipientName.isBlank()) ? recipientName : "Quý khách";
 
@@ -243,6 +301,9 @@ public class EmailService {
             """.formatted(safeName, resetUrl, resetUrl, resetUrl, expiryMinutes);
     }
 
+    /**
+     * Xây dựng nội dung HTML email Biên lai thanh toán thành công.
+     */
     private String buildHtmlBody(Map<String, Object> data) {
         String title = String.valueOf(data.getOrDefault("title", "XÁC NHẬN THANH TOÁN THÀNH CÔNG"));
         String customerName = String.valueOf(data.getOrDefault("customerName", "Quý khách"));
