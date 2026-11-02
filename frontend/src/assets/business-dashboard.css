@@ -1,0 +1,452 @@
+/**
+ * ============================================================================
+ * BUSINESS DASHBOARD STYLESHEET (THE PULSE BUSINESS CONTROL ROOM)
+ * Đồng bộ phong cách hoàn toàn với Admin Dashboard & Ad Manager Dashboard:
+ * - Khung Hero đón tiếp sang trọng, đổ bóng nhẹ, gradient chuyên nghiệp.
+ * - Hệ thống thẻ KPI với icon màu sắc, hiệu ứng số đếm động.
+ * - Biểu đồ SVG tương tác (Area / Bar) xem xu hướng hiển thị & click theo ngày.
+ * - Bố cục 2 cột khoa học: Chiến dịch trực tiếp & Lối tắt tác vụ nhanh.
+ * ============================================================================
+ */
+.business-overview {
+  --bo-ink: #1e293b;
+  --bo-muted: #64748b;
+  --bo-line: #e2e8f0;
+  --bo-surface: #ffffff;
+  color: var(--bo-ink);
+  max-width: 1600px;
+  margin: auto;
+}
+
+.business-overview h1,
+.business-overview h2,
+.business-overview h3 {
+  font-family: inherit;
+}
+
+/* 1. Hero Header Banner */
+.business-overview-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 32px 36px;
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 95% 0%, #dbeafe 0%, transparent 60%), linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%);
+  display: flex;
+  gap: 28px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+}
+
+.business-overview-hero h1 {
+  font-size: clamp(1.8rem, 2.5vw, 2.6rem);
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  margin: 10px 0;
+  color: #0f172a;
+}
+
+.business-overview-hero p {
+  max-width: 680px;
+  color: #475569;
+  line-height: 1.6;
+  font-size: 14.5px;
+}
+
+.business-eyebrow {
+  color: #059669;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.business-snapshot-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+
+.business-snapshot-dot::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.business-hero-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.business-segment {
+  display: flex;
+  padding: 4px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+}
+
+.business-segment button {
+  background: transparent;
+  color: #64748b;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.business-segment button[aria-pressed="true"] {
+  background: #ffffff;
+  color: #059669;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.business-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #1e293b;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.business-refresh-btn:hover {
+  background: #0f172a;
+  transform: translateY(-1px);
+}
+
+/* 2. KPIs Section */
+.business-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.business-kpi-card {
+  padding: 22px;
+  border: 1.5px solid var(--bo-line);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.business-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  border-color: #cbd5e1;
+}
+
+.business-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.business-kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tone-emerald .business-kpi-icon { background: #d1fae5; color: #059669; }
+.tone-indigo .business-kpi-icon { background: #e0e7ff; color: #4f46e5; }
+.tone-blue .business-kpi-icon { background: #dbeafe; color: #2563eb; }
+.tone-amber .business-kpi-icon { background: #fef3c7; color: #d97706; }
+
+.business-kpi-card > strong {
+  display: block;
+  margin-top: 14px;
+  font-size: clamp(1.6rem, 2.2vw, 2.2rem);
+  letter-spacing: -0.04em;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.business-kpi-card > p {
+  font-size: 12px;
+  color: var(--bo-muted);
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+/* 3. Main Dashboard 2-Column Grid */
+.business-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(320px, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.business-panel {
+  padding: 24px;
+  border: 1.5px solid var(--bo-line);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+}
+
+.business-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--bo-line);
+}
+
+.business-panel-header h2 {
+  font-size: 18px;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.business-panel-link {
+  font-size: 13px;
+  color: #059669;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.business-panel-link:hover {
+  text-decoration: underline;
+}
+
+/* 4. Trend Chart Container */
+.business-chart-switches {
+  display: flex;
+  gap: 6px;
+}
+
+.business-chart-switches button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.business-chart-switches button[aria-pressed="true"] {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.business-chart-tooltip {
+  min-height: 38px;
+  padding: 10px 0 4px;
+  font-size: 12.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.business-chart-svg {
+  width: 100%;
+  overflow: visible;
+}
+
+/* 5. Campaign List in Dashboard */
+.business-campaign-table-wrap {
+  overflow-x: auto;
+}
+
+.business-campaign-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.business-campaign-table th {
+  text-align: left;
+  padding: 12px 14px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  border-bottom: 1.5px solid var(--bo-line);
+}
+
+.business-campaign-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--bo-line);
+  vertical-align: middle;
+}
+
+.business-campaign-table tr:hover {
+  background: #f8fafc;
+}
+
+.campaign-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-active { background: #d1fae5; color: #065f46; }
+.status-pending { background: #fef3c7; color: #92400e; }
+.status-paused { background: #e2e8f0; color: #334155; }
+.status-revision { background: #fee2e2; color: #991b1b; }
+
+/* 6. Quick Action Cards (Right Column) */
+.business-actions-list {
+  display: grid;
+  gap: 10px;
+}
+
+.business-action-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--bo-line);
+  border-radius: 14px;
+  background: #ffffff;
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.18s ease;
+}
+
+.business-action-item:hover {
+  background: #f8fafc;
+  border-color: #059669;
+  transform: translateX(3px);
+}
+
+.business-action-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #059669;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.business-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.business-action-info strong {
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.business-action-info small {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.business-action-arrow {
+  margin-left: auto;
+  color: #94a3b8;
+  font-size: 16px;
+  transition: transform 0.15s ease;
+}
+
+.business-action-item:hover .business-action-arrow {
+  color: #059669;
+  transform: translateX(2px);
+}
+
+/* 7. Partnership Status Card */
+.business-partner-card {
+  padding: 16px;
+  background: #f0fdf4;
+  border: 1.5px solid #bbf7d0;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.business-partner-card.pending {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.business-partner-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.business-partner-card-header strong {
+  font-size: 13.5px;
+  color: #14532d;
+}
+
+.business-partner-card p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #166534;
+  line-height: 1.5;
+}
+
+/* Responsive */
+@media (max-width: 1150px) {
+  .business-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .business-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .business-overview-hero {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 650px) {
+  .business-overview-hero {
+    flex-direction: column;
+    padding: 22px;
+  }
+  .business-kpis {
+    grid-template-columns: 1fr;
+  }
+}

@@ -340,10 +340,14 @@ export default function PerformancePage() {
                       </g>
                     ))}
 
-                    {type === "line" ? (
+                    {points.length === 0 ? (
+                      <text x="400" y="145" textAnchor="middle" fill="#7c8796" fontSize="13">
+                        Chưa phát sinh dữ liệu hiển thị trong khoảng thời gian này
+                      </text>
+                    ) : type === "line" ? (
                       <>
                         <path
-                          d={`${path} L${points.at(-1)?.[0]},240 L40,240 Z`}
+                          d={`${path} L${points.at(-1)?.[0] || 40},240 L40,240 Z`}
                           fill="url(#performance-fill)"
                         />
                         <path

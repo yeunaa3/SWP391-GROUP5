@@ -13,6 +13,7 @@ import SlotCalendarPage from "../pages/business/SlotCalendarPage.jsx";
 import PerformancePage from "../pages/business/PerformancePage.jsx";
 import BusinessWorkspacePage from "../pages/business/BusinessWorkspacePage.jsx";
 import BusinessCampaignPage from "../pages/business/BusinessCampaignPage.jsx";
+import BusinessDashboardPage from "../pages/business/BusinessDashboardPage.jsx";
 import PackagesPage from "../pages/premium/PackagesPage.jsx";
 import PackageDetailPage from "../pages/premium/PackageDetailPage.jsx";
 import PremiumCheckoutPage from "../pages/premium/PremiumCheckoutPage.jsx";
@@ -77,6 +78,7 @@ const specialPages = {
   "CFG-01": <AdminDashboardPage />,
   "CFG-02": <AccessManagementPage />,
   "CFG-06": <SystemSettingsPage />,
+  "BUS-01": <BusinessDashboardPage />,
   "BUS-05": <AdvertisingCatalogPage />,
   "BUS-06": <SlotCalendarPage />,
   "BUS-18": <PerformancePage />,
@@ -98,7 +100,7 @@ function screenElement(screen) {
     pageComponent = specialPages[screen.id];
   } 
   // 2. Các trang chỉnh sửa và nộp chiến dịch quảng cáo của doanh nghiệp
-  else if (["BUS-01", "BUS-02", "BUS-13", "BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id)) {
+  else if (["BUS-02", "BUS-13", "BUS-14", "BUS-15", "BUS-16", "BUS-17"].includes(screen.id)) {
     pageComponent = <BusinessCampaignPage screen={screen} />;
   } 
   // 3. Không gian làm việc chung của doanh nghiệp

@@ -454,10 +454,14 @@ export default function ActiveCampaignMonitorPage() {
                   </g>
                 ))}
 
-                {chartType === "line" ? (
+                {dailyData.length === 0 ? (
+                  <text x="400" y="145" textAnchor="middle" fill="#94a3b8" fontSize="13">
+                    Chưa phát sinh dữ liệu hiển thị hoặc click trong khoảng thời gian này
+                  </text>
+                ) : chartType === "line" ? (
                   <>
                     <path
-                      d={`${chartPath} L${chartPoints.at(-1)?.[0]},240 L40,240 Z`}
+                      d={`${chartPath} L${chartPoints.at(-1)?.[0] || 40},240 L40,240 Z`}
                       fill="url(#campaign-fill)"
                     />
                     <path

@@ -67,6 +67,28 @@ public class AdvertisingDataService {
         boolean staff = principal.authorities().stream().anyMatch(a ->
                 a.getAuthority().equals("ROLE_AD_MANAGER") || a.getAuthority().equals("ROLE_ADMINISTRATOR"));
 
+        // 1. Ưu tiên đọc dữ liệu chuỗi thời gian đã tổng hợp từ ad_metrics
+        List<Map<String, Object>> fromMetrics = jdbc.queryForList("""
+            SELECT 
+                c.campaign_id AS campaignId,
+                c.campaign_name AS campaignName,
+                m.metric_date AS metricDate,
+                m.impressions_count AS impressions,
+                m.clicks_count AS clicks,
+                m.invalid_clicks_count AS invalidClicks
+            FROM ad_metrics m
+            JOIN ad_creatives cr ON cr.creative_id = m.creative_id
+            JOIN ad_campaigns c ON c.campaign_id = cr.campaign_id
+            JOIN contracts ct ON ct.contract_id = c.contract_id
+            WHERE (? OR ct.company_id = (SELECT company_id FROM users WHERE user_id = ?))
+            ORDER BY m.metric_date, c.campaign_id
+            """, staff, principal.id());
+
+        if (!fromMetrics.isEmpty()) {
+            return fromMetrics;
+        }
+
+        // 2. Dự phòng: Tổng hợp trực tiếp từ raw events trong ad_events nếu chưa kết chuyển sang ad_metrics
         return jdbc.queryForList("""
             SELECT 
                 c.campaign_id AS campaignId,
