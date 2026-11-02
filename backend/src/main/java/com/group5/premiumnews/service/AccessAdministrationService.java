@@ -35,10 +35,23 @@ public class AccessAdministrationService {
         String term="%"+query.toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_")+"%";
         String where="""
             FROM users u LEFT JOIN companies c ON c.company_id=u.company_id
-            WHERE (LOWER(u.username) LIKE ? ESCAPE '!' OR LOWER(u.email) LIKE ? ESCAPE '!' OR LOWER(COALESCE(u.full_name,'')) LIKE ? ESCAPE '!')
-            AND (?='' OR u.status=?) AND (?='' OR EXISTS(SELECT 1 FROM user_roles ur JOIN roles r ON r.role_id=ur.role_id WHERE ur.user_id=u.user_id AND r.role_name=?))
+            WHERE (
+                LOWER(u.username) LIKE ? ESCAPE '!'
+                OR LOWER(u.email) LIKE ? ESCAPE '!'
+                OR LOWER(COALESCE(u.full_name,'')) LIKE ? ESCAPE '!'
+                OR LOWER(COALESCE(c.company_name,'')) LIKE ? ESCAPE '!'
+                OR EXISTS(SELECT 1 FROM user_roles ur2 JOIN roles r2 ON r2.role_id=ur2.role_id WHERE ur2.user_id=u.user_id AND (LOWER(r2.role_name) LIKE ? ESCAPE '!' OR LOWER(COALESCE(r2.description,'')) LIKE ? ESCAPE '!'))
+            )
+            AND (?='' OR u.status=?)
+            AND (?='' OR EXISTS(
+                SELECT 1 FROM user_roles ur
+                JOIN roles r ON r.role_id=ur.role_id
+                LEFT JOIN role_permissions rp ON rp.role_id=r.role_id
+                WHERE ur.user_id=u.user_id
+                AND (LOWER(r.role_name)=LOWER(?) OR LOWER(rp.permission_code)=LOWER(?))
+            ))
             """;
-        Object[] args={term,term,term,status,status,role,role};
+        Object[] args={term,term,term,term,term,term,status,status,role,role,role};
         var count=jdbc.queryForObject("SELECT COUNT(*) "+where,Long.class,args);
         var bind=new ArrayList<>(Arrays.asList(args));bind.add(page*20);
         var users=jdbc.queryForList("SELECT u.user_id id,u.username,u.full_name fullName,u.email,u.company_id companyId,c.company_name companyName,u.status,u.access_version version "+where+" ORDER BY u.user_id DESC LIMIT 20 OFFSET ?",bind.toArray());

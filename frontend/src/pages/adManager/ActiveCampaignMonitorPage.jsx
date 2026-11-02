@@ -568,22 +568,30 @@ export default function ActiveCampaignMonitorPage() {
 
       {/* Filter and Control Bar for Campaign Table */}
       <div className="performance-filters" style={{ marginTop: "10px" }}>
-        <label style={{ flex: 1, minWidth: "220px" }}>
-          Tìm kiếm chiến dịch / Doanh nghiệp
-          <input
-            type="search"
-            placeholder="Nhập tên chiến dịch, công ty hoặc mã HĐ…"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              padding: "10px 12px",
-              border: "1px solid #ddd6cd",
-              borderRadius: "8px",
-              background: "#fbfaf7",
-              color: "#26313f",
-              fontSize: "13px",
-            }}
-          />
+        <label style={{ flex: 1, minWidth: "260px" }}>
+          <span>Tìm kiếm chiến dịch / Doanh nghiệp</span>
+          <div className="modern-search-input-wrap">
+            <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Nhập tên chiến dịch, công ty hoặc mã HĐ…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="modern-search-clear-btn"
+                onClick={() => setSearchTerm("")}
+                title="Xóa tìm kiếm"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </label>
 
         <label>

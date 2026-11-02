@@ -57,7 +57,16 @@ export default function PartnershipQueuePage() {
         </header>
         <section className="dashboard-section">
             <form className="review-filters" key={params.toString()} onSubmit={applyFilters}>
-                <label className="review-filter-search"><span>Tìm hồ sơ</span><input name="q" maxLength="150" defaultValue={filters.q} placeholder="Mã hồ sơ, doanh nghiệp, mã số thuế" /></label>
+                <div className="review-filter-search">
+                  <label htmlFor="search-partner-input"><span>Tìm hồ sơ</span></label>
+                  <div className="modern-search-input-wrap">
+                    <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input id="search-partner-input" name="q" maxLength="150" defaultValue={filters.q} placeholder="Mã hồ sơ, tên doanh nghiệp, mã số thuế…" />
+                  </div>
+                </div>
                 <label><span>Trạng thái</span><select name="status" defaultValue={filters.status}><option value="">Tất cả</option><option value="PENDING_REVIEW">Chờ xem xét</option><option value="RESUBMITTED">Đã gửi lại</option></select></label>
                 <label><span>Ưu tiên</span><select name="priority" defaultValue={filters.priority}><option value="">Tất cả</option><option value="URGENT">Khẩn cấp</option><option value="HIGH">Cao</option><option value="NORMAL">Bình thường</option></select></label>
                 <label><span>Từ ngày</span><input type="date" name="from" defaultValue={filters.from} /></label>

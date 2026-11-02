@@ -1,0 +1,514 @@
+/**
+ * ============================================================================
+ * MODERN SEARCH BAR & FILTER COMPONENT SYSTEM (THE PULSE UI)
+ * ============================================================================
+ * Thiết kế giao diện thanh tìm kiếm và bộ lọc hiện đại, đồng bộ:
+ * - Khung tìm kiếm mềm mại (bo góc 12px / 24px pill), đổ bóng nhẹ cao cấp.
+ * - Biểu tượng kính lúp SVG dẫn đầu với hiệu ứng đổi màu khi active/focus.
+ * - Nút xóa nhanh (Clear button ✕) mượt mà xuất hiện khi có nội dung.
+ * - Hiệu ứng focus ring màu ngọc lục bảo / chàm dịu mắt, không thô ráp.
+ * - Dropdown chọn lọc được tùy biến với mũi tên chevron tinh tế.
+ * - Dải thẻ chip hiển thị các bộ lọc đang kích hoạt với thao tác 1-chạm xóa lọc.
+ * ============================================================================
+ */
+
+/* 1. Khung tìm kiếm hiện đại (Modern Search Bar) */
+.modern-search-bar,
+.modern-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.modern-search-bar.pill,
+.modern-search-input-wrap.pill {
+  border-radius: 9999px;
+  padding: 0 18px;
+}
+
+.modern-search-bar:hover,
+.modern-search-input-wrap:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 5px 0 rgba(15, 23, 42, 0.07);
+}
+
+.modern-search-bar:focus-within,
+.modern-search-input-wrap:focus-within {
+  border-color: #059669;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16), 0 2px 4px 0 rgba(15, 23, 42, 0.05);
+}
+
+/* Biểu tượng kính lúp bên trong khung tìm kiếm */
+.modern-search-bar .search-icon,
+.modern-search-input-wrap .search-icon,
+.modern-search-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  transition: color 0.18s ease;
+  pointer-events: none;
+}
+
+.modern-search-bar:focus-within .search-icon,
+.modern-search-input-wrap:focus-within .search-icon,
+.modern-search-input-wrap:focus-within .modern-search-icon {
+  color: #059669;
+}
+
+/* Ô nhập liệu bên trong khung tìm kiếm */
+.modern-search-bar input,
+.modern-search-input-wrap input,
+.admin-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 10px 0;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #0f172a;
+  font-size: 14px;
+  font-family: inherit;
+  box-shadow: none !important;
+}
+
+.modern-search-bar input::placeholder,
+.modern-search-input-wrap input::placeholder,
+.admin-search-input::placeholder {
+  color: #94a3b8;
+  font-size: 13.5px;
+}
+
+/* Nút xóa nhanh từ khóa (Clear ✕) */
+.modern-search-clear-btn,
+.admin-search-clear-btn,
+.queue-toolbar__clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modern-search-clear-btn:hover,
+.admin-search-clear-btn:hover,
+.queue-toolbar__clear:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  transform: scale(1.08);
+}
+
+/* 2. Hộp chọn lọc dữ liệu hiện đại (Modern Select Dropdown) */
+.modern-select-wrap,
+.admin-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.modern-select-wrap select,
+.admin-select-wrap select,
+.admin-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 36px 0 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  color: #1e293b;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.modern-select-wrap select:hover,
+.admin-select-wrap select:hover,
+.admin-select:hover {
+  border-color: #cbd5e1;
+}
+
+.modern-select-wrap select:focus,
+.admin-select-wrap select:focus,
+.admin-select:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.modern-select-chevron,
+.admin-select-chevron {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  color: #64748b;
+  transition: transform 0.15s ease;
+}
+
+/* 3. Khung điều khiển bộ lọc trang quản trị (Admin Search & Filter Panel) */
+.admin-search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.admin-search-panel-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.8fr) repeat(auto-fit, minmax(180px, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.admin-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-search-field > label,
+.admin-filter-label {
+  font-size: 13px;
+  font-weight: 650;
+  color: #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-search-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 20px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.admin-search-submit-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.28);
+  transform: translateY(-1px);
+}
+
+/* 4. Dải thẻ lọc đang kích hoạt (Active Filter Chips) */
+.admin-active-chips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 13px;
+}
+
+.admin-active-chips .chips-title {
+  color: #64748b;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.admin-active-chips .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #e6f4ea;
+  color: #137333;
+  border: 1px solid #ceead6;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.admin-active-chips .filter-chip strong {
+  font-weight: 700;
+}
+
+.admin-active-chips .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(19, 115, 51, 0.15);
+  color: #137333;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-active-chips .filter-chip button:hover {
+  background: #137333;
+  color: #ffffff;
+}
+
+.admin-active-chips .clear-all-chips {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px dashed #fca5a5;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.admin-active-chips .clear-all-chips:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+/* 5. Nâng cấp bộ lọc Ad Manager Queue (.review-filters) */
+.review-filters {
+  display: grid;
+  grid-template-columns: minmax(280px, 2.2fr) repeat(auto-fit, minmax(140px, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 18px 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-bottom: 20px;
+}
+
+.review-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #334155;
+}
+
+.review-filters input[type="text"],
+.review-filters input[type="search"],
+.review-filters input:not([type="date"]):not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  font-size: 13.5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.review-filters input[type="date"] {
+  min-height: 44px;
+  padding: 0 12px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.review-filters select {
+  min-height: 44px;
+  padding: 0 14px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  color: #0f172a;
+  font-size: 13.5px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.review-filters input:focus,
+.review-filters select:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+.review-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.review-filter-actions button[type="submit"] {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 13.5px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+  transition: all 0.18s ease;
+}
+
+.review-filter-actions button[type="submit"]:hover {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  transform: translateY(-1px);
+}
+
+.review-filter-actions .secondary-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+}
+
+.review-filter-actions .secondary-button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 6. Nâng cấp bộ lọc tìm kiếm tin bài (.article-search-form) */
+.article-search-form {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+  padding: 24px !important;
+  transition: all 0.2s ease;
+}
+
+.article-search-form:focus-within {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.08);
+}
+
+.article-search-form input,
+.article-search-form select {
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.article-search-form input:focus,
+.article-search-form select:focus {
+  outline: none;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16);
+}
+
+/* 7. Nâng cấp ô tìm kiếm trong Trung tâm thông báo (.notification-search-box) */
+.notification-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 260px;
+}
+
+.notification-search-box input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 34px 0 36px;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 20px;
+  font-size: 13px;
+  color: #1e293b;
+  transition: all 0.2s ease;
+}
+
+.notification-search-box input:focus {
+  background: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+  outline: none;
+}
+
+.notification-search-box::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  width: 15px;
+  height: 15px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+.notification-search-box .clear-search-btn {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: #e2e8f0;
+  color: #64748b;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.notification-search-box .clear-search-btn:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}

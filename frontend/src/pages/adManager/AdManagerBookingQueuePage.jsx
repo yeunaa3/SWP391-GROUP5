@@ -80,10 +80,16 @@ export default function AdManagerBookingQueuePage() {
         </header>
         <section className="dashboard-section">
             <form className="review-filters" key={params.toString()} onSubmit={applyFilters}>
-                <label className="review-filter-search">
-                    <span>Tìm booking</span>
-                    <input name="q" maxLength="150" defaultValue={filters.q} placeholder="Mã booking, tên booking, doanh nghiệp" />
-                </label>
+                <div className="review-filter-search">
+                  <label htmlFor="search-booking-input"><span>Tìm booking</span></label>
+                  <div className="modern-search-input-wrap">
+                    <svg className="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input id="search-booking-input" name="q" maxLength="150" defaultValue={filters.q} placeholder="Mã booking, tên booking, doanh nghiệp…" />
+                  </div>
+                </div>
                 <label>
                     <span>Trạng thái</span>
                     <select name="status" defaultValue={filters.status}>
