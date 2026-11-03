@@ -16,6 +16,8 @@ import "./assets/visual-refresh.css";
 import "./assets/auth-editorial.css";
 import "./assets/ad-manager-review.css";
 import "./assets/modern-search.css";
+import "./assets/admin-editor-visual.css";
+import "./assets/workspace-unified.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

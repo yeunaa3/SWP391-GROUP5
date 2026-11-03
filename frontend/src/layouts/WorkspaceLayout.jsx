@@ -16,12 +16,20 @@ const labels = {
   admin: "System Administration",
 };
 
+const captions = {
+  account: "MEMBER SPACE",
+  premium: "PREMIUM SPACE",
+  business: "PARTNER PORTAL",
+  adManager: "AD OPERATIONS",
+  admin: "SYSTEM CONTROL",
+};
+
 /**
  * ============================================================================
  * KHUNG GIAO DIỆN CHUNG CHO CÁC KHÔNG GIAN LÀM VIỆC (WORKSPACE LAYOUT)
  * - Chứa Sidebar bên trái (Navigation menu)
  * - Chứa Topbar bên trên (Breadcrumb, Bell, Avatar)
- * - Chứa <Outlet />: Vị trí cắm động các trang con (PackagesPage, MySubscriptionPage, ...)
+ * - Đồng bộ bảng màu và phong cách theo từng Role (Admin, Business, Ad Manager, Premium, Reader)
  * ============================================================================
  */
 export default function WorkspaceLayout({ area }) {
@@ -96,7 +104,7 @@ export default function WorkspaceLayout({ area }) {
 
   // 4. Render Layout hoàn chỉnh
   return (
-    <div className={`workspace-shell ${menuOpen ? "workspace-menu-open" : ""}`}>
+    <div className={`workspace-shell workspace-area-${area} ${menuOpen ? "workspace-menu-open" : ""}`} data-area={area}>
       {/* Nút bấm mở menu trên điện thoại */}
       <button
         className="mobile-workspace-toggle"
@@ -120,7 +128,7 @@ export default function WorkspaceLayout({ area }) {
       <aside id="workspace-navigation" className="sidebar">
         <Link className="brand brand-light" to="/">
           THE PULSE
-          <span className="workspace-brand-caption">PARTNER & READER SPACE</span>
+          <span className="workspace-brand-caption">{captions[area] || "WORKSPACE"}</span>
         </Link>
         <div className="sidebar-rule" />
         <p className="workspace-name">{tr(labels[area])}</p>
@@ -177,7 +185,7 @@ export default function WorkspaceLayout({ area }) {
           </div>
         </header>
 
-        {/* <Outlet /> CHÍNH LÀ NƠI TRANG CON (VÍ DỤ PackagesPage) ĐƯỢC BƠM VÀO ĐÂY! */}
+        {/* <Outlet /> NƠI TRANG CON ĐƯỢC RENDER */}
         <Outlet />
       </div>
     </div>

@@ -1,0 +1,469 @@
+/**
+ * ============================================================================
+ * ADMIN VISUAL EDITOR & LIVE PREVIEW SYSTEM
+ * - Hỗ trợ Modal rộng rãi 2 cột: Form nhập liệu bên trái, Live Mockup bên phải.
+ * - Mô phỏng giao diện trang web The Pulse trực quan theo vị trí slot quảng cáo.
+ * - Thẻ xem trước gói quảng cáo B2B sang trọng, tự động tính CPM.
+ * - Khung hướng dẫn thân thiện cho Cài đặt hệ thống.
+ * ============================================================================
+ */
+
+/* 1. Modal 2 cột rộng rãi */
+.admin-modal-wide {
+  width: min(1040px, 96vw) !important;
+  max-height: calc(100vh - 40px) !important;
+  padding: 24px !important;
+  border-radius: 20px !important;
+}
+
+.admin-split-editor {
+  display: grid;
+  grid-template-columns: minmax(340px, 1.15fr) minmax(360px, 1.25fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.admin-editor-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 2. Khung mô phỏng trình duyệt web trực quan (Live Ad Slot Mockup) */
+.ad-slot-mockup-container {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+.mockup-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.mockup-window-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.mockup-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.mockup-dot.red { background: #ef4444; }
+.mockup-dot.yellow { background: #f59e0b; }
+.mockup-dot.green { background: #10b981; }
+
+.mockup-browser-url {
+  flex: 1;
+  padding: 4px 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.mockup-viewport {
+  padding: 18px;
+  background: #ffffff;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mockup-site-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #0f172a;
+}
+
+.mockup-site-logo {
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: -0.04em;
+  color: #0f172a;
+}
+.mockup-site-logo span { color: #059669; }
+
+.mockup-site-nav {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* Banner quảng cáo mô phỏng sống động */
+.mockup-ad-banner-box {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 2px dashed #059669;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 95, 70, 0.12) 100%);
+  color: #065f46;
+  box-sizing: border-box;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.mockup-ad-banner-box.inactive {
+  border-color: #94a3b8;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  color: #475569;
+}
+
+.mockup-banner-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
+  background: #ffffff;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #059669;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.05em;
+}
+
+.mockup-ad-banner-box.inactive .mockup-banner-badge {
+  color: #64748b;
+}
+
+.mockup-banner-title {
+  font-size: 14px;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: inherit;
+}
+
+.mockup-banner-specs {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.mockup-banner-price {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+/* Mô phỏng khung tin tức xung quanh */
+.mockup-content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+  opacity: 0.75;
+}
+
+.mockup-article-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mockup-line {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+.mockup-line.short { width: 45%; }
+.mockup-line.title { height: 16px; background: #cbd5e1; width: 85%; }
+
+.mockup-sidebar-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Nút chọn nhanh kích thước chuẩn (Quick Presets) */
+.preset-pills-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.preset-pills-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.preset-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-pill-btn {
+  padding: 5px 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 16px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-pill-btn:hover {
+  background: #f1f5f9;
+  border-color: #059669;
+  color: #059669;
+}
+
+.preset-pill-btn.active {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+/* 3. Thẻ xem trước gói quảng cáo B2B (Live B2B Package Card Preview) */
+.b2b-package-preview-card {
+  position: relative;
+  padding: 24px;
+  border-radius: 20px;
+  background: radial-gradient(ellipse at 90% 10%, #dbeafe 0%, transparent 55%), linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.b2b-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  align-self: flex-start;
+}
+
+.b2b-card-badge.inactive {
+  background: rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.b2b-card-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.b2b-card-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.b2b-card-price-row strong {
+  font-size: 26px;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: -0.03em;
+}
+
+.b2b-card-price-row span {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.b2b-card-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.b2b-metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.b2b-metric-item span {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.b2b-metric-item strong {
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.b2b-card-features {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.b2b-card-features li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.b2b-card-features li::before {
+  content: "✓";
+  color: #34d399;
+  font-weight: bold;
+}
+
+/* 4. Khung hướng dẫn thân thiện cho Cài đặt hệ thống (System Settings Guide) */
+.settings-guide-card {
+  padding: 22px 24px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+  border: 1.5px solid #bbf7d0;
+  border-radius: 18px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.05);
+}
+
+.settings-guide-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.settings-guide-header .guide-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.settings-guide-header h2 {
+  font-size: 17px;
+  color: #14532d;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.settings-guide-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.settings-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.settings-step-number {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #15803d;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.settings-step-text strong {
+  display: block;
+  font-size: 13px;
+  color: #1e293b;
+  margin-bottom: 2px;
+}
+
+.settings-step-text p {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Quick MB Preset Pills in Settings Modal */
+.size-presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 14px;
+}
+
+.size-preset-btn {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.size-preset-btn:hover {
+  background: #f1f5f9;
+  border-color: #059669;
+  color: #059669;
+}
+
+.size-preset-btn.active {
+  background: #059669;
+  border-color: #059669;
+  color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .admin-split-editor {
+    grid-template-columns: 1fr;
+  }
+}

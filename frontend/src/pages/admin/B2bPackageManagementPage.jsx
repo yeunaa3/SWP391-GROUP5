@@ -4,15 +4,16 @@ import {
   getAdminB2bPackages,
   updateAdminB2bPackage,
 } from "../../services/b2bPackageAdminService.js";
+import ModalShell from "../../components/ModalShell.jsx";
 
 const emptyForm = {
   code: "",
   name: "",
-  price: "",
-  durationDays: "",
-  impressionsQuota: "",
+  price: "15000000",
+  durationDays: "30",
+  impressionsQuota: "100000",
   description: "",
-  status: "DRAFT",
+  status: "ACTIVE",
 };
 
 function money(value, currency = "VND") {
@@ -44,6 +45,75 @@ function formFrom(item) {
     description: item.description || "",
     status: item.status,
   };
+}
+
+/**
+ * ============================================================================
+ * [CFG-05] THẺ XEM TRƯỚC GÓI QUẢNG CÁO B2B (LIVE CARD PREVIEW)
+ * Hiển thị thẻ gói sang trọng, tự động tính toán các chỉ số marketing:
+ * - Đơn giá CPM ước tính: (Giá / Hạn mức) * 1.000
+ * - Phân bổ lượt hiển thị: Hạn mức / Số ngày
+ * - Huy hiệu trạng thái và cam kết phân phối
+ * ============================================================================
+ */
+function B2bPackageVisualCard({ form }) {
+  const price = Number(form.price) || 0;
+  const quota = Math.max(1, Number(form.impressionsQuota) || 1);
+  const duration = Math.max(1, Number(form.durationDays) || 30);
+  const cpm = Math.round((price / quota) * 1000);
+  const dailyPacing = Math.round(quota / duration);
+  const isActive = form.status === "ACTIVE";
+  const isDraft = form.status === "DRAFT";
+
+  return (
+    <div className="b2b-package-preview-card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span className={`b2b-card-badge ${!isActive ? "inactive" : ""}`}>
+          {isActive ? "✦ ĐANG HOẠT ĐỘNG" : isDraft ? "✎ BẢN NHÁP" : "⊘ ĐÃ TẮT"}
+        </span>
+        <span style={{ fontSize: "11px", color: "#94a3b8", fontFamily: "monospace", letterSpacing: "0.05em" }}>
+          {form.code || "MÃ_GÓI"}
+        </span>
+      </div>
+
+      <div>
+        <h3 className="b2b-card-title">{form.name || "Tên gói quảng cáo"}</h3>
+        <p style={{ fontSize: "12px", color: "#cbd5e1", marginTop: "6px", lineHeight: "1.5" }}>
+          {form.description || "Gói quảng cáo tiêu chuẩn hiển thị trên toàn mạng lưới The Pulse."}
+        </p>
+      </div>
+
+      <div className="b2b-card-price-row">
+        <strong>{money(price, "VND")}</strong>
+        <span>/ {duration} ngày hiển thị</span>
+      </div>
+
+      <div className="b2b-card-metrics-grid">
+        <div className="b2b-metric-item">
+          <span>Hạn mức hiển thị</span>
+          <strong>{Number(quota).toLocaleString("vi-VN")} lượt</strong>
+        </div>
+        <div className="b2b-metric-item">
+          <span>Đơn giá CPM ước tính</span>
+          <strong>{money(cpm, "VND")} <small style={{ fontSize: "10px", fontWeight: "normal", color: "#94a3b8" }}>/1k lượt</small></strong>
+        </div>
+        <div className="b2b-metric-item">
+          <span>Phân bổ trung bình</span>
+          <strong>~{Number(dailyPacing).toLocaleString("vi-VN")} lượt/ngày</strong>
+        </div>
+        <div className="b2b-metric-item">
+          <span>Thời hạn chiến dịch</span>
+          <strong>{duration} ngày liên tục</strong>
+        </div>
+      </div>
+
+      <ul className="b2b-card-features">
+        <li>✓ Tự động xoay vòng carousel trên các vị trí đã đặt</li>
+        <li>✓ Báo cáo thời gian thực về lượt hiển thị & lượt click</li>
+        <li>✓ Cam kết phân bổ đúng hạn mức {Number(quota).toLocaleString("vi-VN")} impressions</li>
+      </ul>
+    </div>
+  );
 }
 
 export default function B2bPackageManagementPage() {
@@ -99,7 +169,7 @@ export default function B2bPackageManagementPage() {
     setForm({ ...emptyForm });
     setError("");
     setNotice("");
-    setEditorOpen(true)
+    setEditorOpen(true);
   }
 
   function openEdit(item) {
@@ -107,7 +177,7 @@ export default function B2bPackageManagementPage() {
     setForm(formFrom(item));
     setError("");
     setNotice("");
-    setEditorOpen(true)
+    setEditorOpen(true);
   }
 
   function changeField(event) {
@@ -115,6 +185,13 @@ export default function B2bPackageManagementPage() {
     setForm((current) => ({
       ...current,
       [name]: name === "code" ? value.toUpperCase() : value,
+    }));
+  }
+
+  function applyPreset(field, val) {
+    setForm((current) => ({
+      ...current,
+      [field]: String(val),
     }));
   }
 
@@ -168,7 +245,7 @@ export default function B2bPackageManagementPage() {
       }
 
       await loadPackages();
-      setEditorOpen(false)
+      setEditorOpen(false);
       setNotice(
         editingPackage ? "Đã lưu thay đổi gói quảng cáo." : "Đã tạo gói quảng cáo mới.",
       );
@@ -192,7 +269,7 @@ export default function B2bPackageManagementPage() {
         <button type="button" onClick={openCreate}>Tạo gói mới</button>
       </header>
 
-      {notice && <p role="status">{notice}</p>}
+      {notice && <p role="status" className="notice-banner">{notice}</p>}
 
       <section className="dashboard-section ad-slot-list">
         <div className="list-toolbar">
@@ -304,121 +381,169 @@ export default function B2bPackageManagementPage() {
         )}
       </section>
 
-      {error && packages.length > 0 && <p role="alert">{error}</p>}
+      {error && packages.length > 0 && <p role="alert" className="form-error">{error}</p>}
 
+      {/* MODAL BIÊN TẬP VÀ XEM TRƯỚC GÓI QUẢNG CÁO B2B TRỰC QUAN */}
       {editorOpen && (
-        <section className="dashboard-section ad-slot-editor b2b-package-editor">
-          <h2>
-            {editingPackage ? "Chỉnh sửa gói quảng cáo" : "Tạo gói quảng cáo"}
-          </h2>
+        <ModalShell
+          title={editingPackage ? `Chỉnh sửa gói: ${editingPackage.name}` : "Tạo gói quảng cáo B2B mới"}
+          className="admin-modal-wide"
+          onClose={() => {
+            setEditorOpen(false);
+            setError("");
+          }}
+        >
+          <div className="admin-split-editor">
+            {/* Cột trái: Form nhập liệu */}
+            <form className="ad-slot-form" onSubmit={savePackage}>
+              {error && <p role="alert" className="form-error">{error}</p>}
 
-          {error && <p role="alert">{error}</p>}
+              <label>
+                Mã gói (In hoa, không dấu)
+                <input
+                  name="code"
+                  value={form.code}
+                  onChange={changeField}
+                  maxLength={50}
+                  placeholder="VD: STARTER_30D"
+                  required
+                />
+              </label>
 
-          <form className="ad-slot-form" onSubmit={savePackage}>
-            <label>
-              Mã gói
-              <input
-                name="code"
-                value={form.code}
-                onChange={changeField}
-                maxLength={50}
-                required
-              />
-            </label>
+              <label>
+                Tên gói quảng cáo
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={changeField}
+                  maxLength={100}
+                  placeholder="VD: Gói Doanh Nghiệp Khởi Động"
+                  required
+                />
+              </label>
 
-            <label>
-              Tên gói
-              <input
-                name="name"
-                value={form.name}
-                onChange={changeField}
-                maxLength={100}
-                required
-              />
-            </label>
+              <label>
+                Giá gói (VND)
+                <input
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={form.price}
+                  onChange={changeField}
+                  required
+                />
+              </label>
 
-            <label>
-              Giá (VND)
-              <input
-                name="price"
-                type="number"
-                min="0"
-                step="1"
-                value={form.price}
-                onChange={changeField}
-                required
-              />
-            </label>
+              <div className="preset-pills-wrap">
+                <span className="preset-pills-label">Thời hạn chiến dịch:</span>
+                <div className="preset-pills">
+                  {[7, 14, 30, 60, 90].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      className={`preset-pill-btn ${form.durationDays === String(days) ? "active" : ""}`}
+                      onClick={() => applyPreset("durationDays", days)}
+                    >
+                      {days} ngày
+                    </button>
+                  ))}
+                </div>
+                <input
+                  name="durationDays"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.durationDays}
+                  onChange={changeField}
+                  placeholder="Số ngày khác…"
+                  required
+                />
+              </div>
 
-            <label>
-              Thời hạn (ngày)
-              <input
-                name="durationDays"
-                type="number"
-                min="1"
-                step="1"
-                value={form.durationDays}
-                onChange={changeField}
-                required
-              />
-            </label>
+              <div className="preset-pills-wrap">
+                <span className="preset-pills-label">Hạn mức impressions:</span>
+                <div className="preset-pills">
+                  {[50000, 100000, 250000, 500000, 1000000].map((q) => (
+                    <button
+                      key={q}
+                      type="button"
+                      className={`preset-pill-btn ${form.impressionsQuota === String(q) ? "active" : ""}`}
+                      onClick={() => applyPreset("impressionsQuota", q)}
+                    >
+                      {(q / 1000).toLocaleString("vi-VN")}k lượt
+                    </button>
+                  ))}
+                </div>
+                <input
+                  name="impressionsQuota"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={form.impressionsQuota}
+                  onChange={changeField}
+                  placeholder="Hạn mức khác…"
+                  required
+                />
+              </div>
 
-            <label>
-              Hạn mức impressions
-              <input
-                name="impressionsQuota"
-                type="number"
-                min="1"
-                step="1"
-                value={form.impressionsQuota}
-                onChange={changeField}
-                required
-              />
-            </label>
+              <label>
+                Trạng thái hiển thị
+                <select name="status" value={form.status} onChange={changeField}>
+                  <option value="ACTIVE">Đang hoạt động (Active)</option>
+                  <option value="DRAFT">Bản nháp (Draft)</option>
+                  <option value="INACTIVE">Đã tắt (Inactive)</option>
+                </select>
+              </label>
 
-            <label>
-              Trạng thái
-              <select name="status" value={form.status} onChange={changeField}>
-                <option value="DRAFT">Bản nháp</option>
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="INACTIVE">Đã tắt</option>
-              </select>
-            </label>
+              <label className="b2b-description-field">
+                Mô tả chi tiết và quyền lợi
+                <textarea
+                  name="description"
+                  rows="3"
+                  maxLength={4000}
+                  value={form.description}
+                  onChange={changeField}
+                  placeholder="Mô tả ưu đãi, vị trí ưu tiên hoặc phân khúc độc giả của gói…"
+                />
+              </label>
 
-            <label className="b2b-description-field">
-              Mô tả
-              <textarea
-                name="description"
-                rows="4"
-                maxLength={4000}
-                value={form.description}
-                onChange={changeField}
-              />
-            </label>
+              <div className="ad-slot-form-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={saving}
+                  onClick={() => {
+                    setEditorOpen(false);
+                    setError("");
+                  }}
+                >
+                  Hủy
+                </button>
 
-            <div className="ad-slot-form-actions">
-              <button
-                type="button"
-                className="secondary-button"
-                disabled={saving}
-                onClick={() => {
-                  setEditorOpen(false);
-                  setError("");
-                }}
-              >
-                Hủy
-              </button>
+                <button type="submit" disabled={saving}>
+                  {saving
+                    ? "Đang lưu..."
+                    : editingPackage
+                      ? "Lưu thay đổi"
+                      : "Tạo gói"}
+                </button>
+              </div>
+            </form>
 
-              <button type="submit" disabled={saving}>
-                {saving
-                  ? "Đang lưu..."
-                  : editingPackage
-                    ? "Lưu thay đổi"
-                    : "Tạo gói"}
-              </button>
+            {/* Cột phải: Live Preview Card */}
+            <div className="admin-editor-column">
+              <div className="mockup-info-badge">
+                <span>✨ Xem trước giao diện thẻ gói (Live Card Preview)</span>
+              </div>
+              <B2bPackageVisualCard form={form} />
+              <div className="mockup-hint-box" style={{ background: "#f8fafc", padding: "14px 16px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "11.5px", color: "#64748b", lineHeight: "1.6" }}>
+                <strong style={{ color: "#0f172a", display: "block", marginBottom: "4px" }}>💡 Lưu ý định giá B2B:</strong>
+                Chỉ số CPM (chi phí cho mỗi 1.000 lượt hiển thị) giúp đối tác dễ dàng so sánh hiệu quả giữa các gói. Các gói có thời hạn dài thường được giảm giá 10–20% CPM để khuyến khích hợp đồng lớn.
+              </div>
             </div>
-          </form>
-        </section>
+          </div>
+        </ModalShell>
       )}
     </main>
   );

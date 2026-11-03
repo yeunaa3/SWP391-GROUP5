@@ -1,0 +1,305 @@
+/**
+ * ============================================================================
+ * THE PULSE · UNIFIED WORKSPACE DESIGN SYSTEM & ROLE THEMES
+ * Harmonized colors, consistent cards, streamlined sidebars, and clean actions.
+ * ============================================================================
+ */
+
+/* 1. Base Workspace Shell */
+.workspace-shell {
+  --ws-bg: #f8fafc;
+  --ws-surface: #ffffff;
+  --ws-border: #e2e8f0;
+  --ws-border-subtle: #f1f5f9;
+  --ws-ink: #0f172a;
+  --ws-muted: #64748b;
+  --ws-radius-lg: 16px;
+  --ws-radius-md: 10px;
+  --ws-radius-sm: 6px;
+  --ws-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --ws-shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+
+  /* Default theme (Admin - Deep Slate & Indigo) */
+  --ws-accent: #6366f1;
+  --ws-accent-grad: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  --ws-accent-light: #eef2ff;
+  --ws-accent-border: #c7d2fe;
+  --ws-sidebar-bg: linear-gradient(175deg, #0f172a 0%, #1e293b 100%);
+}
+
+/* 2. Role Specific Accents & Badges */
+/* Admin: Deep Slate & Indigo */
+.workspace-shell.workspace-area-admin {
+  --ws-accent: #6366f1;
+  --ws-accent-grad: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  --ws-accent-light: #eef2ff;
+  --ws-accent-border: #c7d2fe;
+}
+
+/* Ad Manager: Deep Navy & Ruby Rose */
+.workspace-shell.workspace-area-adManager {
+  --ws-accent: #e11d48;
+  --ws-accent-grad: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+  --ws-accent-light: #ffe4e6;
+  --ws-accent-border: #fecdd3;
+}
+
+/* Business: Modern Emerald & Forest Green */
+.workspace-shell.workspace-area-business {
+  --ws-accent: #059669;
+  --ws-accent-grad: linear-gradient(135deg, #047857 0%, #059669 100%);
+  --ws-accent-light: #ecfdf5;
+  --ws-accent-border: #a7f3d0;
+}
+
+/* Premium: Refined Amber & Warm Gold */
+.workspace-shell.workspace-area-premium {
+  --ws-accent: #d97706;
+  --ws-accent-grad: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  --ws-accent-light: #fffbeb;
+  --ws-accent-border: #fde68a;
+}
+
+/* Reader / Account: Elegant Royal Blue & Slate */
+.workspace-shell.workspace-area-account {
+  --ws-accent: #2563eb;
+  --ws-accent-grad: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  --ws-accent-light: #eff6ff;
+  --ws-accent-border: #bfdbfe;
+}
+
+/* 3. Streamlined Sidebar */
+.workspace-shell .sidebar {
+  background: var(--ws-sidebar-bg) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 24px 16px 20px !important;
+  color: #cbd5e1 !important;
+}
+
+.workspace-shell .sidebar .brand {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: 0 10px !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+  color: #ffffff !important;
+  margin-bottom: 18px !important;
+}
+
+.workspace-shell .workspace-brand-caption {
+  font-size: 9px !important;
+  letter-spacing: 0.16em !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+}
+
+.workspace-shell .sidebar .workspace-name {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #e2e8f0 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  margin: 0 10px 18px !important;
+}
+
+.workspace-shell .sidebar .nav-group h2 {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  padding: 0 10px !important;
+  margin: 14px 0 6px !important;
+}
+
+.workspace-shell .sidebar .nav-group a {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  transition: all 0.15s ease !important;
+  margin: 2px 0 !important;
+}
+
+.workspace-shell .sidebar .nav-group a .ui-icon {
+  width: 16px !important;
+  height: 16px !important;
+  color: #64748b !important;
+  transition: color 0.15s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.workspace-shell .sidebar .nav-group a:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ffffff !important;
+}
+
+.workspace-shell .sidebar .nav-group a:hover .ui-icon {
+  color: #e2e8f0 !important;
+}
+
+/* Active Menu Item with Role Accent */
+.workspace-shell .sidebar .nav-group a.active {
+  background: var(--ws-accent-grad) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+.workspace-shell .sidebar .nav-group a.active .ui-icon {
+  color: #ffffff !important;
+}
+
+/* 4. Unified Topbar */
+.workspace-shell .workspace-topbar {
+  background: var(--ws-surface) !important;
+  border-bottom: 1px solid var(--ws-border) !important;
+  min-height: 60px !important;
+  padding: 0 32px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.workspace-shell .workspace-breadcrumb {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 13px !important;
+  color: var(--ws-muted) !important;
+}
+
+.workspace-shell .workspace-breadcrumb a {
+  color: var(--ws-muted) !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+}
+
+.workspace-shell .workspace-breadcrumb a:hover {
+  color: var(--ws-ink) !important;
+}
+
+.workspace-shell .workspace-breadcrumb span {
+  color: #cbd5e1 !important;
+}
+
+.workspace-shell .workspace-breadcrumb strong {
+  color: var(--ws-ink) !important;
+  font-weight: 700 !important;
+}
+
+/* 5. Harmonized Buttons Across Workspaces */
+.workspace-shell button:not(.mobile-workspace-toggle, .workspace-scrim, .secondary-button, .outline-button, .preset-pill-btn, .modern-search-clear-btn),
+.workspace-shell .button-link:not(.outline-button, .secondary-button) {
+  background: var(--ws-accent, #0f172a) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  padding: 9px 18px !important;
+  border-radius: 9px !important;
+  border: none !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  text-decoration: none !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+.workspace-shell button:not(.mobile-workspace-toggle, .workspace-scrim, .secondary-button, .outline-button, .preset-pill-btn):hover,
+.workspace-shell .button-link:not(.outline-button, .secondary-button):hover {
+  filter: brightness(1.08) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.workspace-shell .secondary-button {
+  background: #ffffff !important;
+  border: 1px solid var(--ws-border) !important;
+  color: var(--ws-ink) !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.workspace-shell .secondary-button:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* 6. Standardized Cards and Section Elevation */
+.workspace-shell .dashboard-section,
+.workspace-shell .admin-panel,
+.workspace-shell .premium-panel {
+  background: var(--ws-surface) !important;
+  border: 1px solid var(--ws-border) !important;
+  border-radius: var(--ws-radius-lg) !important;
+  box-shadow: var(--ws-shadow-sm) !important;
+}
+
+/* 7. Clean Form Inputs */
+.workspace-shell input:not([type="checkbox"], [type="radio"]),
+.workspace-shell select,
+.workspace-shell textarea {
+  border: 1.5px solid var(--ws-border) !important;
+  border-radius: 9px !important;
+  padding: 9px 13px !important;
+  font-size: 13px !important;
+  color: var(--ws-ink) !important;
+  background: #ffffff !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.workspace-shell input:focus,
+.workspace-shell select:focus,
+.workspace-shell textarea:focus {
+  outline: none !important;
+  border-color: var(--ws-accent) !important;
+  box-shadow: 0 0 0 3px var(--ws-accent-light) !important;
+}
+
+/* 8. Modern Tables */
+.workspace-shell table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.workspace-shell th {
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  padding: 12px 14px !important;
+  border-bottom: 1.5px solid var(--ws-border) !important;
+}
+
+.workspace-shell td {
+  padding: 13px 14px !important;
+  border-bottom: 1px solid var(--ws-border-subtle) !important;
+  font-size: 13px !important;
+  color: var(--ws-ink) !important;
+  vertical-align: middle !important;
+}
+
+.workspace-shell tr:hover td {
+  background: #f8fafc !important;
+}
