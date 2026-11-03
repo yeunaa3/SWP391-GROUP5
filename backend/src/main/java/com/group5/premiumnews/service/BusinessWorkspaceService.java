@@ -22,11 +22,9 @@ import java.util.*;
 public class BusinessWorkspaceService {
 
     private final JdbcTemplate jdbc;// dùng để viết với SQL trực tiếp
-    private final BusinessAssetStorage storage;
 
-    public BusinessWorkspaceService(JdbcTemplate jdbc, BusinessAssetStorage storage) {
+    public BusinessWorkspaceService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.storage = storage;
     }
 
     // Resolve membership from DB on every request: sessions created before company
@@ -63,7 +61,9 @@ public class BusinessWorkspaceService {
                        p.proposed_start_at AS latest_proposal_start_at,
                        p.proposed_end_at AS latest_proposal_end_at,
                        p.expires_at AS latest_proposal_expires_at,
-                       p.sent_at AS latest_proposal_sent_at
+                       p.sent_at AS latest_proposal_sent_at,
+                       p.proposed_package_name_snapshot AS latest_proposal_package_name,
+                       p.proposed_slot_name_snapshot AS latest_proposal_slot_name
                 FROM contracts c
                 LEFT JOIN contract_proposals p
                   ON p.proposal_id = (
@@ -178,7 +178,6 @@ public class BusinessWorkspaceService {
             throw new InvalidStateTransitionException(
                     "Hồ sơ chỉ được gửi tối đa 5 tài liệu. Vui lòng gỡ tài liệu không dùng.");
         }
-        requireAvailableApplicationDocuments(id, count);
         int nextVersion = ((Number) c.get("application_version")).intValue() + 1;
         String nextStatus = "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW";
         String priority = "NEEDS_REVISION".equals(state) ? "HIGH" : "NORMAL";
@@ -203,22 +202,6 @@ public class BusinessWorkspaceService {
                 id, nextVersion);
         audit(user, "SUBMIT_APPLICATION", "COMPANY", id);
         return overview(user);
-    }
-
-    /**
-     * BUS-03: chỉ chốt phiên bản khi toàn bộ tài liệu còn đọc được trên kho thực.
-     * Metadata không đủ chứng minh file tồn tại; lỗi kho/mất file phải giữ hồ sơ nháp
-     * để doanh nghiệp gỡ tài liệu lỗi và tải lại trước khi gửi.
-     */
-    private void requireAvailableApplicationDocuments(Long companyId, int expectedCount) {
-        List<Map<String, Object>> documents = jdbc.queryForList(
-                "SELECT document_id,storage_object_key FROM company_documents WHERE company_id=? AND status='ACTIVE'",
-                companyId);
-        if (documents.size() != expectedCount || documents.stream().anyMatch(document ->
-                !storage.available((String) document.get("storage_object_key")))) {
-            throw new InvalidStateTransitionException(
-                    "Có tài liệu không còn khả dụng trên kho lưu trữ. Hãy gỡ tài liệu lỗi, tải lại và kiểm tra trước khi gửi.");
-        }
     }
 
     /**

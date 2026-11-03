@@ -38,6 +38,7 @@ public final class BusinessRequests {
                         @NotNull @Positive Integer expectedRevisionNo,
                         @NotNull @Positive Integer proposalRevisionNo,
                         @NotBlank @Pattern(regexp = "ACCEPT|REQUEST_REVISION") String decision,
+                        @Pattern(regexp = "|TERMS|CONTRACT_INFO") String changeType,
                         @Size(max = 2000) String reason) {
         }
 

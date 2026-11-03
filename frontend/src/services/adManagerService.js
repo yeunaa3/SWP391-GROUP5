@@ -56,12 +56,12 @@ export function sendBookingProposal(contractId, expectedRevisionNo) {
     );
 }
 
-export function requestAnotherBookingPeriod(contractId, expectedRevisionNo, reason) {
+export function requestAnotherBookingPeriod(contractId, expectedRevisionNo) {
     return apiRequest(
         `/api/ad-manager/bookings/${encodeURIComponent(contractId)}/request-another-period`,
         {
             method: "POST",
-            body: JSON.stringify({ expectedRevisionNo, reason }),
+            body: JSON.stringify({ expectedRevisionNo }),
         },
     );
 }

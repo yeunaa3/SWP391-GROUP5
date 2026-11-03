@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getBookingDetail, saveBookingProposal, sendBookingProposal, requestAnotherBookingPeriod } from "../../services/adManagerService.js";
+import { getAdvertisingCatalog } from "../../services/contentService.js";
+import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
+import { addDays } from "../../utils/bookingCalendar.js";
 
 function showDate(value) {
     return value ? String(value).slice(0, 10) : "—";
+}
+
+function inclusiveEndDate(value) {
+    const date = showDate(value);
+    return date === "—" ? "" : addDays(date, -1);
 }
 
 function showMoney(value, currency = "VND") {
@@ -18,7 +26,7 @@ function showMoney(value, currency = "VND") {
 
 
 function defaultExpiryValue() {
-    const date = new Date(Date.now() +  60 * 60 * 1000);
+    const date = new Date(Date.now() + 12 * 60 * 60 * 1000);
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return localDate.toISOString().slice(0, 16);
 }
@@ -27,6 +35,8 @@ export default function AdManagerBookingProposalPage() {
     const { contractId } = useParams();
     const [searchParams] = useSearchParams();
     const [detail, setDetail] = useState(null);
+    const [catalog, setCatalog] = useState(null);
+    const [catalogError, setCatalogError] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [attempt, setAttempt] = useState(0);
@@ -35,14 +45,22 @@ export default function AdManagerBookingProposalPage() {
         endDate: "",
         commercialTerms: "",
         expiresAt: "",
+        packageId: "",
+        slotId: "",
     });
+    const [calendarFocusDate, setCalendarFocusDate] = useState("");
     const [saving, setSaving] = useState(false);
     const [sendingProposal, setSendingProposal] = useState(false);
     const [feedback, setFeedback] = useState("");
-    const [periodReason, setPeriodReason] = useState("");
-    const [showPeriodRequest, setShowPeriodRequest] = useState(false);
     const [requestingPeriod, setRequestingPeriod] = useState(false);
     const [periodFeedback, setPeriodFeedback] = useState("");
+    const [calendarCheck, setCalendarCheck] = useState({ valid: false, error: "Chọn đủ vị trí và khoảng ngày." });
+
+    useEffect(() => {
+        getAdvertisingCatalog()
+            .then(setCatalog)
+            .catch((requestError) => setCatalogError(requestError.message));
+    }, []);
 
     const requestedReturnTo = searchParams.get("returnTo");
     const returnTo = requestedReturnTo?.startsWith("/ad-manager/bookings")
@@ -54,6 +72,7 @@ export default function AdManagerBookingProposalPage() {
 
         setLoading(true);
         setError("");
+        setCalendarCheck({ valid: false, error: "Đang kiểm tra lịch…" });
 
         getBookingDetail(contractId, controller.signal)
             .then((data) => {
@@ -64,19 +83,23 @@ export default function AdManagerBookingProposalPage() {
                     ["DRAFT", "REVISION_REQUESTED"].includes(latest?.status)
                         ? latest
                         : null;
+                const startDate = String(
+                    editableProposal?.proposedStartAt ?? data.booking.startAt,
+                ).slice(0, 10);
 
                 setProposalForm({
-                    startDate: String(
-                        editableProposal?.proposedStartAt ?? data.booking.startAt,
-                    ).slice(0, 10),
-                    endDate: String(
+                    startDate,
+                    endDate: inclusiveEndDate(
                         editableProposal?.proposedEndAt ?? data.booking.endAt,
-                    ).slice(0, 10),
+                    ),
                     commercialTerms: editableProposal?.commercialTerms ?? "",
                     expiresAt: String(
                         draft?.expiresAt ?? defaultExpiryValue(),
                     ).slice(0, 16),
+                    packageId: String(editableProposal?.proposedPackageId ?? data.booking.packageId),
+                    slotId: String(editableProposal?.proposedSlotId ?? data.booking.slotId),
                 });
+                setCalendarFocusDate(startDate);
                 setLoading(false);
             })
             .catch((requestError) => {
@@ -90,9 +113,25 @@ export default function AdManagerBookingProposalPage() {
     }, [contractId, attempt]);
 
     const booking = detail?.booking;
+    const requestToChangeContract = ["REVISION_REQUESTED", "DRAFT"].includes(detail?.latestProposal?.status)
+        && detail.latestProposal.businessResponseType === "CONTRACT_INFO";
+    const selectedPackage = catalog?.offers?.find((item) => String(item.id) === proposalForm.packageId);
+    const selectedSlot = catalog?.slots?.find((item) => String(item.id) === proposalForm.slotId);
+    const proposalAmount = requestToChangeContract
+        ? selectedPackage && selectedSlot
+            ? Number(selectedPackage.price)
+            + Number(selectedSlot.basePrice ?? selectedSlot.base_price ?? 0)
+            : null
+        : detail?.latestProposal?.status === "DRAFT"
+            ? detail.latestProposal.proposedAmount
+            : booking?.calculatedProposalAmount;
 
     async function saveProposal(event) {
         event.preventDefault();
+        if (!calendarCheck.valid || calendarCheck.error) {
+            setFeedback(calendarCheck.error || "Chọn lịch còn trống trước khi lưu.");
+            return;
+        }
         setSaving(true);
         setFeedback("");
 
@@ -101,8 +140,10 @@ export default function AdManagerBookingProposalPage() {
                 expectedRevisionNo: booking.revisionNo,
                 commercialTerms: proposalForm.commercialTerms,
                 proposedStartAt: `${proposalForm.startDate}T00:00:00`,
-                proposedEndAt: `${proposalForm.endDate}T00:00:00`,
+                proposedEndAt: `${addDays(proposalForm.endDate, 1)}T00:00:00`,
                 expiresAt: `${proposalForm.expiresAt}:00`,
+                packageId: Number(proposalForm.packageId),
+                slotId: Number(proposalForm.slotId),
             });
 
             setDetail(updated);
@@ -134,8 +175,7 @@ export default function AdManagerBookingProposalPage() {
     }
 
     async function handleRequestAnotherPeriod() {
-        const reason = periodReason.trim();
-        if (!reason || !booking) return;
+        if (!booking) return;
 
         setRequestingPeriod(true);
         setPeriodFeedback("");
@@ -144,11 +184,9 @@ export default function AdManagerBookingProposalPage() {
             const updated = await requestAnotherBookingPeriod(
                 contractId,
                 booking.revisionNo,
-                reason,
             );
 
             setDetail(updated);
-            setPeriodReason("");
             setPeriodFeedback("Đã gửi yêu cầu Business chọn kỳ khác.");
         } catch (requestError) {
             setPeriodFeedback(requestError.message);
@@ -219,7 +257,7 @@ export default function AdManagerBookingProposalPage() {
                             <div>
                                 <dt>Thời gian yêu cầu</dt>
                                 <dd>
-                                    {showDate(booking.startAt)} đến {showDate(booking.endAt)}
+                                    {showDate(booking.startAt)} đến {inclusiveEndDate(booking.endAt)}
                                 </dd>
                             </div>
                             <div>
@@ -233,79 +271,92 @@ export default function AdManagerBookingProposalPage() {
                         </dl>
                     </section>
 
+                    {detail.latestProposal
+                        && ["SENT", "REVISION_REQUESTED", "ACCEPTED"].includes(detail.latestProposal.status) && (
+                            <section className="dashboard-section">
+                                <h2>Proposal gần nhất · phiên bản {detail.latestProposal.revisionNo}</h2>
+                                <dl className="business-details">
+                                    <div>
+                                        <dt>Trạng thái proposal</dt>
+                                        <dd>{detail.latestProposal.status}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Package đề xuất</dt>
+                                        <dd>{detail.latestProposal.proposedPackageName || booking.packageName}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Ad slot đề xuất</dt>
+                                        <dd>{detail.latestProposal.proposedSlotName || booking.slotName}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Thời gian đề xuất</dt>
+                                        <dd>
+                                            {showDate(detail.latestProposal.proposedStartAt)} đến {inclusiveEndDate(detail.latestProposal.proposedEndAt)}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt>Giá đề xuất</dt>
+                                        <dd>{showMoney(detail.latestProposal.proposedAmount, detail.latestProposal.currency || booking.currency)}</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Hạn phản hồi</dt>
+                                        <dd>{detail.latestProposal.expiresAt ? String(detail.latestProposal.expiresAt).replace("T", " ").slice(0, 16) : "—"}</dd>
+                                    </div>
+                                </dl>
+                                <p><strong>Điều khoản thương mại</strong></p>
+                                <p style={{ whiteSpace: "pre-wrap" }}>
+                                    {detail.latestProposal.commercialTerms || "Chưa có điều khoản."}
+                                </p>
+                            </section>
+                        )}
 
-                    <section className="dashboard-section">
-                        <h2>Xung đột lịch</h2>
-
-                        {detail.conflicts.length === 0 ? (
-                            <p role="status">Không phát hiện booking trùng lịch.</p>
-                        ) : (
-                            <>
+                    {detail.conflicts.length > 0 && (
+                        <section className="dashboard-section">
+                            <h2>Xung đột lịch</h2>
                                 <ul>
                                     {detail.conflicts.map((conflict, index) => (
                                         <li key={`${conflict.contractCode}-${index}`}>
                                             {conflict.contractCode}: {showDate(conflict.startAt)}
                                             {" đến "}
-                                            {showDate(conflict.endAt)} · {conflict.status}
+                                            {inclusiveEndDate(conflict.endAt)} · {conflict.status}
                                         </li>
                                     ))}
                                 </ul>
 
                                 {detail.allowedActions.includes("REQUEST_ANOTHER_PERIOD") && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            className="secondary-button"
-                                            onClick={() => setShowPeriodRequest((current) => !current)}
-                                        >
-                                            {showPeriodRequest
-                                                ? "Ẩn phần yêu cầu"
-                                                : "Yêu cầu Business chọn kỳ khác"}
-                                        </button>
-
-                                        {showPeriodRequest && (
-                                            <div>
-                                                <label className="business-field">
-                                                    <span>Lý do yêu cầu</span>
-                                                    <textarea
-                                                        maxLength={500}
-                                                        rows={3}
-                                                        value={periodReason}
-                                                        onChange={(event) => setPeriodReason(event.target.value)}
-                                                        placeholder="Nêu booking bị trùng và yêu cầu Business chọn thời gian khác."
-                                                    />
-                                                </label>
-
-                                                <button
-                                                    type="button"
-                                                    disabled={requestingPeriod || !periodReason.trim()}
-                                                    onClick={handleRequestAnotherPeriod}
-                                                >
-                                                    {requestingPeriod ? "Đang gửi…" : "Gửi yêu cầu"}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </>
+                                    <button
+                                        type="button"
+                                        className="secondary-button"
+                                        disabled={requestingPeriod}
+                                        onClick={handleRequestAnotherPeriod}
+                                    >
+                                        {requestingPeriod ? "Đang gửi…" : "Yêu cầu Business đổi thông tin booking"}
+                                    </button>
                                 )}
-                            </>
-                        )}
+                            {periodFeedback && (
+                                <p className="info-note" role="status">
+                                    {periodFeedback}
+                                </p>
+                            )}
+                        </section>
+                    )}
+                    {periodFeedback && detail.conflicts.length === 0 && (
+                        <p className="info-note" role="status">{periodFeedback}</p>
+                    )}
 
-                        {periodFeedback && (
-                            <p className="info-note" role="status">
-                                {periodFeedback}
-                            </p>
-                        )}
-                    </section>
-
-                    {detail.latestProposal?.status === "REVISION_REQUESTED" && (
+                    {detail.latestProposal?.businessResponseType && (
                         <section className="dashboard-section">
-                            <h2>Yêu cầu sửa điều khoản từ Business</h2>
+                            <h2>
+                                {detail.latestProposal.businessResponseType === "CONTRACT_INFO"
+                                    ? "Yêu cầu đổi thông tin hợp đồng từ Doanh nghiệp"
+                                    : "Yêu cầu sửa điều khoản từ Doanh nghiệp"}
+                            </h2>
                             <p style={{ whiteSpace: "pre-wrap" }}>
                                 {detail.latestProposal.businessResponseReason
                                     || "Business chưa ghi rõ lý do."}
                             </p>
                         </section>
-                    )}  
+                    )}
 
                     {feedback && (
                         <p className="info-note" role="status">
@@ -314,42 +365,110 @@ export default function AdManagerBookingProposalPage() {
                     )}
 
                     {detail.allowedActions.includes("SAVE_PROPOSAL") && (
-                        <section className="dashboard-section">
-                            <h2>Điều khoản đề xuất</h2>
-
-                            <form onSubmit={saveProposal}>
+                        <form onSubmit={saveProposal}>
+                            <section className="dashboard-section">
+                                <h2>Package, ad slot và lịch đề xuất</h2>
+                                {catalogError && <p role="alert" className="info-note">{catalogError}</p>}
                                 <div className="business-form-grid">
+                                    <label className="business-field">
+                                        <span>Gói quảng cáo B2B</span>
+                                        <select
+                                            required
+                                            disabled={!requestToChangeContract || !catalog}
+                                            value={proposalForm.packageId}
+                                            onChange={(event) => {
+                                                setProposalForm((current) => ({
+                                                    ...current,
+                                                    packageId: event.target.value,
+                                                    startDate: "",
+                                                    endDate: "",
+                                                }));
+                                                setCalendarFocusDate((current) => current || showDate(booking.startAt));
+                                                setCalendarCheck({ valid: false, error: "Chọn lại ngày bắt đầu và khoảng ngày trên lịch." });
+                                            }}
+                                        >
+                                            {catalog?.offers?.map((offer) => (
+                                                <option key={offer.id} value={offer.id}>
+                                                    {offer.name} · {showMoney(offer.price, offer.currency)} · Thời hạn: {offer.durationDays} ngày
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="business-field">
+                                        <span>Vị trí quảng cáo</span>
+                                        <select
+                                            required
+                                            disabled={!requestToChangeContract || !catalog}
+                                            value={proposalForm.slotId}
+                                            onChange={(event) => {
+                                                setProposalForm((current) => ({
+                                                    ...current,
+                                                    slotId: event.target.value,
+                                                    startDate: "",
+                                                    endDate: "",
+                                                }));
+                                                setCalendarFocusDate((current) => current || showDate(booking.startAt));
+                                                setCalendarCheck({ valid: false, error: "Chọn lại ngày bắt đầu và khoảng ngày trên lịch." });
+                                            }}
+                                        >
+                                            {catalog?.slots?.map((slot) => (
+                                                <option key={slot.id} value={slot.id}>
+                                                    {slot.name} · {slot.width} × {slot.height} px · {showMoney(slot.basePrice, slot.currency)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
                                     <label className="business-field">
                                         <span>Ngày bắt đầu</span>
                                         <input
                                             type="date"
                                             required
+                                            disabled={!requestToChangeContract}
                                             value={proposalForm.startDate}
-                                            onChange={(event) =>
-                                                setProposalForm((current) => ({
-                                                    ...current,
-                                                    startDate: event.target.value,
-                                                }))
-                                            }
+                                            onChange={(event) => {
+                                                setProposalForm((current) => ({ ...current, startDate: event.target.value }));
+                                                setCalendarFocusDate(event.target.value);
+                                                setCalendarCheck({ valid: false, error: "Đang kiểm tra lịch…" });
+                                            }}
                                         />
                                     </label>
-
                                     <label className="business-field">
                                         <span>Ngày kết thúc (bao gồm)</span>
                                         <input
-                                            type="date"
-                                            required
-                                            min={proposalForm.startDate}
-                                            value={proposalForm.endDate}
-                                            onChange={(event) =>
-                                                setProposalForm((current) => ({
-                                                    ...current,
-                                                    endDate: event.target.value,
-                                                }))
-                                            }
+                                            type="text"
+                                            value={proposalForm.endDate
+                                                ? new Date(`${proposalForm.endDate}T12:00:00`).toLocaleDateString("vi-VN")
+                                                : ""}
+                                            placeholder="Ngày kết thúc được chọn trên lịch"
+                                            readOnly
+                                            aria-readonly="true"
                                         />
                                     </label>
+                                </div>
 
+                                <SlotBookingCalendar
+                                    showSuccessMessage={false}
+                                    focusDate={proposalForm.startDate || calendarFocusDate || showDate(booking.startAt)}
+                                    onMonthChange={setCalendarFocusDate}
+                                    slotId={proposalForm.slotId}
+                                    packageId={proposalForm.packageId}
+                                    slots={catalog?.slots || []}
+                                    packages={catalog?.offers || []}
+                                    startDate={proposalForm.startDate}
+                                    endDate={proposalForm.endDate}
+                                    disabled={!requestToChangeContract}
+                                    onSelectRange={({ startDate, endDate, isValid, errorMessage }) => {
+                                        setProposalForm((current) => ({ ...current, startDate, endDate }));
+                                        if (startDate) setCalendarFocusDate(startDate);
+                                        setCalendarCheck({ valid: isValid, error: errorMessage || "" });
+                                    }}
+                                />
+                                <p>Giá đề xuất: {showMoney(proposalAmount, booking.currency)}</p>
+                            </section>
+
+                            <section className="dashboard-section">
+                                <h2>Điều khoản đề xuất</h2>
+                                <div className="business-form-grid">
                                     <label className="business-field">
                                         <span>Hạn đề xuất</span>
                                         <input
@@ -364,13 +483,13 @@ export default function AdManagerBookingProposalPage() {
                                             }
                                         />
                                     </label>
-
                                     <label className="business-field">
                                         <span>Điều khoản thương mại</span>
                                         <textarea
                                             required
                                             maxLength={10000}
                                             rows={5}
+                                            readOnly={requestToChangeContract}
                                             value={proposalForm.commercialTerms}
                                             onChange={(event) =>
                                                 setProposalForm((current) => ({
@@ -381,35 +500,22 @@ export default function AdManagerBookingProposalPage() {
                                         />
                                     </label>
                                 </div>
-
-                                <p>
-                                    Giá đề xuất:{" "}
-                                    {showMoney(
-                                        detail.latestProposal?.status === "DRAFT"
-                                            ? detail.latestProposal.proposedAmount
-                                            : booking.calculatedProposalAmount,
-                                        booking.currency,
-                                    )}
-                                </p>
-
-
                                 <div className="form-actions">
-                                    <button type="submit" disabled={saving || sendingProposal}>
+                                    <button type="submit" disabled={saving || sendingProposal || !calendarCheck.valid || Boolean(calendarCheck.error)}>
                                         {saving ? "Đang lưu…" : "Lưu đề xuất"}
                                     </button>
-
                                     {detail.allowedActions.includes("SEND_PROPOSAL") && (
                                         <button
                                             type="button"
-                                            disabled={saving || sendingProposal}
+                                            disabled={saving || sendingProposal || !calendarCheck.valid || Boolean(calendarCheck.error)}
                                             onClick={handleSendProposal}
                                         >
                                             {sendingProposal ? "Đang gửi…" : "Gửi đề xuất cho Business"}
                                         </button>
                                     )}
                                 </div>
-                            </form>
-                        </section>
+                            </section>
+                        </form>
                     )}
                 </>
             )}

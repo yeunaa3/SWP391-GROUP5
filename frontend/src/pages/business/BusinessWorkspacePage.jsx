@@ -15,6 +15,7 @@ import PartnershipStatus from "./PartnershipStatus.jsx";
 import "../../assets/partnership-status.css";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
 import { applicationSubmitBlockReason, legalDocumentError } from "../../utils/partnershipApplication.js";
+import { addDays } from "../../utils/bookingCalendar.js";
 
 const statusLabels = {
   DRAFT: "Bản nháp",
@@ -36,6 +37,11 @@ const statusLabels = {
 const status = (value) => statusLabels[value] || value || "Chưa có";
 const currency = (value) => Number(value || 0).toLocaleString("vi-VN") + " ₫";
 const time = (value) => (value ? String(value).replace("T", " ").slice(0, 16) : "—");
+const inclusiveProposalEnd = (value) => {
+  if (!value) return "—";
+  const normalized = String(value).replace(" ", "T").slice(0, 16);
+  return `${addDays(normalized.slice(0, 10), -1)} ${normalized.slice(11, 16)}`;
+};
 const datetime = (value) =>
   value ? String(value).replace(" ", "T").slice(0, 16) : "";
 const editable = (value) => ["DRAFT", "NEEDS_REVISION"].includes(value);
@@ -140,6 +146,7 @@ export default function BusinessWorkspacePage({ screen }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [proposalRevisionReason, setProposalRevisionReason] = useState("");
+  const [showProposalRevisionForm, setShowProposalRevisionForm] = useState(false);
 
   // UC-38/BUS-02: dữ liệu đang chỉnh sửa của hồ sơ công ty, độc lập với hồ sơ cá nhân ở UC-08.
   const [companyForm, setCompanyForm] = useState({
@@ -343,7 +350,7 @@ export default function BusinessWorkspacePage({ screen }) {
     }
   }
 
-  function handleProposalDecision(decision, reason = "") {
+  function handleProposalDecision(decision, reason = "", changeType = "") {
     if (!contract) return;
 
     action(
@@ -356,15 +363,21 @@ export default function BusinessWorkspacePage({ screen }) {
               expectedRevisionNo: Number(contract.revision_no),
               proposalRevisionNo: Number(contract.latest_proposal_revision_no),
               decision,
+              changeType: decision === "REQUEST_REVISION" ? changeType : null,
               reason: decision === "REQUEST_REVISION" ? reason.trim() : null,
             }),
           },
         ),
       decision === "ACCEPT"
         ? "Đã đồng ý đề xuất. Hợp đồng đang chờ thanh toán."
-        : "Đã gửi yêu cầu sửa điều khoản cho Ad Manager.",
+        : changeType === "CONTRACT_INFO"
+          ? "Đã gửi yêu cầu đổi thông tin hợp đồng cho Ad Manager."
+          : "Đã gửi yêu cầu sửa điều khoản cho Ad Manager.",
       decision === "REQUEST_REVISION"
-        ? () => setProposalRevisionReason("")
+        ? () => {
+          setProposalRevisionReason("");
+          setShowProposalRevisionForm(false);
+        }
         : undefined,
     );
   }
@@ -1116,6 +1129,7 @@ export default function BusinessWorkspacePage({ screen }) {
                     packages={catalog?.offers || []}
                     startDate={booking.startDate}
                     endDate={booking.endDate}
+                    focusDate={booking.startDate}
                     onSelectRange={({
                       startDate,
                       endDate,
@@ -1154,16 +1168,13 @@ export default function BusinessWorkspacePage({ screen }) {
 
                     <Field label="Ngày kết thúc (từ lịch)">
                       <input
-                        type="date"
-                        required
-                        value={booking.endDate}
-                        onChange={(event) => {
-                          setBooking({
-                            ...booking,
-                            endDate: event.target.value,
-                          });
-                          setCalendarValid(false);
-                        }}
+                        type="text"
+                        value={booking.endDate
+                          ? new Date(`${booking.endDate}T12:00:00`).toLocaleDateString("vi-VN")
+                          : ""}
+                        placeholder="Ngày kết thúc được chọn trên lịch"
+                        readOnly
+                        aria-readonly="true"
                       />
                     </Field>
                   </div>
@@ -1350,7 +1361,7 @@ export default function BusinessWorkspacePage({ screen }) {
                           <dd>
                             {time(contract.latest_proposal_start_at)}
                             {" đến "}
-                            {time(contract.latest_proposal_end_at)}
+                            {inclusiveProposalEnd(contract.latest_proposal_end_at)}
                           </dd>
                         </div>
                         <div>
@@ -1369,6 +1380,65 @@ export default function BusinessWorkspacePage({ screen }) {
                       </p>
                     </section>
                   )}
+                  {contract.status === "PENDING_REVIEW"
+                    && contract.latest_proposal_status === "REVISION_REQUESTED" && (
+                      <section className="dashboard-section">
+                        <h3>
+                          {contract.latest_proposal_response_type === "CONTRACT_INFO"
+                            ? "Đã gửi yêu cầu đổi thông tin hợp đồng"
+                            : "Đã gửi yêu cầu sửa điều khoản"}
+                        </h3>
+                        <p role="status" className="info-note">
+                          Ad Manager đang xem xét yêu cầu của bạn và sẽ gửi đề xuất cập nhật.
+                        </p>
+                        {contract.latest_proposal_response_reason && (
+                          <p style={{ whiteSpace: "pre-wrap" }}>
+                            <strong>Lý do đã gửi: </strong>{contract.latest_proposal_response_reason}
+                          </p>
+                        )}
+                      </section>
+                    )}
+                  {contract.status !== "PROPOSED"
+                    && contract.latest_proposal_id
+                    && ["SENT", "REVISION_REQUESTED"].includes(contract.latest_proposal_status) && (
+                      <section className="dashboard-section">
+                        <h3>Proposal gần nhất · phiên bản {contract.latest_proposal_revision_no}</h3>
+                        <dl className="business-details">
+                          <div>
+                            <dt>Thời gian đề xuất</dt>
+                            <dd>
+                              {time(contract.latest_proposal_start_at)}
+                              {" đến "}
+                              {inclusiveProposalEnd(contract.latest_proposal_end_at)}
+                            </dd>
+                          </div>
+                          {contract.latest_proposal_package_name && (
+                            <div>
+                              <dt>Package đề xuất</dt>
+                              <dd>{contract.latest_proposal_package_name}</dd>
+                            </div>
+                          )}
+                          {contract.latest_proposal_slot_name && (
+                            <div>
+                              <dt>Ad slot đề xuất</dt>
+                              <dd>{contract.latest_proposal_slot_name}</dd>
+                            </div>
+                          )}
+                          <div>
+                            <dt>Giá đề xuất</dt>
+                            <dd>{currency(contract.latest_proposal_amount)}</dd>
+                          </div>
+                          <div>
+                            <dt>Hạn phản hồi</dt>
+                            <dd>{time(contract.latest_proposal_expires_at)}</dd>
+                          </div>
+                        </dl>
+                        <p><strong>Điều khoản thương mại</strong></p>
+                        <p style={{ whiteSpace: "pre-wrap" }}>
+                          {contract.latest_proposal_terms || "Chưa có điều khoản."}
+                        </p>
+                      </section>
+                    )}
                   {contract.status === "PROPOSED" ? (
                     <>
                       <h3>Đề xuất hợp đồng từ Ad Manager</h3>
@@ -1384,9 +1454,21 @@ export default function BusinessWorkspacePage({ screen }) {
                               <dd>
                                 {time(contract.latest_proposal_start_at)}
                                 {" đến "}
-                                {time(contract.latest_proposal_end_at)}
+                                {inclusiveProposalEnd(contract.latest_proposal_end_at)}
                               </dd>
                             </div>
+                            {contract.latest_proposal_package_name && (
+                              <div>
+                                <dt>Package đề xuất</dt>
+                                <dd>{contract.latest_proposal_package_name}</dd>
+                              </div>
+                            )}
+                            {contract.latest_proposal_slot_name && (
+                              <div>
+                                <dt>Ad slot đề xuất</dt>
+                                <dd>{contract.latest_proposal_slot_name}</dd>
+                              </div>
+                            )}
                             <div>
                               <dt>Giá đề xuất</dt>
                               <dd>{currency(contract.latest_proposal_amount)}</dd>
@@ -1401,7 +1483,6 @@ export default function BusinessWorkspacePage({ screen }) {
                           <p style={{ whiteSpace: "pre-wrap" }}>
                             {contract.latest_proposal_terms}
                           </p>
-
                           {contract.latest_proposal_status === "SENT"
                             && new Date(
                               String(contract.latest_proposal_expires_at).replace(" ", "T"),
@@ -1414,6 +1495,14 @@ export default function BusinessWorkspacePage({ screen }) {
                               <div className="form-actions">
                                 <button
                                   type="button"
+                                  className="secondary-button"
+                                  aria-expanded={showProposalRevisionForm}
+                                  onClick={() => setShowProposalRevisionForm((shown) => !shown)}
+                                >
+                                  {showProposalRevisionForm ? "Ẩn yêu cầu" : "Gửi yêu cầu"}
+                                </button>
+                                <button
+                                  type="button"
                                   disabled={busy}
                                   onClick={() => handleProposalDecision("ACCEPT")}
                                 >
@@ -1421,30 +1510,43 @@ export default function BusinessWorkspacePage({ screen }) {
                                 </button>
                               </div>
 
-                              <form
-                                onSubmit={(event) => {
-                                  event.preventDefault();
-                                  handleProposalDecision("REQUEST_REVISION", proposalRevisionReason);
-                                }}
-                              >
-                                <label className="business-field">
-                                  <span>Lý do yêu cầu sửa điều khoản</span>
-                                  <textarea
-                                    required
-                                    maxLength={2000}
-                                    rows={4}
-                                    value={proposalRevisionReason}
-                                    onChange={(event) => setProposalRevisionReason(event.target.value)}
-                                  />
-                                </label>
-
-                                <button
-                                  type="submit"
-                                  disabled={busy || !proposalRevisionReason.trim()}
+                              {showProposalRevisionForm && (
+                                <form
+                                  onSubmit={(event) => {
+                                    event.preventDefault();
+                                    handleProposalDecision("REQUEST_REVISION", proposalRevisionReason, "TERMS");
+                                  }}
                                 >
-                                  Yêu cầu sửa điều khoản
-                                </button>
-                              </form>
+                                  <label className="business-field">
+                                    <span>Lý do yêu cầu</span>
+                                    <textarea
+                                      required
+                                      maxLength={2000}
+                                      rows={4}
+                                      value={proposalRevisionReason}
+                                      onChange={(event) => setProposalRevisionReason(event.target.value)}
+                                    />
+                                  </label>
+
+                                  <div className="form-actions">
+                                    <button
+                                      type="submit"
+                                      disabled={busy || !proposalRevisionReason.trim()}
+                                    >
+                                      Yêu cầu sửa điều khoản
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy || !proposalRevisionReason.trim()}
+                                      onClick={() => handleProposalDecision(
+                                        "REQUEST_REVISION", proposalRevisionReason, "CONTRACT_INFO",
+                                      )}
+                                    >
+                                      Yêu cầu đổi thông tin hợp đồng
+                                    </button>
+                                  </div>
+                                </form>
+                              )}
                             </>
                           ) : contract.latest_proposal_status === "REVISION_REQUESTED" ? (
                             <p role="status" className="info-note">
@@ -1465,10 +1567,9 @@ export default function BusinessWorkspacePage({ screen }) {
                   ) : contract.status === "REVISION_REQUESTED" ? (
                     <>
                       <p role="status" className="info-note">
-                        Quản lý yêu cầu chọn thời gian khác. Hãy sửa lịch booking, lưu thay đổi,
-                        rồi gửi lại để được xem xét.
+                        Quản lý yêu cầu thay đổi thông tin booking. Hãy sửa package, ad slot hoặc ngày,
+                        lưu thay đổi rồi gửi lại để được xem xét.
                       </p>
-
                       {editingBooking ? (
                         <ContractDraftEditor
                           key={contract.contract_id}
@@ -1501,7 +1602,7 @@ export default function BusinessWorkspacePage({ screen }) {
                               setMessage("");
                             }}
                           >
-                            Sửa thời gian booking
+                            Sửa thông tin booking
                           </button>
 
                           <button
