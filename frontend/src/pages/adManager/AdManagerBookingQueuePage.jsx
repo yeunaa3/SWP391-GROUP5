@@ -109,7 +109,6 @@ export default function AdManagerBookingQueuePage() {
         {state.data && <section className="dashboard-section">
             <div className="section-heading">
                 <div><p className="section-kicker">HÀNG CHỜ</p><h2>{state.data.total} yêu cầu</h2></div>
-                <span>Yêu cầu gửi sớm hơn hiển thị trước</span>
             </div>
             {state.data.items.length === 0 ? <div className="review-empty" role="status">
                 <h3>Chưa có yêu cầu phù hợp</h3><p>Hãy thay đổi bộ lọc hoặc kiểm tra lại sau.</p>

@@ -884,7 +884,10 @@ export default function BusinessWorkspacePage({ screen }) {
             </section>
           )}
 
+
           {/* UC-25/BUS-07: form tạo yêu cầu đặt quảng cáo, hiển thị khi hồ sơ hợp tác đã được duyệt. */}
+
+
           {screen.id === "BUS-07" &&
             (() => {
               // Tìm thông tin vị trí và gói đã chọn để tính toán và validate
@@ -1245,7 +1248,9 @@ export default function BusinessWorkspacePage({ screen }) {
               );
             })()}
 
+
           {/* UC-25/BUS-11: danh sách hợp đồng và yêu cầu đã gửi, hiển thị khi khách đã có hợp đồng. */}
+
           {screen.id === "BUS-11" && (
             <section className="dashboard-section">
               <div className="section-heading">

@@ -49,7 +49,7 @@ export default function WorkspaceLayout({ area }) {
       !screen.path.includes(":") &&
       (!screen.roles?.length || screen.roles.some((role) => user?.roles?.includes(role)))
   );
-
+// Lấy danh sách các nhóm menu (feature) để hiển thị trong sidebar
   const navigationGroups = [
     ...new Set(
       navigation
@@ -57,9 +57,9 @@ export default function WorkspaceLayout({ area }) {
         .map((screen) => screen.feature)
     ),
   ];
-
+// Hiển thị tên người dùng ở góc dưới sidebar
   const displayName = user?.fullName || user?.username || "Demo User";
-
+// Hàm xác định icon cho từng mục menu dựa trên tên của màn hình
   const iconFor = (name) =>
     /Dashboard/.test(name)
       ? "grid"

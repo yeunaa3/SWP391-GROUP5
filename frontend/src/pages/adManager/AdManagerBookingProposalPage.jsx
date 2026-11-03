@@ -18,7 +18,7 @@ function showMoney(value, currency = "VND") {
 
 
 function defaultExpiryValue() {
-    const date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const date = new Date(Date.now() +  60 * 60 * 1000);
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
     return localDate.toISOString().slice(0, 16);
 }
@@ -233,15 +233,6 @@ export default function AdManagerBookingProposalPage() {
                         </dl>
                     </section>
 
-                    {detail.latestProposal?.status === "REVISION_REQUESTED" && (
-                        <section className="dashboard-section">
-                            <h2>Yêu cầu sửa điều khoản từ Business</h2>
-                            <p style={{ whiteSpace: "pre-wrap" }}>
-                                {detail.latestProposal.businessResponseReason
-                                    || "Business chưa ghi rõ lý do."}
-                            </p>
-                        </section>
-                    )}
 
                     <section className="dashboard-section">
                         <h2>Xung đột lịch</h2>
@@ -305,6 +296,16 @@ export default function AdManagerBookingProposalPage() {
                             </p>
                         )}
                     </section>
+
+                    {detail.latestProposal?.status === "REVISION_REQUESTED" && (
+                        <section className="dashboard-section">
+                            <h2>Yêu cầu sửa điều khoản từ Business</h2>
+                            <p style={{ whiteSpace: "pre-wrap" }}>
+                                {detail.latestProposal.businessResponseReason
+                                    || "Business chưa ghi rõ lý do."}
+                            </p>
+                        </section>
+                    )}  
 
                     {feedback && (
                         <p className="info-note" role="status">
