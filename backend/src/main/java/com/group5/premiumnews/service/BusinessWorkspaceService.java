@@ -293,10 +293,15 @@ public class BusinessWorkspaceService {
             if ("REVISION_REQUESTED".equals(existingBooking.get("status"))) {
                 LocalDateTime previousStart = dateTime(existingBooking.get("start_at"));
                 LocalDateTime previousEnd = dateTime(existingBooking.get("end_at"));
+                long previousPackageId = ((Number) existingBooking.get("b2b_package_id")).longValue();
+                long previousSlotId = ((Number) existingBooking.get("slot_id")).longValue();
 
-                if (start.equals(previousStart) && end.equals(previousEnd)) {
+                if (request.packageId() == previousPackageId
+                        && request.slotId() == previousSlotId
+                        && start.equals(previousStart)
+                        && end.equals(previousEnd)) {
                     throw new InvalidStateTransitionException(
-                            "Hãy chọn khoảng thời gian mới trước khi lưu booking.");
+                            "Hãy thay đổi package, ad slot hoặc khoảng thời gian trước khi gửi lại booking.");
                 }
             }
         }
@@ -358,7 +363,11 @@ public class BusinessWorkspaceService {
                 "UPDATE contracts SET quote_snapshot=JSON_OBJECT('packagePrice',?,'slotMonthlyPrice',?,'days',?,'total',?,'currency',?,'quotedAt',CURRENT_TIMESTAMP(6)) WHERE contract_id=?",
                 pack.get("price"), slot.get("base_price"), days, price, slot.get("currency"), contract);
         if (submit) {
-            submitBooking(user, contract);
+            if (existingBooking == null) {
+                submitBooking(user, contract);
+            } else {
+                submitBooking(user, contract, request.expectedRevisionNo() + 1);
+            }
         }
         String resultStatus = submit
                 ? "PENDING_REVIEW"
@@ -642,7 +651,7 @@ public class BusinessWorkspaceService {
         }
 
         if ("REVISION_REQUESTED".equals(currentStatus)) {
-            requireDifferentFromRequestedPeriod(id, start, end);
+            requireDifferentFromRequestedBooking(id, contract);
         }
 
         one("SELECT * FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",
@@ -692,12 +701,13 @@ public class BusinessWorkspaceService {
         return booking;
     }
 
-    private void requireDifferentFromRequestedPeriod(
+    private void requireDifferentFromRequestedBooking(
             Long contractId,
-            LocalDateTime currentStart,
-            LocalDateTime currentEnd) {
+            Map<String, Object> currentBooking) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT
+                    JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.packageId')) AS previous_package_id,
+                    JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.slotId')) AS previous_slot_id,
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.startAt')) AS DATETIME(6))
                         AS previous_start,
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.endAt')) AS DATETIME(6))
@@ -705,7 +715,7 @@ public class BusinessWorkspaceService {
                 FROM audit_logs
                 WHERE entity_type='CONTRACT'
                   AND entity_id=?
-                  AND action='REQUEST_ANOTHER_PERIOD'
+                  AND action='MANAGER_REQUEST_CONTRACT_CHANGE'
                 ORDER BY audit_log_id DESC
                 LIMIT 1
                 """, String.valueOf(contractId));
@@ -715,12 +725,22 @@ public class BusinessWorkspaceService {
                     "Không tìm thấy yêu cầu đổi thời gian. Hãy tải lại booking.");
         }
 
-        LocalDateTime previousStart = dateTime(rows.getFirst().get("previous_start"));
-        LocalDateTime previousEnd = dateTime(rows.getFirst().get("previous_end"));
+        Map<String, Object> previous = rows.getFirst();
+        long previousPackageId = Long.parseLong(String.valueOf(previous.get("previous_package_id")));
+        long previousSlotId = Long.parseLong(String.valueOf(previous.get("previous_slot_id")));
+        LocalDateTime previousStart = dateTime(previous.get("previous_start"));
+        LocalDateTime previousEnd = dateTime(previous.get("previous_end"));
+        long currentPackageId = ((Number) currentBooking.get("b2b_package_id")).longValue();
+        long currentSlotId = ((Number) currentBooking.get("slot_id")).longValue();
+        LocalDateTime currentStart = dateTime(currentBooking.get("start_at"));
+        LocalDateTime currentEnd = dateTime(currentBooking.get("end_at"));
 
-        if (currentStart.equals(previousStart) && currentEnd.equals(previousEnd)) {
+        if (currentPackageId == previousPackageId
+                && currentSlotId == previousSlotId
+                && currentStart.equals(previousStart)
+                && currentEnd.equals(previousEnd)) {
             throw new InvalidStateTransitionException(
-                    "Booking cần có khoảng thời gian mới trước khi gửi lại.");
+                    "Hãy thay đổi package, ad slot hoặc khoảng thời gian trước khi gửi lại booking.");
         }
     }
 

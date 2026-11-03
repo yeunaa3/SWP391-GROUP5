@@ -23,9 +23,11 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
   const [error, setError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
   const [cutoff, setCutoff] = useState("");
+  const [selectionError, setSelectionError] = useState("");
 
   const callbackRef = useRef(onSelectRange);
   callbackRef.current = onSelectRange;
+  const previousSelectionRef = useRef({ slotId, packageId });
 
   const today = useMemo(() => isoDay(new Date()), []);
 
@@ -63,12 +65,26 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
 
   // Đồng bộ callback ra ngoài
   useEffect(() => {
+    const selectionChanged = previousSelectionRef.current.slotId !== slotId
+      || previousSelectionRef.current.packageId !== packageId;
+    previousSelectionRef.current = { slotId, packageId };
     callbackRef.current?.({ startDate, endDate, isValid: !validation, errorMessage: validation });
+    if (selectionChanged || startDate || endDate) setSelectionError("");
   }, [startDate, endDate, slotId, packageId, validation]);
+
+  function rejectSelection(message) {
+    setSelectionError(message);
+    callbackRef.current?.({ startDate: "", endDate: "", isValid: false, errorMessage: message });
+  }
 
   // Hàm chọn range
   function select(start, end) {
     const message = validateRange({ start, end, slot: slotId, duration, windows, ready: state === "ready" });
+    if (message) {
+      rejectSelection(message);
+      return;
+    }
+    setSelectionError("");
     callbackRef.current?.({ startDate: start, endDate: end, isValid: !message, errorMessage: message });
   }
 
@@ -76,8 +92,12 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
   function choose(day) {
     if (!startDate || endDate || day < startDate) {
       const end = duration ? addDays(day, duration - 1) : "";
-      const isValidEnd = end && !validateRange({ start: day, end, slot: slotId, duration, windows, ready: state === "ready" });
-      select(day, isValidEnd ? end : "");
+      const message = validateRange({ start: day, end, slot: slotId, duration, windows, ready: state === "ready" });
+      if (message) {
+        rejectSelection(message);
+        return;
+      }
+      select(day, end);
     } else {
       select(startDate, day);
     }
@@ -169,8 +189,8 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
         </>
       )}
 
-      {validation ? (
-        <p className="info-note" role="status">{validation}</p>
+      {selectionError || validation ? (
+        <p className="info-note" role="status">{selectionError || validation}</p>
       ) : (
         showSuccessMessage && (
           <p className="success-message">

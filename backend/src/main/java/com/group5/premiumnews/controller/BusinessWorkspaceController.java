@@ -86,6 +86,12 @@ public class BusinessWorkspaceController {
         return service.saveBooking(user, id, request, false);
     }
 
+    @PutMapping("/bookings/{id}/submit")
+    public Map<String, Object> updateAndSubmitBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id, @Valid @RequestBody BusinessRequests.Booking request) {
+        return service.saveBooking(user, id, request, true);
+    }
+
     @DeleteMapping("/bookings/{id}")
     public Map<String, Object> deleteBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @PathVariable Long id) {

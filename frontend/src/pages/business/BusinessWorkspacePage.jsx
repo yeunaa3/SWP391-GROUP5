@@ -1643,8 +1643,7 @@ export default function BusinessWorkspacePage({ screen }) {
                   ) : contract.status === "REVISION_REQUESTED" ? (
                     <>
                       <p role="status" className="info-note">
-                        Quản lý yêu cầu thay đổi thông tin booking. Hãy sửa package, ad slot hoặc ngày,
-                        lưu thay đổi rồi gửi lại để được xem xét.
+                        Quản lý yêu cầu thay đổi thông tin booking. Nếu đổi package hoặc ad slot, hãy chọn lại khoảng ngày trên lịch rồi gửi booking.
                       </p>
                       {editingBooking ? (
                         <ContractDraftEditor
@@ -1652,16 +1651,17 @@ export default function BusinessWorkspacePage({ screen }) {
                           contract={contract}
                           catalog={catalog}
                           busy={busy}
+                          submitImmediately
                           onCancel={() => setEditingBooking(false)}
                           onSave={(payload) =>
                             action(
                               () =>
                                 json(
-                                  `/api/business/bookings/${contract.contract_id}`,
+                                  `/api/business/bookings/${contract.contract_id}/submit`,
                                   payload,
                                   "PUT",
                                 ),
-                              "Đã lưu thay đổi. Gửi lại booking để quản lý xem xét.",
+                              "Đã lưu và gửi lại booking để quản lý xem xét.",
                               () => setEditingBooking(false),
                             )
                           }
@@ -1681,26 +1681,6 @@ export default function BusinessWorkspacePage({ screen }) {
                             Sửa thông tin booking
                           </button>
 
-                          <button
-                            disabled={busy || data.company.application_status !== "APPROVED"}
-                            onClick={() =>
-                              action(
-                                () =>
-                                  apiRequest(
-                                    `/api/business/bookings/${contract.contract_id}/submit`,
-                                    {
-                                      method: "POST",
-                                      body: JSON.stringify({
-                                        expectedRevisionNo: Number(contract.revision_no),
-                                      }),
-                                    },
-                                  ),
-                                "Đã gửi lại booking để quản lý xem xét.",
-                              )
-                            }
-                          >
-                            {busy ? "Đang gửi…" : "Gửi lại booking"}
-                          </button>
                         </div>
                       )}
                     </>
