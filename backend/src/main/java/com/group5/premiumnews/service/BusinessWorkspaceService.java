@@ -22,9 +22,11 @@ import java.util.*;
 public class BusinessWorkspaceService {
 
     private final JdbcTemplate jdbc;// dùng để viết với SQL trực tiếp
+    private final BusinessAssetStorage storage;
 
-    public BusinessWorkspaceService(JdbcTemplate jdbc) {
+    public BusinessWorkspaceService(JdbcTemplate jdbc, BusinessAssetStorage storage) {
         this.jdbc = jdbc;
+        this.storage = storage;
     }
 
     // Resolve membership from DB on every request: sessions created before company
@@ -178,6 +180,7 @@ public class BusinessWorkspaceService {
             throw new InvalidStateTransitionException(
                     "Hồ sơ chỉ được gửi tối đa 5 tài liệu. Vui lòng gỡ tài liệu không dùng.");
         }
+        requireAvailableApplicationDocuments(id, count);
         int nextVersion = ((Number) c.get("application_version")).intValue() + 1;
         String nextStatus = "NEEDS_REVISION".equals(state) ? "RESUBMITTED" : "PENDING_REVIEW";
         String priority = "NEEDS_REVISION".equals(state) ? "HIGH" : "NORMAL";
@@ -202,6 +205,21 @@ public class BusinessWorkspaceService {
                 id, nextVersion);
         audit(user, "SUBMIT_APPLICATION", "COMPANY", id);
         return overview(user);
+    }
+
+    /**
+     * BUS-03: chỉ gửi phiên bản hồ sơ khi mọi tài liệu còn đọc được trong kho.
+     * Metadata trong DB không đủ để xác nhận tệp vẫn tồn tại.
+     */
+    private void requireAvailableApplicationDocuments(Long companyId, int expectedCount) {
+        List<Map<String, Object>> documents = jdbc.queryForList(
+                "SELECT document_id,storage_object_key FROM company_documents WHERE company_id=? AND status='ACTIVE'",
+                companyId);
+        if (documents.size() != expectedCount || documents.stream().anyMatch(document ->
+                !storage.available((String) document.get("storage_object_key")))) {
+            throw new InvalidStateTransitionException(
+                    "Có tài liệu không còn khả dụng trên kho lưu trữ. Hãy gỡ tài liệu lỗi, tải lại và kiểm tra trước khi gửi.");
+        }
     }
 
     /**
