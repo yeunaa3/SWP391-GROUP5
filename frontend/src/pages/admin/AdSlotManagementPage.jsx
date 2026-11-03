@@ -16,6 +16,82 @@ const emptyDraft = {
   status: "ACTIVE",
 };
 
+const STANDARD_POSITIONS = [
+  {
+    code: "HOME_HERO",
+    name: "Banner đầu trang chủ (Home Hero)",
+    scope: "HOME",
+    width: 1200,
+    height: 300,
+    price: 7500000,
+    label: "HOME_HERO · Đầu trang chủ (1200 × 300 px)",
+  },
+  {
+    code: "HOME_MIDDLE",
+    name: "Banner giữa trang chủ (Billboard)",
+    scope: "HOME",
+    width: 970,
+    height: 250,
+    price: 6000000,
+    label: "HOME_MIDDLE · Giữa trang chủ (970 × 250 px)",
+  },
+  {
+    code: "ARTICLE_TOP",
+    name: "Banner đầu bài viết (Article Top)",
+    scope: "ARTICLE",
+    width: 728,
+    height: 90,
+    price: 4500000,
+    label: "ARTICLE_TOP · Đầu bài viết (728 × 90 px)",
+  },
+  {
+    code: "ARTICLE_SIDEBAR",
+    name: "Banner cột phải bài viết (Sidebar Skyscraper)",
+    scope: "ARTICLE_SIDEBAR",
+    width: 300,
+    height: 600,
+    price: 5000000,
+    label: "ARTICLE_SIDEBAR · Cột phải bài viết (300 × 600 px)",
+  },
+  {
+    code: "ARTICLE_SIDEBAR_RECT",
+    name: "Banner vuông cột phải (Medium Rectangle)",
+    scope: "ARTICLE_SIDEBAR",
+    width: 300,
+    height: 250,
+    price: 3500000,
+    label: "ARTICLE_SIDEBAR_RECT · Cột bên vuông (300 × 250 px)",
+  },
+  {
+    code: "ARTICLE_BOTTOM",
+    name: "Banner cuối bài viết (Article Bottom)",
+    scope: "ARTICLE",
+    width: 728,
+    height: 90,
+    price: 3000000,
+    label: "ARTICLE_BOTTOM · Chân bài viết (728 × 90 px)",
+  },
+  {
+    code: "CATEGORY_HERO",
+    name: "Banner đầu trang chuyên mục",
+    scope: "CATEGORY",
+    width: 1200,
+    height: 300,
+    price: 5500000,
+    label: "CATEGORY_HERO · Đầu chuyên mục (1200 × 300 px)",
+  },
+];
+
+const STANDARD_DIMENSIONS = [
+  { label: "1200 × 300 (Hero Banner)", w: 1200, h: 300 },
+  { label: "970 × 250 (Billboard)", w: 970, h: 250 },
+  { label: "728 × 90 (Leaderboard)", w: 728, h: 90 },
+  { label: "300 × 600 (Skyscraper)", w: 300, h: 600 },
+  { label: "300 × 250 (Chữ nhật vừa)", w: 300, h: 250 },
+];
+
+const PRICE_PRESETS = [3000000, 4500000, 5000000, 6000000, 7500000, 10000000];
+
 function money(value) {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -43,26 +119,14 @@ function makeDraft(slot) {
 /**
  * ============================================================================
  * [CFG-04] MINH HỌA TRỰC QUAN VỊ TRÍ QUẢNG CÁO (LIVE INTERACTIVE MOCKUP)
- * Mô phỏng trực tiếp layout website The Pulse theo thời gian thực:
- * - Thay đổi kích thước (width x height) -> Box quảng cáo co giãn aspect ratio tự động.
- * - Thay đổi vị trí (HOME, ARTICLE, SIDEBAR) -> Banner nhảy đúng vị trí trên giao diện mẫu.
- * - Đổi trạng thái, tên, giá -> Các chỉ số trên banner cập nhật ngay lập tức.
  * ============================================================================
  */
-function AdSlotVisualMockup({ draft, setDraft }) {
+function AdSlotVisualMockup({ draft }) {
   const width = Math.max(10, Number(draft.width) || 1200);
   const height = Math.max(10, Number(draft.height) || 300);
   const ratio = (width / height).toFixed(2);
   const isHome = String(draft.pageScope || draft.positionCode || "").toUpperCase().includes("HOME");
   const isSidebar = String(draft.pageScope || draft.positionCode || "").toUpperCase().includes("SIDEBAR");
-
-  const presets = [
-    { label: "1200 × 300 (Hero Banner)", w: 1200, h: 300, scope: "HOME" },
-    { label: "970 × 250 (Billboard)", w: 970, h: 250, scope: "HOME" },
-    { label: "728 × 90 (Leaderboard)", w: 728, h: 90, scope: "ARTICLE" },
-    { label: "300 × 250 (In-Article)", w: 300, h: 250, scope: "ARTICLE" },
-    { label: "300 × 600 (Half Page / Sidebar)", w: 300, h: 600, scope: "ARTICLE_SIDEBAR" },
-  ];
 
   return (
     <div className="ad-slot-mockup-container">
@@ -139,64 +203,47 @@ function AdSlotVisualMockup({ draft, setDraft }) {
                 <div className="mockup-banner-title" style={{ fontSize: "12px" }}>
                   {draft.name || "Sidebar Slot"}
                 </div>
-                <div className="mockup-banner-specs" style={{ fontSize: "10.5px" }}>
-                  {draft.width || 0} × {draft.height || 0}
+                <div className="mockup-banner-specs" style={{ fontSize: "10px" }}>
+                  {draft.width} × {draft.height}
                 </div>
                 <div className="mockup-banner-price" style={{ fontSize: "11px" }}>
-                  {money(draft.basePrice)}
+                  <strong>{money(draft.basePrice)}</strong>
                 </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="mockup-article-main">
-            <div className="mockup-line title"></div>
-            <div className="mockup-line"></div>
-            {/* Banner trong luồng đọc bài viết */}
+          <div>
             <div
               className={`mockup-ad-banner-box ${draft.status === "INACTIVE" ? "inactive" : ""}`}
               style={{
-                minHeight: Math.min(130, Math.max(65, (height / width) * 320)),
-                margin: "8px 0",
+                minHeight: Math.min(90, Math.max(50, (height / width) * 360)),
+                marginBottom: "12px",
               }}
             >
-              <span className="mockup-banner-badge">IN-ARTICLE</span>
-              <div className="mockup-banner-title">{draft.name || "Banner bài viết"}</div>
-              <div className="mockup-banner-specs">
-                {draft.width || 0} × {draft.height || 0} px · Tỷ lệ ~{ratio}:1
-              </div>
-              <div className="mockup-banner-price">{money(draft.basePrice)}</div>
+              <span className="mockup-banner-badge">{draft.positionCode || "ARTICLE_TOP"}</span>
+              <div className="mockup-banner-title" style={{ fontSize: "12px" }}>{draft.name || "Banner bài viết"}</div>
+              <div className="mockup-banner-specs">{draft.width} × {draft.height} px · {money(draft.basePrice)} / ngày</div>
             </div>
-            <div className="mockup-line"></div>
-            <div className="mockup-line short"></div>
+
+            <div className="mockup-article-main">
+              <div className="mockup-line title"></div>
+              <div className="mockup-line"></div>
+              <div className="mockup-line"></div>
+              <div className="mockup-line short"></div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dải nút chọn nhanh kích thước chuẩn quốc tế (IAB Presets) */}
-      <div style={{ padding: "12px 16px", background: "#f1f5f9", borderTop: "1px solid #cbd5e1" }}>
-        <div className="preset-pills-label">Gợi ý kích thước chuẩn quốc tế (IAB):</div>
-        <div className="preset-pills" style={{ marginTop: "6px" }}>
-          {presets.map((p) => (
-            <button
-              key={p.label}
-              type="button"
-              className={`preset-pill-btn ${
-                Number(draft.width) === p.w && Number(draft.height) === p.h ? "active" : ""
-              }`}
-              onClick={() => {
-                setDraft((prev) => ({
-                  ...prev,
-                  width: String(p.w),
-                  height: String(p.h),
-                  pageScope: prev.pageScope || p.scope,
-                }));
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      {/* Thanh chân ghi chú trực quan */}
+      <div className="mockup-footer-note" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>
+          Bố cục: <strong>{isHome ? "Trang chủ (Home)" : isSidebar ? "Cột bên bài viết (Sidebar)" : "Đầu bài viết (Article)"}</strong>
+        </span>
+        <span style={{ fontWeight: "700", color: draft.status === "ACTIVE" ? "#10b981" : "#ef4444" }}>
+          {draft.status === "ACTIVE" ? "● Đang hoạt động" : "○ Đã tắt"}
+        </span>
       </div>
     </div>
   );
@@ -276,6 +323,38 @@ export default function AdSlotManagementPage() {
     setDraft((current) => ({
       ...current,
       [name]: name === "positionCode" ? value.toUpperCase() : value,
+    }));
+  }
+
+  function handleSelectPresetPosition(e) {
+    const code = e.target.value;
+    if (!code) return;
+    const found = STANDARD_POSITIONS.find((p) => p.code === code);
+    if (found) {
+      setDraft((current) => ({
+        ...current,
+        positionCode: found.code,
+        name: found.name,
+        pageScope: found.scope,
+        width: String(found.width),
+        height: String(found.height),
+        basePrice: String(found.price),
+      }));
+    }
+  }
+
+  function handleSelectDimension(w, h) {
+    setDraft((current) => ({
+      ...current,
+      width: String(w),
+      height: String(h),
+    }));
+  }
+
+  function handleSelectPrice(price) {
+    setDraft((current) => ({
+      ...current,
+      basePrice: String(price),
     }));
   }
 
@@ -511,6 +590,25 @@ export default function AdSlotManagementPage() {
           <div className="admin-split-editor">
             {/* Cột trái: Form nhập thông tin vị trí */}
             <form className="admin-editor-column" onSubmit={saveSlot}>
+              {/* LỰA CHỌN NHANH VỊ TRÍ MẪU */}
+              <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                <label style={{ fontSize: "12px", fontWeight: "700", color: "#0f172a", marginBottom: "6px", display: "block" }}>
+                  ⚡ Chọn nhanh vị trí mẫu (Tự động điền đầy đủ):
+                </label>
+                <select
+                  defaultValue=""
+                  onChange={handleSelectPresetPosition}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #94a3b8", fontSize: "13px", background: "#ffffff" }}
+                >
+                  <option value="">-- Bấm vào đây để chọn vị trí chuẩn --</option>
+                  {STANDARD_POSITIONS.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <label>
                 Mã vị trí (UPPERCASE)
                 <input
@@ -535,58 +633,99 @@ export default function AdSlotManagementPage() {
                 />
               </label>
 
+              {/* NƠI HIỂN THỊ CHỌN TỪ DROPDOWN */}
               <label>
                 Nơi hiển thị (Page Scope)
-                <input
+                <select
                   name="pageScope"
                   value={draft.pageScope}
                   onChange={changeField}
-                  maxLength={50}
-                  placeholder="VD: HOME, ARTICLE, ARTICLE_SIDEBAR..."
-                  required
-                />
+                >
+                  <option value="HOME">Trang chủ (HOME)</option>
+                  <option value="ARTICLE">Bài viết (ARTICLE)</option>
+                  <option value="ARTICLE_SIDEBAR">Cột bên bài viết (ARTICLE_SIDEBAR)</option>
+                  <option value="CATEGORY">Chuyên mục tin (CATEGORY)</option>
+                  <option value="GLOBAL">Toàn bộ trang web (GLOBAL)</option>
+                </select>
               </label>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <label>
-                  Chiều rộng (px)
-                  <input
-                    name="width"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={draft.width}
-                    onChange={changeField}
-                    required
-                  />
+              {/* CHỌN NHANH KÍCH THƯỚC CHUẨN */}
+              <div>
+                <label style={{ fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "6px", display: "block" }}>
+                  Kích thước chuẩn (px):
                 </label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "8px" }}>
+                  {STANDARD_DIMENSIONS.map((dim) => {
+                    const active = Number(draft.width) === dim.w && Number(draft.height) === dim.h;
+                    return (
+                      <button
+                        key={dim.label}
+                        type="button"
+                        className={`preset-pill-btn ${active ? "active" : ""}`}
+                        onClick={() => handleSelectDimension(dim.w, dim.h)}
+                        style={{ fontSize: "11px", padding: "4px 8px" }}
+                      >
+                        {dim.label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                <label>
-                  Chiều cao (px)
-                  <input
-                    name="height"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={draft.height}
-                    onChange={changeField}
-                    required
-                  />
-                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <label>
+                    Chiều rộng (px)
+                    <input
+                      name="width"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={draft.width}
+                      onChange={changeField}
+                      required
+                    />
+                  </label>
+
+                  <label>
+                    Chiều cao (px)
+                    <input
+                      name="height"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={draft.height}
+                      onChange={changeField}
+                      required
+                    />
+                  </label>
+                </div>
               </div>
 
+              {/* CHỌN NHANH GIÁ CƠ BẢN */}
               <label>
                 Giá cơ bản (VND / ngày)
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 8px" }}>
+                  {PRICE_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`preset-pill-btn ${Number(draft.basePrice) === p ? "active" : ""}`}
+                      onClick={() => handleSelectPrice(p)}
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      {money(p)}
+                    </button>
+                  ))}
+                </div>
                 <input
                   name="basePrice"
                   type="number"
                   min="0"
-                  step="1"
+                  step="1000"
                   value={draft.basePrice}
                   onChange={changeField}
                   required
                 />
-                <small style={{ color: "#059669", fontWeight: "600", marginTop: "4px" }}>
+                <small style={{ color: "#334155", fontWeight: "600", marginTop: "4px" }}>
                   Giá hiển thị: {money(draft.basePrice)} / ngày
                 </small>
               </label>
@@ -599,22 +738,36 @@ export default function AdSlotManagementPage() {
                 </select>
               </label>
 
-              <div className="form-actions" style={{ marginTop: "12px" }}>
-                <button type="submit" disabled={saving}>
-                  {saving ? "Đang lưu..." : selectedSlot ? "Lưu thay đổi" : "Tạo vị trí"}
-                </button>
+              <div className="ad-slot-form-actions">
                 <button
                   type="button"
                   className="secondary-button"
+                  disabled={saving}
                   onClick={() => setEditorOpen(false)}
                 >
                   Hủy
                 </button>
+                <button type="submit" disabled={saving}>
+                  {saving
+                    ? "Đang lưu..."
+                    : selectedSlot
+                      ? "Lưu thay đổi vị trí"
+                      : "Tạo vị trí"}
+                </button>
               </div>
             </form>
 
-            {/* Cột phải: Minh họa trực quan layout trang web The Pulse thay đổi theo thời gian thực */}
-            <AdSlotVisualMockup draft={draft} setDraft={setDraft} />
+            {/* Cột phải: Live Mockup trực quan */}
+            <div className="admin-editor-column">
+              <div className="mockup-info-badge">
+                <span>👁️ Mô phỏng giao diện The Pulse trực tiếp</span>
+              </div>
+              <AdSlotVisualMockup draft={draft} />
+              <div className="mockup-hint-box" style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "11.5px", color: "#64748b", lineHeight: "1.5" }}>
+                <strong>💡 Hướng dẫn nhanh:</strong>
+                Chọn nhanh một trong các vị trí mẫu ở trên để hệ thống tự điền mã, kích thước tỷ lệ và giá gợi ý. Hình minh họa bên trên sẽ lập tức nhảy đến đúng vị trí hiển thị tương ứng.
+              </div>
+            </div>
           </div>
         </ModalShell>
       )}

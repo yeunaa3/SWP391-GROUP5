@@ -16,6 +16,49 @@ const emptyForm = {
   status: "ACTIVE",
 };
 
+const STANDARD_PACKAGES = [
+  {
+    code: "STARTER_30D",
+    name: "Gói Khởi Động 30 Ngày",
+    durationDays: 30,
+    impressionsQuota: 100000,
+    price: 15000000,
+    description: "Gói cơ bản tiếp cận 100.000 lượt xem trong 30 ngày cho các doanh nghiệp vừa và nhỏ.",
+    label: "STARTER_30D · Khởi động (30 ngày · 100k lượt · 15 triệu)",
+  },
+  {
+    code: "GROWTH_30D",
+    name: "Gói Tăng Trưởng 30 Ngày",
+    durationDays: 30,
+    impressionsQuota: 250000,
+    price: 30000000,
+    description: "Gói mở rộng tối ưu tương tác với 250.000 lượt hiển thị chất lượng cao trên các chuyên mục.",
+    label: "GROWTH_30D · Tăng trưởng (30 ngày · 250k lượt · 30 triệu)",
+  },
+  {
+    code: "ENTERPRISE_60D",
+    name: "Gói Doanh Nghiệp 60 Ngày",
+    durationDays: 60,
+    impressionsQuota: 500000,
+    price: 55000000,
+    description: "Gói phủ sóng thương hiệu liên tục 60 ngày với 500.000 impressions đa vị trí.",
+    label: "ENTERPRISE_60D · Doanh nghiệp (60 ngày · 500k lượt · 55 triệu)",
+  },
+  {
+    code: "PREMIUM_VIP_90D",
+    name: "Gói Toàn Diện VIP 90 Ngày",
+    durationDays: 90,
+    impressionsQuota: 1000000,
+    price: 99000000,
+    description: "Gói đối tác chiến lược 90 ngày với 1.000.000 lượt hiển thị cao cấp, ưu tiên phân bổ tối đa.",
+    label: "PREMIUM_VIP_90D · VIP (90 ngày · 1.000k lượt · 99 triệu)",
+  },
+];
+
+const DURATION_PRESETS = [7, 14, 30, 60, 90, 180];
+const QUOTA_PRESETS = [50000, 100000, 250000, 500000, 1000000, 2000000];
+const PACKAGE_PRICE_PRESETS = [10000000, 15000000, 30000000, 55000000, 99000000];
+
 function money(value, currency = "VND") {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -50,10 +93,6 @@ function formFrom(item) {
 /**
  * ============================================================================
  * [CFG-05] THẺ XEM TRƯỚC GÓI QUẢNG CÁO B2B (LIVE CARD PREVIEW)
- * Hiển thị thẻ gói sang trọng, tự động tính toán các chỉ số marketing:
- * - Đơn giá CPM ước tính: (Giá / Hạn mức) * 1.000
- * - Phân bổ lượt hiển thị: Hạn mức / Số ngày
- * - Huy hiệu trạng thái và cam kết phân phối
  * ============================================================================
  */
 function B2bPackageVisualCard({ form }) {
@@ -188,6 +227,23 @@ export default function B2bPackageManagementPage() {
     }));
   }
 
+  function handleSelectTemplate(e) {
+    const code = e.target.value;
+    if (!code) return;
+    const found = STANDARD_PACKAGES.find((p) => p.code === code);
+    if (found) {
+      setForm((current) => ({
+        ...current,
+        code: found.code,
+        name: found.name,
+        durationDays: String(found.durationDays),
+        impressionsQuota: String(found.impressionsQuota),
+        price: String(found.price),
+        description: found.description,
+      }));
+    }
+  }
+
   function applyPreset(field, val) {
     setForm((current) => ({
       ...current,
@@ -266,7 +322,7 @@ export default function B2bPackageManagementPage() {
             Quản lý thời hạn, hạn mức impressions, giá và trạng thái gói quảng cáo B2B.
           </p>
         </div>
-        <button type="button" onClick={openCreate}>Tạo gói mới</button>
+        <button type="button" onClick={openCreate}>＋ Tạo gói mới</button>
       </header>
 
       {notice && <p role="status" className="notice-banner">{notice}</p>}
@@ -398,6 +454,25 @@ export default function B2bPackageManagementPage() {
             <form className="ad-slot-form" onSubmit={savePackage}>
               {error && <p role="alert" className="form-error">{error}</p>}
 
+              {/* LỰA CHỌN GÓI MẪU CÓ SẴN */}
+              <div style={{ background: "#f8fafc", padding: "12px 14px", borderRadius: "10px", border: "1px solid #cbd5e1" }}>
+                <label style={{ fontSize: "12px", fontWeight: "700", color: "#0f172a", marginBottom: "6px", display: "block" }}>
+                  ⚡ Chọn nhanh mẫu gói (Tự động điền đầy đủ cấu hình):
+                </label>
+                <select
+                  defaultValue=""
+                  onChange={handleSelectTemplate}
+                  style={{ width: "100%", padding: "9px 12px", borderRadius: "8px", border: "1px solid #94a3b8", fontSize: "13px", background: "#ffffff" }}
+                >
+                  <option value="">-- Bấm vào đây để chọn gói mẫu --</option>
+                  {STANDARD_PACKAGES.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <label>
                 Mã gói (In hoa, không dấu)
                 <input
@@ -422,8 +497,22 @@ export default function B2bPackageManagementPage() {
                 />
               </label>
 
+              {/* CHỌN NHANH GIÁ GÓI */}
               <label>
                 Giá gói (VND)
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 8px" }}>
+                  {PACKAGE_PRICE_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`preset-pill-btn ${Number(form.price) === p ? "active" : ""}`}
+                      onClick={() => applyPreset("price", p)}
+                      style={{ fontSize: "11px", padding: "4px 8px" }}
+                    >
+                      {money(p)}
+                    </button>
+                  ))}
+                </div>
                 <input
                   name="price"
                   type="number"
@@ -435,10 +524,11 @@ export default function B2bPackageManagementPage() {
                 />
               </label>
 
+              {/* CHỌN NHANH THỜI HẠN */}
               <div className="preset-pills-wrap">
                 <span className="preset-pills-label">Thời hạn chiến dịch:</span>
                 <div className="preset-pills">
-                  {[7, 14, 30, 60, 90].map((days) => (
+                  {DURATION_PRESETS.map((days) => (
                     <button
                       key={days}
                       type="button"
@@ -461,10 +551,11 @@ export default function B2bPackageManagementPage() {
                 />
               </div>
 
+              {/* CHỌN NHANH HẠN MỨC IMPRESSIONS */}
               <div className="preset-pills-wrap">
                 <span className="preset-pills-label">Hạn mức impressions:</span>
                 <div className="preset-pills">
-                  {[50000, 100000, 250000, 500000, 1000000].map((q) => (
+                  {QUOTA_PRESETS.map((q) => (
                     <button
                       key={q}
                       type="button"
@@ -539,7 +630,7 @@ export default function B2bPackageManagementPage() {
               <B2bPackageVisualCard form={form} />
               <div className="mockup-hint-box" style={{ background: "#f8fafc", padding: "14px 16px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "11.5px", color: "#64748b", lineHeight: "1.6" }}>
                 <strong style={{ color: "#0f172a", display: "block", marginBottom: "4px" }}>💡 Lưu ý định giá B2B:</strong>
-                Chỉ số CPM (chi phí cho mỗi 1.000 lượt hiển thị) giúp đối tác dễ dàng so sánh hiệu quả giữa các gói. Các gói có thời hạn dài thường được giảm giá 10–20% CPM để khuyến khích hợp đồng lớn.
+                Chỉ số CPM (chi phí cho mỗi 1.000 lượt hiển thị) giúp đối tác dễ dàng so sánh hiệu quả giữa các gói. Bạn có thể chọn nhanh các mẫu gói có sẵn ở trên để áp dụng cấu hình khuyến nghị.
               </div>
             </div>
           </div>

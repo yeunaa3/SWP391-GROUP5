@@ -47,8 +47,7 @@ const REASON_PRESETS = [
  * [CFG-06][UC-37] CÀI ĐẶT HỆ THỐNG (SYSTEM SETTINGS MANAGEMENT)
  * - Quản lý tham số vận hành: dung lượng tối đa file ảnh/video quảng cáo.
  * - Hỗ trợ quy đổi Byte sang MB thân thiện, có các nút chọn nhanh dung lượng.
- * - Kiểm soát lịch sử thay đổi (Audit Log) 50 lần gần nhất.
- * - Xác nhận 2 bước minh bạch, bảo vệ an toàn hệ thống.
+ * - Sử dụng tông màu biên tập cổ điển của The Pulse (Slate & Crimson Red).
  * ============================================================================
  */
 export default function SystemSettingsPage() {
@@ -143,20 +142,20 @@ export default function SystemSettingsPage() {
 
       {/* KHUNG HƯỚNG DẪN THÂN THIỆN CHO QUẢN TRỊ VIÊN */}
       <section className="settings-guide-card" style={{
-        background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
-        border: "1px solid #a7f3d0",
+        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+        border: "1px solid #cbd5e1",
         borderRadius: "16px",
         padding: "20px 24px",
         marginBottom: "24px",
-        boxShadow: "0 2px 10px rgba(16, 185, 129, 0.05)"
+        boxShadow: "0 2px 10px rgba(15, 23, 42, 0.04)"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
           <span style={{ fontSize: "20px" }}>💡</span>
-          <strong style={{ fontSize: "15px", color: "#065f46" }}>
+          <strong style={{ fontSize: "15px", color: "#0f172a" }}>
             Hướng dẫn nhanh cách sử dụng Cài đặt hệ thống:
           </strong>
         </div>
-        <p style={{ fontSize: "13px", color: "#047857", margin: "0 0 12px", lineHeight: "1.6" }}>
+        <p style={{ fontSize: "13px", color: "#475569", margin: "0 0 12px", lineHeight: "1.6" }}>
           Màn hình này cho phép Quản trị viên điều chỉnh các hạn mức hệ thống (ví dụ: kích thước tối đa cho file ảnh hoặc video quảng cáo do doanh nghiệp tải lên).
         </p>
         <div style={{
@@ -164,23 +163,23 @@ export default function SystemSettingsPage() {
           gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: "14px",
           fontSize: "12.5px",
-          color: "#064e3b"
+          color: "#0f172a"
         }}>
-          <div style={{ background: "rgba(255,255,255,0.7)", padding: "10px 14px", borderRadius: "10px", border: "1px solid #d1fae5" }}>
+          <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
             <strong>Bước 1: Chọn tham số</strong>
-            <p style={{ margin: "4px 0 0", color: "#047857" }}>
+            <p style={{ margin: "4px 0 0", color: "#64748b" }}>
               Tìm thẻ tham số có nhãn <strong>&ldquo;Cho phép sửa&rdquo;</strong> và bấm nút <em>&ldquo;Chỉnh sửa&rdquo;</em>.
             </p>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.7)", padding: "10px 14px", borderRadius: "10px", border: "1px solid #d1fae5" }}>
+          <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
             <strong>Bước 2: Chọn dung lượng (MB)</strong>
-            <p style={{ margin: "4px 0 0", color: "#047857" }}>
+            <p style={{ margin: "4px 0 0", color: "#64748b" }}>
               Bấm nhanh vào các nút dung lượng gợi ý (ví dụ: <code>2 MB</code>, <code>5 MB</code>, <code>8 MB</code>...). Hệ thống tự quy đổi ra byte chuẩn.
             </p>
           </div>
-          <div style={{ background: "rgba(255,255,255,0.7)", padding: "10px 14px", borderRadius: "10px", border: "1px solid #d1fae5" }}>
+          <div style={{ background: "#ffffff", padding: "10px 14px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
             <strong>Bước 3: Ghi lý do & Lưu</strong>
-            <p style={{ margin: "4px 0 0", color: "#047857" }}>
+            <p style={{ margin: "4px 0 0", color: "#64748b" }}>
               Nhập lý do thay đổi để lưu vào Nhật ký kiểm toán minh bạch, sau đó xác nhận lưu.
             </p>
           </div>
@@ -234,7 +233,7 @@ export default function SystemSettingsPage() {
                           fontSize: "10px",
                           letterSpacing: "0.08em",
                           fontWeight: "700",
-                          color: row.editable ? "#059669" : "#64748b"
+                          color: row.editable ? "#bc233b" : "#64748b"
                         }}>
                           {row.group} · {row.editable ? "✓ CHO PHÉP SỬA" : "CHỈ XEM"}
                         </span>
@@ -242,11 +241,11 @@ export default function SystemSettingsPage() {
                           <span style={{
                             fontSize: "11px",
                             fontWeight: "700",
-                            background: "#ecfdf5",
-                            color: "#059669",
+                            background: "#f1f5f9",
+                            color: "#0f172a",
                             padding: "3px 8px",
                             borderRadius: "6px",
-                            border: "1px solid #a7f3d0"
+                            border: "1px solid #cbd5e1"
                           }}>
                             Dung lượng động
                           </span>
@@ -362,7 +361,7 @@ export default function SystemSettingsPage() {
                         <td style={{ fontSize: "12px" }}>
                           <span style={{ color: "#ef4444", textDecoration: "line-through" }}>{x.old_value}</span>
                           {" → "}
-                          <strong style={{ color: "#10b981" }}>{x.new_value}</strong>
+                          <strong style={{ color: "#0f172a" }}>{x.new_value}</strong>
                         </td>
                         <td style={{ fontSize: "12.5px", color: "#334155" }}>{x.reason}</td>
                       </tr>
@@ -411,10 +410,10 @@ export default function SystemSettingsPage() {
                       {formatBytes(editing.setting_value)}
                     </p>
                   </div>
-                  <span style={{ fontSize: "20px", color: "#059669" }}>➔</span>
+                  <span style={{ fontSize: "20px", color: "#0f172a" }}>➔</span>
                   <div>
-                    <span style={{ fontSize: "11px", color: "#059669", fontWeight: "700" }}>Giá trị mới</span>
-                    <p style={{ margin: "4px 0 0", fontWeight: "800", color: "#059669", fontSize: "16px" }}>
+                    <span style={{ fontSize: "11px", color: "#0f172a", fontWeight: "700" }}>Giá trị mới</span>
+                    <p style={{ margin: "4px 0 0", fontWeight: "800", color: "#0f172a", fontSize: "16px" }}>
                       {formatBytes(editing.value)}
                     </p>
                   </div>
@@ -442,7 +441,7 @@ export default function SystemSettingsPage() {
                   disabled={busy}
                   onClick={save}
                   style={{
-                    background: "#059669",
+                    background: "#0f172a",
                     color: "#ffffff",
                     fontWeight: "700",
                     padding: "10px 20px",
@@ -470,7 +469,7 @@ export default function SystemSettingsPage() {
               style={{ display: "flex", flexDirection: "column", gap: "18px", marginTop: "10px" }}
             >
               <div>
-                <span className="eyebrow" style={{ fontSize: "10px", letterSpacing: "0.08em", color: "#059669", fontWeight: "700" }}>
+                <span className="eyebrow" style={{ fontSize: "10px", letterSpacing: "0.08em", color: "#bc233b", fontWeight: "700" }}>
                   THAM SỐ ĐANG CHỌN
                 </span>
                 <h3 style={{ margin: "4px 0", fontSize: "17px", color: "#0f172a", fontFamily: "monospace" }}>
@@ -485,7 +484,7 @@ export default function SystemSettingsPage() {
                   <label style={{ fontSize: "13px", fontWeight: "700", color: "#334155", margin: 0 }}>
                     Chọn dung lượng tối đa (MB):
                   </label>
-                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#059669" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "700", color: "#0f172a" }}>
                     Tương đương: {formatBytes(editing.value)}
                   </span>
                 </div>
@@ -505,10 +504,10 @@ export default function SystemSettingsPage() {
                           fontWeight: "600",
                           cursor: "pointer",
                           transition: "all 0.15s ease",
-                          background: isSelected ? "#059669" : "#ffffff",
+                          background: isSelected ? "#0f172a" : "#ffffff",
                           color: isSelected ? "#ffffff" : "#1e293b",
-                          border: isSelected ? "1.5px solid #059669" : "1px solid #cbd5e1",
-                          boxShadow: isSelected ? "0 2px 6px rgba(5, 150, 105, 0.25)" : "none"
+                          border: isSelected ? "1.5px solid #0f172a" : "1px solid #cbd5e1",
+                          boxShadow: isSelected ? "0 2px 6px rgba(15, 23, 42, 0.2)" : "none"
                         }}
                       >
                         {p.label}

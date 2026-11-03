@@ -667,6 +667,32 @@ export default function AccessManagementPage() {
 
               <label>
                 Lý do thay đổi (bắt buộc cho nhật ký audit)
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", margin: "6px 0 8px" }}>
+                  {[
+                    "Cập nhật quyền theo nhiệm vụ công tác",
+                    "Tạm khóa tài khoản để xác minh bảo mật",
+                    "Kích hoạt lại tài khoản sau khi xác minh",
+                    "Bổ sung vai trò doanh nghiệp đối tác",
+                    "Theo quyết định của Ban Quản trị",
+                  ].map((r) => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setEditing((cur) => ({ ...cur, reason: r }))}
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "14px",
+                        fontSize: "11px",
+                        background: "#f1f5f9",
+                        color: "#475569",
+                        border: "1px solid #cbd5e1",
+                        cursor: "pointer",
+                      }}
+                    >
+                      + {r}
+                    </button>
+                  ))}
+                </div>
                 <textarea
                   required
                   maxLength={500}

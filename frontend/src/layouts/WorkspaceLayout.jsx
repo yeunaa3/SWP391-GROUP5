@@ -16,20 +16,12 @@ const labels = {
   admin: "System Administration",
 };
 
-const captions = {
-  account: "MEMBER SPACE",
-  premium: "PREMIUM SPACE",
-  business: "PARTNER PORTAL",
-  adManager: "AD OPERATIONS",
-  admin: "SYSTEM CONTROL",
-};
-
 /**
  * ============================================================================
  * KHUNG GIAO DIỆN CHUNG CHO CÁC KHÔNG GIAN LÀM VIỆC (WORKSPACE LAYOUT)
  * - Chứa Sidebar bên trái (Navigation menu)
  * - Chứa Topbar bên trên (Breadcrumb, Bell, Avatar)
- * - Đồng bộ bảng màu và phong cách theo từng Role (Admin, Business, Ad Manager, Premium, Reader)
+ * - Sử dụng phong cách và tông màu biên tập cổ điển của The Pulse
  * ============================================================================
  */
 export default function WorkspaceLayout({ area }) {
@@ -57,7 +49,7 @@ export default function WorkspaceLayout({ area }) {
       !screen.path.includes(":") &&
       (!screen.roles?.length || screen.roles.some((role) => user?.roles?.includes(role)))
   );
-// Lấy danh sách các nhóm menu (feature) để hiển thị trong sidebar
+
   const navigationGroups = [
     ...new Set(
       navigation
@@ -65,9 +57,9 @@ export default function WorkspaceLayout({ area }) {
         .map((screen) => screen.feature)
     ),
   ];
-// Hiển thị tên người dùng ở góc dưới sidebar
+
   const displayName = user?.fullName || user?.username || "Demo User";
-// Hàm xác định icon cho từng mục menu dựa trên tên của màn hình
+
   const iconFor = (name) =>
     /Dashboard/.test(name)
       ? "grid"
@@ -104,7 +96,7 @@ export default function WorkspaceLayout({ area }) {
 
   // 4. Render Layout hoàn chỉnh
   return (
-    <div className={`workspace-shell workspace-area-${area} ${menuOpen ? "workspace-menu-open" : ""}`} data-area={area}>
+    <div className={`workspace-shell ${menuOpen ? "workspace-menu-open" : ""}`}>
       {/* Nút bấm mở menu trên điện thoại */}
       <button
         className="mobile-workspace-toggle"
@@ -128,7 +120,7 @@ export default function WorkspaceLayout({ area }) {
       <aside id="workspace-navigation" className="sidebar">
         <Link className="brand brand-light" to="/">
           THE PULSE
-          <span className="workspace-brand-caption">{captions[area] || "WORKSPACE"}</span>
+          <span className="workspace-brand-caption">PARTNER & READER SPACE</span>
         </Link>
         <div className="sidebar-rule" />
         <p className="workspace-name">{tr(labels[area])}</p>
