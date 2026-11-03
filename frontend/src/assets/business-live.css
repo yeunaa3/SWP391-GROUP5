@@ -21,4 +21,13 @@
 .business-creative-preview { width: 100%; max-height: 300px; object-fit: contain; border-radius: 12px; background: #f5f4ef; margin-block: 20px; }
 .business-live .info-note { padding: 14px 18px; background: #f8f4ec; border-radius: 9px; font-size: 13px; line-height: 1.8; margin-block: 18px; }
 .business-live .form-error { padding: 14px; border: 1px solid #efb1bb; border-radius: 10px; background: #fff3f3; }
+.business-booking-tabs { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; margin:0 0 22px; padding:7px; border:1px solid #e4e7ed; border-radius:13px; background:#f4f6f9; }
+.business-booking-tabs a { display:flex; min-height:48px; align-items:center; justify-content:center; padding:10px 14px; border:1px solid transparent; border-radius:9px; color:#596273; text-align:center; text-decoration:none; font-size:14px; font-weight:650; transition:background .16s ease,color .16s ease,box-shadow .16s ease; }
+.business-booking-tabs a:hover { background:#fff; color:#bd1833; }
+.business-booking-tabs a.is-active { border-color:#f0d5db; background:#fff; color:#bd1833; box-shadow:0 2px 8px #18223812; }
+.business-booking-panel { padding:20px; border:1px solid #e6e1da; border-radius:14px; background:#fff; }
+.business-booking-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; padding:14px; margin-bottom:20px; border-radius:10px; background:#faf9f6; }
+.business-booking-summary > div { display:grid; gap:6px; }.business-booking-summary > div > span { color:#81838a; font-size:12px; }
+.business-contract-terms { padding:16px; margin-block:20px; border:1px solid #e6e1da; border-radius:10px; }
 @media(max-width:700px) { .business-form-grid { grid-template-columns: 1fr; }.business-details { grid-template-columns: 1fr; gap: 6px; }.business-details dd { margin-bottom: 12px; } }
+@media(max-width:560px) { .business-booking-tabs { grid-template-columns:repeat(2,minmax(0,1fr)); }.business-booking-tabs a { min-height:44px; padding:8px; font-size:13px; } }

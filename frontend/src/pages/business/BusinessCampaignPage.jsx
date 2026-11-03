@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiRequest } from "../../services/apiClient.js";
 import CampaignReviewChecklist from "./CampaignReviewChecklist.jsx";
 import CreativeMedia from "../../components/CreativeMedia.jsx";
@@ -61,6 +61,8 @@ import "../../assets/business-campaign.css";
         export default function BusinessCampaignPage({screen}){
         const {campaignId} = useParams(),
                 navigate = useNavigate();
+                const [searchParams] = useSearchParams();
+                const requestedContractId = searchParams.get("contractId");
                 const [workspace, setWorkspace] = useState(null),
         [detail, setDetail] = useState(null),
         [checks, setChecks] = useState([]);
@@ -104,7 +106,8 @@ import "../../assets/business-campaign.css";
                         const cp = w.company;
                         setCompanyForm({name: cp.company_name || "", taxCode: cp.tax_code || "", email: cp.email || "", phone: cp.phone || "", address: cp.address || "", billingAddress: cp.billing_address || "", industry: cp.industry || "", contactPerson: cp.contact_person || ""});
                         const cam = d?.campaign;
-                        const first = w.contracts.find(x => x.status === "ACTIVE" && x.payment_status === "PAID" && new Date(x.end_at) > new Date());
+                        const eligible = w.contracts.filter(x => x.status === "ACTIVE" && x.payment_status === "PAID" && new Date(x.end_at) > new Date());
+                        const first = eligible.find(x => String(x.contract_id) === requestedContractId) || eligible[0];
                         setForm(keep.form || (cam ? {name: cam.campaign_name, description: cam.description || "", contractId: String(cam.contract_id), startTime: startInput(cam.scheduled_start_time), endTime: dateInput(cam.scheduled_end_time), targetUrl: cam.target_url || ""} : {...emptyForm, contractId: String(first?.contract_id || ""), startTime: startInput(first?.start_at), endTime: dateInput(first?.end_at)}));
                         const t = d?.targeting;
                         setTarget(keep.target || {categoryIds: t?.categoryIds || [], tagIds: t?.tagIds || [], geoScope: t?.geo_scope || "", audience: t?.target_audience || "", deviceType: t?.device_type || "ALL"});
@@ -130,7 +133,7 @@ import "../../assets/business-campaign.css";
                         setLoading(false);
                 });
                         return() => controller.abort();
-                }, [screen.id, campaignId]);
+                }, [screen.id, campaignId, requestedContractId]);
                         useEffect(() => {
                         if (!file) {
                         setPreview(null);
