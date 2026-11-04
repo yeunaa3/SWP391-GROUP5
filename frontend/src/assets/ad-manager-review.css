@@ -39,6 +39,7 @@
 .review-badge-resubmitted { color: #174f86; background: #e3f0ff; }
 .review-badge-needs_revision,.review-badge-rejected { color: #8b2828; background: #ffe5e5; }
 .review-badge-approved { color: #236441; background: #dff4e8; }
+.review-badge-cancelled { color: #8b2828; background: #ffe5e5; }
 .review-priority-normal { color: #46566d; background: #e9eef4; }
 .review-priority-high { color: #864d08; background: #ffebc7; }
 .review-priority-urgent { color: #941f2e; background: #ffe0e5; }

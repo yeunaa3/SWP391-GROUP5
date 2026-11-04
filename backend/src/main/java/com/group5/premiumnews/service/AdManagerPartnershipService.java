@@ -77,7 +77,7 @@ public class AdManagerPartnershipService {
         validateDates(filter.from(), filter.to());
         String keyword = filter.q() == null ? "" : filter.q().trim();
         String status = filter.status() == null ? "" : filter.status();
-        StringBuilder where = new StringBuilder(" WHERE ct.status='PENDING_REVIEW' ");
+        StringBuilder where = new StringBuilder(" WHERE ct.status IN ('PENDING_REVIEW','CANCELLED') ");
         List<Object> arguments = new ArrayList<>();
         if (!keyword.isEmpty()) {
             where.append(
@@ -109,7 +109,12 @@ public class AdManagerPartnershipService {
         List<AdManagerDtos.BookingQueueItem> items = jdbc.query("""
                 SELECT ct.contract_id, ct.contract_code, ct.contract_name, c.company_name,
                        ct.slot_name_snapshot, ct.start_at, ct.end_at, ct.total_value,
-                       ct.currency, ct.status, ct.updated_at
+                       ct.currency, ct.status, ct.updated_at,
+                       (SELECT al.reason FROM audit_logs al
+                        WHERE al.entity_type='CONTRACT'
+                          AND al.entity_id=CAST(ct.contract_id AS CHAR)
+                          AND al.action='BUSINESS_CANCEL_BOOKING'
+                        ORDER BY al.audit_log_id DESC LIMIT 1) AS cancellation_reason
                 """ + fromClause + """
                 ORDER BY ct.updated_at ASC, ct.contract_id ASC
                 LIMIT ? OFFSET ?
@@ -119,7 +124,7 @@ public class AdManagerPartnershipService {
                 rs.getString("slot_name_snapshot"), instant(rs.getTimestamp("start_at")),
                 instant(rs.getTimestamp("end_at")), rs.getBigDecimal("total_value"),
                 rs.getString("currency"), rs.getString("status"),
-                instant(rs.getTimestamp("updated_at"))), pageArguments.toArray());
+                instant(rs.getTimestamp("updated_at")), rs.getString("cancellation_reason")), pageArguments.toArray());
 
         int totalPages = total == 0 ? 0 : (int) ((total + filter.size() - 1) / filter.size());
         return new AdManagerDtos.BookingQueuePage(items, total, filter.page(), filter.size(), totalPages);
@@ -864,7 +869,7 @@ public class AdManagerPartnershipService {
         String status = filter.status() == null ? "" : filter.status();
         if (filter.page() < 0 || filter.size() < 1 || filter.size() > 100
                 || (filter.q() != null && filter.q().length() > 150)
-                || !List.of("", "PENDING_REVIEW").contains(status)) {
+                || !List.of("", "PENDING_REVIEW", "CANCELLED").contains(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc booking không hợp lệ.");
         }
     }

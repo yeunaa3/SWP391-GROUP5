@@ -1,5 +1,6 @@
 export const statusLabels = {
     PENDING_REVIEW: "Chờ xem xét",
+    CANCELLED: "Đã hủy",
     RESUBMITTED: "Đã gửi lại",
     NEEDS_REVISION: "Cần chỉnh sửa",
     APPROVED: "Đã phê duyệt",

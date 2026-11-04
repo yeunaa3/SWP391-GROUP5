@@ -272,9 +272,12 @@ export default function AdManagerBookingProposalPage() {
                     </section>
 
                     {detail.latestProposal
-                        && ["SENT", "REVISION_REQUESTED", "ACCEPTED"].includes(detail.latestProposal.status) && (
+                        && ["DRAFT", "SENT", "REVISION_REQUESTED", "ACCEPTED"].includes(detail.latestProposal.status) && (
                             <section className="dashboard-section">
-                                <h2>Proposal gần nhất · phiên bản {detail.latestProposal.revisionNo}</h2>
+                                <h2>
+                                    Proposal gần nhất · phiên bản {detail.latestProposal.revisionNo}
+                                    {detail.latestProposal.status === "DRAFT" ? " · bản nháp chưa gửi" : ""}
+                                </h2>
                                 <dl className="business-details">
                                     <div>
                                         <dt>Trạng thái proposal</dt>
@@ -484,7 +487,7 @@ export default function AdManagerBookingProposalPage() {
                                         />
                                     </label>
                                     <label className="business-field">
-                                        <span>Điều khoản thương mại</span>
+                                        <span>Yêu cầu thay đổi Điều khoản thương mại</span>
                                         <textarea
                                             required
                                             maxLength={10000}

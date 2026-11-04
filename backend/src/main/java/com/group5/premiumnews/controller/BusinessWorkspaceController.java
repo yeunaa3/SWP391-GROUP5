@@ -4,6 +4,7 @@ import com.group5.premiumnews.dto.BusinessRequests;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import com.group5.premiumnews.service.BusinessWorkspaceService;
 import com.group5.premiumnews.service.CampaignWorkflowService;
+import com.group5.premiumnews.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,10 +18,13 @@ public class BusinessWorkspaceController {
 
     private final BusinessWorkspaceService service;
     private final CampaignWorkflowService campaigns;
+    private final PaymentService payments;
 
-    public BusinessWorkspaceController(BusinessWorkspaceService service, CampaignWorkflowService campaigns) {
+    public BusinessWorkspaceController(BusinessWorkspaceService service, CampaignWorkflowService campaigns,
+            PaymentService payments) {
         this.service = service;
         this.campaigns = campaigns;
+        this.payments = payments;
     }
 
     // Lấy user từ session và trả workspace của chính công ty gắn với user đó.
@@ -96,6 +100,16 @@ public class BusinessWorkspaceController {
     public Map<String, Object> deleteBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @PathVariable Long id) {
         return service.deleteBooking(user, id);
+    }
+
+    @PostMapping("/bookings/{id}/cancel")
+    public Map<String, Object> cancelBooking(@AuthenticationPrincipal AuthenticatedUserPrincipal user,
+            @PathVariable Long id, @Valid @RequestBody BusinessRequests.BookingCancellationRequest request) {
+        Map<String, Object> result = service.cancelBooking(user, id, request);
+        if (!"PAID".equals(result.get("paymentStatus"))) {
+            payments.cancelContractPaymentLinks(id, request.reason().trim());
+        }
+        return result;
     }
 
     @PostMapping("/campaigns")

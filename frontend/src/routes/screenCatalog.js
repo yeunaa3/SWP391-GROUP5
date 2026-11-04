@@ -28,7 +28,7 @@ export const screens = [
   { id: "BUS-09", name: "Advertising Checkout", feature: "Booking and Contract", path: "/business/contracts/:contractId/checkout", area: "business", roles: ["BUSINESS"], bf: ["BF-05"], uc: ["UC-24"] },
   { id: "BUS-10", name: "Advertising Payment Result", feature: "Booking and Contract", path: "/business/contracts/payment-result", area: "business", roles: ["BUSINESS"], bf: ["BF-05"], uc: ["UC-24"] },
   { id: "BUS-11", name: "Contract List", feature: "Booking and Contract", path: "/business/contracts", area: "business", roles: ["BUSINESS"], bf: ["BF-05", "BF-06"] },
-  { id: "BUS-12", name: "Contract Detail and Invoice", feature: "Booking and Contract", path: "/business/contracts/:contractId", area: "business", roles: ["BUSINESS"], bf: ["BF-05", "BF-06"], uc: ["UC-24"] },
+  { id: "BUS-12", name: "Contract Detail", feature: "Booking and Contract", path: "/business/contracts/:contractId", area: "business", roles: ["BUSINESS"], bf: ["BF-05", "BF-06"], uc: ["UC-24"] },
   { id: "BUS-13", name: "Campaign List", feature: "Campaign", path: "/business/campaigns", area: "business", roles: ["BUSINESS"], bf: ["BF-06", "BF-07", "BF-08"], uc: ["UC-25"] },
   { id: "BUS-14", name: "Campaign Create and Edit", feature: "Campaign", path: "/business/campaigns/edit/:campaignId?", area: "business", roles: ["BUSINESS"], bf: ["BF-06"], uc: ["UC-25"] },
   { id: "BUS-15", name: "Creative and Targeting", feature: "Campaign", path: "/business/campaigns/:campaignId/creative", area: "business", roles: ["BUSINESS"], bf: ["BF-06"], uc: ["UC-26"] },

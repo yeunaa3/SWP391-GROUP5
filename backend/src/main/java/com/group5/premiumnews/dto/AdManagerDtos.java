@@ -45,7 +45,8 @@ public final class AdManagerDtos {
 
         public record BookingQueueItem(long contractId, String contractCode, String contractName,
                         String companyName, String slotName, Instant startAt, Instant endAt,
-                        BigDecimal totalValue, String currency, String status, Instant submittedAt) {
+                        BigDecimal totalValue, String currency, String status, Instant submittedAt,
+                        String cancellationReason) {
         }
 
         public record BookingDetail(
@@ -122,7 +123,7 @@ public final class AdManagerDtos {
 
         public record BookingQueueFilter(
                         @Size(max = 150) String q,
-                        @Pattern(regexp = "|PENDING_REVIEW") String status,
+                        @Pattern(regexp = "|PENDING_REVIEW|CANCELLED") String status,
                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                         @Min(0) int page,

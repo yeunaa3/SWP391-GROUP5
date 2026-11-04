@@ -73,8 +73,8 @@ export default function AdManagerBookingQueuePage() {
         <header className="page-heading">
             <div>
                 <p className="eyebrow">ADM-04 · DUYỆT YÊU CẦU ĐẶT QUẢNG CÁO</p>
-                <h1>Yêu cầu đặt quảng cáo chờ xem xét</h1>
-                <p className="page-subtitle">Danh sách yêu cầu mới đang chờ Ad Manager xử lý.</p>
+                <h1>Yêu cầu đặt quảng cáo</h1>
+                <p className="page-subtitle">Theo dõi các booking đang chờ xem xét và đã được doanh nghiệp hủy.</p>
             </div>
 
         </header>
@@ -95,6 +95,7 @@ export default function AdManagerBookingQueuePage() {
                     <select name="status" defaultValue={filters.status}>
                         <option value="">Tất cả</option>
                         <option value="PENDING_REVIEW">Chờ xem xét</option>
+                        <option value="CANCELLED">Đã hủy</option>
                     </select>
                 </label>
                 <label><span>Từ ngày gửi</span><input type="date" name="from" defaultValue={filters.from} /></label>
@@ -121,7 +122,7 @@ export default function AdManagerBookingQueuePage() {
                     <td>{formatAdDate(item.startAt)}<small>đến {formatAdDate(item.endAt)}</small></td>
                     <td>{formatMoney(item.totalValue, item.currency)}</td>
 
-                    <td><StatusBadge value={item.status} /><small>Gửi lúc {formatDateTime(item.submittedAt)}</small></td>
+                    <td><StatusBadge value={item.status} />{item.cancellationReason && <small>Lý do hủy: {item.cancellationReason}</small>}<small>Gửi lúc {formatDateTime(item.submittedAt)}</small></td>
                     <td><Link className="review-open-link" to={"/ad-manager/bookings/" + item.contractId + "/proposal?returnTo=" + encodeURIComponent(returnTo)}>Mở yêu cầu →</Link></td>
                 </tr>)}</tbody>
             </table></div>}

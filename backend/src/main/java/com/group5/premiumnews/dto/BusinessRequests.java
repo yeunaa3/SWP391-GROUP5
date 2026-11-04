@@ -34,6 +34,11 @@ public final class BusinessRequests {
                         @NotNull @Positive Integer expectedRevisionNo) {
         }
 
+        public record BookingCancellationRequest(
+                        @NotNull @Positive Integer expectedRevisionNo,
+                        @NotBlank @Size(max = 500) String reason) {
+        }
+
         public record ContractProposalDecision(
                         @NotNull @Positive Integer expectedRevisionNo,
                         @NotNull @Positive Integer proposalRevisionNo,

@@ -52,6 +52,22 @@ public class PaymentService {
         return payOSService.isConfigured();
     }
 
+    /** Hủy các PayOS link được tạo cho booking này trong tiến trình hiện tại. */
+    public void cancelContractPaymentLinks(long contractId, String reason) {
+        if (!payOSService.isConfigured()) return;
+        var orderCodes = referenceToOrdersMap.get("CONTRACT:" + contractId);
+        if (orderCodes == null) return;
+        for (Long orderCode : orderCodes) {
+            try {
+                payOSService.cancelPaymentLink(orderCode, reason);
+            } catch (Exception ex) {
+                // Booking đã được hủy tại DB; callback đến muộn vẫn được xử lý không kích hoạt lại hợp đồng.
+                log.warn("Không thể hủy PayOS link orderCode {} cho contractId {}: {}",
+                        orderCode, contractId, ex.getMessage());
+            }
+        }
+    }
+
     public PayOSService getPayOSService() {
         return payOSService;
     }
@@ -533,6 +549,7 @@ public class PaymentService {
 
         var ct = contracts.get(0);
         String paymentStatus = (String) ct.get("payment_status");
+        boolean contractCancelled = "CANCELLED".equals(ct.get("status"));
         long companyId = ((Number) ct.get("company_id")).longValue();
         String contractCode = (String) ct.get("contract_code");
         String contractName = (String) ct.get("contract_name");
@@ -544,15 +561,22 @@ public class PaymentService {
 
         // Idempotent: Nếu đã PAID thì trả về thành công luôn
         if ("PAID".equals(paymentStatus)) {
-            return Map.of("success", true, "message", "Hợp đồng đã thanh toán thành công trước đó.", "contractId", contractId);
+            return Map.of("success", true,
+                    "message", contractCancelled
+                            ? "Khoản thanh toán đã được ghi nhận; hợp đồng vẫn giữ trạng thái đã hủy để đối soát."
+                            : "Hợp đồng đã thanh toán thành công trước đó.",
+                    "contractId", contractId);
         }
 
-        // 1. Cập nhật hợp đồng sang PAID và ACTIVE
+        // 1. Ghi nhận tiền về nhưng không kích hoạt lại booking đã bị hủy.
         jdbc.update("""
                 UPDATE contracts
-                SET payment_status = 'PAID', status = 'ACTIVE', signed_at = CURRENT_TIMESTAMP(6), updated_at = CURRENT_TIMESTAMP(6)
+                SET payment_status = 'PAID',
+                    status = CASE WHEN ? THEN 'CANCELLED' ELSE 'ACTIVE' END,
+                    signed_at = CASE WHEN ? THEN signed_at ELSE CURRENT_TIMESTAMP(6) END,
+                    updated_at = CURRENT_TIMESTAMP(6)
                 WHERE contract_id = ?
-                """, contractId);
+                """, contractCancelled, contractCancelled, contractId);
 
         // 2. Ghi nhận giao dịch (ck_transactions_type cho phép: ADVERTISING_PAYMENT)
         Long txUserId = user != null ? user.id() : null;
@@ -574,8 +598,13 @@ public class PaymentService {
         if (txUserId != null) {
             jdbc.update("""
                     INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
-                    VALUES (?, 'Hợp đồng quảng cáo đã kích hoạt', ?, 'CAMPAIGN', 'CONTRACT', ?, 'SENT', CURRENT_TIMESTAMP(6))
-                    """, txUserId, "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.", String.valueOf(contractId));
+                    VALUES (?, ?, ?, 'CAMPAIGN', 'CONTRACT', ?, 'SENT', CURRENT_TIMESTAMP(6))
+                    """, txUserId,
+                    contractCancelled ? "Đã nhận thanh toán cho booking đã hủy" : "Hợp đồng quảng cáo đã kích hoạt",
+                    contractCancelled
+                            ? "Đã nhận khoản thanh toán cho hợp đồng " + contractCode + " sau khi booking bị hủy. Cần đối soát/hoàn tiền thủ công."
+                            : "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.",
+                    String.valueOf(contractId));
         }
 
         // 4. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
@@ -583,16 +612,24 @@ public class PaymentService {
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     Map<String, Object> emailData = Map.of(
-                            "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
+                            "title", contractCancelled
+                                    ? "THANH TOÁN NHẬN SAU KHI BOOKING ĐÃ HỦY"
+                                    : "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
                             "customerName", contactName + " (" + companyName + ")",
                             "itemName", contractName + " (" + contractCode + ")",
                             "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
                             "txnRef", txnRef,
                             "amount", String.format("%,d VND", totalValue.longValue()),
-                            "effectiveDuration", "Hợp đồng đã có hiệu lực (ACTIVE)",
+                            "effectiveDuration", contractCancelled
+                                    ? "Booking đã hủy; khoản tiền cần được đối soát/hoàn thủ công"
+                                    : "Hợp đồng đã có hiệu lực (ACTIVE)",
                             "paymentGateway", "PayOS VietQR Napas (Tự động)"
                     );
-                    emailService.sendReceiptEmail(companyEmail, "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode, emailData);
+                    emailService.sendReceiptEmail(companyEmail,
+                            contractCancelled
+                                    ? "The Pluse - Cần đối soát khoản thanh toán hợp đồng " + contractCode
+                                    : "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode,
+                            emailData);
                 } catch (Exception ex) {
                     log.warn("Không thể gửi email biên lai cho hợp đồng contractId={}: {}", contractId, ex.getMessage());
                 }
@@ -601,10 +638,12 @@ public class PaymentService {
 
         return Map.of(
                 "success", true,
-                "message", "Thanh toán hợp đồng thành công! Hợp đồng đã chuyển sang ACTIVE, doanh nghiệp có thể tạo chiến dịch ngay.",
+                "message", contractCancelled
+                        ? "Đã nhận thanh toán sau khi booking bị hủy; hợp đồng vẫn CANCELLED và cần đối soát/hoàn tiền thủ công."
+                        : "Thanh toán hợp đồng thành công! Hợp đồng đã chuyển sang ACTIVE, doanh nghiệp có thể tạo chiến dịch ngay.",
                 "contractId", contractId,
                 "contractCode", contractCode,
-                "status", "ACTIVE"
+                "status", contractCancelled ? "CANCELLED" : "ACTIVE"
         );
     }
 }
