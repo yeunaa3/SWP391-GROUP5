@@ -204,8 +204,8 @@ public class PaymentService {
                             userName,
                             userEmail,
                             "",
-                            "https://swp391-group5-71mj.onrender.com/business/contracts/" + referenceId,
-                            "https://swp391-group5-71mj.onrender.com/business/contracts"
+                            "https://swp391-group5-71mj.onrender.com/business/contracts/payment-result?contractId=" + referenceId,
+                            "https://swp391-group5-71mj.onrender.com/business/contracts/" + referenceId + "/checkout"
                     );
                     checkoutUrl = payOsData.checkoutUrl();
                     payOsActive = true;
@@ -393,6 +393,10 @@ public class PaymentService {
         return confirmPremium(requestId, null);
     }
 
+    public Map<String, Object> confirmContractDirect(long contractId) {
+        return confirmContract(contractId, null);
+    }
+
     private Map<String, Object> confirmPremium(long requestId, AuthenticatedUserPrincipal user) {
         var requests = jdbc.queryForList("""
                 SELECT r.request_id, r.user_id, r.package_id, r.package_code, r.package_name,
@@ -521,9 +525,9 @@ public class PaymentService {
         var contracts = jdbc.queryForList("""
                 SELECT c.contract_id, c.contract_code, c.contract_name, c.company_id, c.total_value,
                        c.currency, c.payment_status, c.status, c.slot_name_snapshot, c.start_at, c.end_at,
-                       cp.company_name, cp.email AS company_email, cp.contact_name
+                       cp.company_name, cp.email AS company_email
                 FROM contracts c
-                JOIN company_profiles cp ON cp.company_id = c.company_id
+                JOIN companies cp ON cp.company_id = c.company_id
                 WHERE c.contract_id = ? FOR UPDATE
                 """, contractId);
 
@@ -539,8 +543,7 @@ public class PaymentService {
         BigDecimal totalValue = (BigDecimal) ct.get("total_value");
         String companyEmail = (String) ct.get("company_email");
         String companyName = (String) ct.get("company_name");
-        String rawContact = (String) ct.get("contact_name");
-        final String contactName = (rawContact != null && !rawContact.isBlank()) ? rawContact : companyName;
+        final String contactName = companyName;
 
         // Idempotent: Nếu đã PAID thì trả về thành công luôn
         if ("PAID".equals(paymentStatus)) {
@@ -554,7 +557,14 @@ public class PaymentService {
                 WHERE contract_id = ?
                 """, contractId);
 
-        // 2. Ghi nhận giao dịch (ck_transactions_type cho phép: ADVERTISING_PAYMENT)
+        // 2. Đồng bộ trạng thái đề xuất nếu có
+        jdbc.update("""
+                UPDATE contract_proposals
+                SET status = 'ACCEPTED', accepted_at = COALESCE(accepted_at, CURRENT_TIMESTAMP(6))
+                WHERE contract_id = ? AND status IN ('SENT', 'ACCEPTED')
+                """, contractId);
+
+        // 3. Ghi nhận giao dịch (ck_transactions_type cho phép: ADVERTISING_PAYMENT)
         Long txUserId = user != null ? user.id() : null;
         if (txUserId == null) {
             txUserId = jdbc.query("SELECT user_id FROM users WHERE company_id = ? LIMIT 1",
@@ -564,13 +574,30 @@ public class PaymentService {
                         rs -> rs.next() ? rs.getLong(1) : null);
             }
         }
-        String txnRef = "PAYOS-CTR-" + contractId + "-" + (System.currentTimeMillis() % 100000);
+        String txnRef = "PAYOS-CTR-" + contractId + "-" + System.currentTimeMillis();
         jdbc.update("""
                 INSERT INTO transactions(txn_ref, transaction_type, user_id, contract_id, amount, currency, payment_gateway, status, paid_at)
                 VALUES (?, 'ADVERTISING_PAYMENT', ?, ?, ?, 'VND', 'PAYOS', 'SUCCESS', CURRENT_TIMESTAMP(6))
                 """, txnRef, txUserId, contractId, totalValue);
 
-        // 3. Thông báo cho doanh nghiệp
+        // 4. Ghi nhận audit log
+        if (txUserId != null) {
+            jdbc.update("""
+                    INSERT INTO audit_logs(
+                        actor_id, action, entity_type, entity_id,
+                        old_value, new_value, reason
+                    )
+                    VALUES(
+                        ?, 'CONTRACT_PAID_ACTIVATED',
+                        'CONTRACT', ?,
+                        JSON_OBJECT('status', ?, 'payment_status', ?),
+                        JSON_OBJECT('status', 'ACTIVE', 'payment_status', 'PAID'),
+                        'Thanh toán hợp đồng thành công qua PayOS VietQR'
+                    )
+                    """, txUserId, String.valueOf(contractId), ct.get("status"), paymentStatus);
+        }
+
+        // 5. Thông báo cho doanh nghiệp
         if (txUserId != null) {
             jdbc.update("""
                     INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
@@ -578,13 +605,13 @@ public class PaymentService {
                     """, txUserId, "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.", String.valueOf(contractId));
         }
 
-        // 4. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
+        // 6. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
         if (companyEmail != null && !companyEmail.isBlank() && companyEmail.contains("@")) {
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     Map<String, Object> emailData = Map.of(
                             "title", "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
-                            "customerName", contactName + " (" + companyName + ")",
+                            "customerName", contactName,
                             "itemName", contractName + " (" + contractCode + ")",
                             "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
                             "txnRef", txnRef,
@@ -604,6 +631,7 @@ public class PaymentService {
                 "message", "Thanh toán hợp đồng thành công! Hợp đồng đã chuyển sang ACTIVE, doanh nghiệp có thể tạo chiến dịch ngay.",
                 "contractId", contractId,
                 "contractCode", contractCode,
+                "txnRef", txnRef,
                 "status", "ACTIVE"
         );
     }

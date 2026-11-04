@@ -77,6 +77,7 @@ public class PaymentController {
     public Map<String, Object> checkPayosConfig(
             @RequestParam(required = false) Long orderCode,
             @RequestParam(required = false) Long confirm,
+            @RequestParam(required = false) Long confirmContract,
             @RequestParam(required = false) String testEmail) {
         boolean configured = paymentService.isPayOsConfigured();
         java.util.Map<String, Object> res = new java.util.HashMap<>();
@@ -114,7 +115,19 @@ public class PaymentController {
             }
         }
 
-        if (configured && orderCode == null && confirm == null) {
+        if (confirmContract != null) {
+            try {
+                var confirmRes = paymentService.confirmContractDirect(confirmContract);
+                res.put("confirmContractResult", confirmRes);
+            } catch (Exception ex) {
+                res.put("confirmContractError", ex.getMessage());
+                java.io.StringWriter sw = new java.io.StringWriter();
+                ex.printStackTrace(new java.io.PrintWriter(sw));
+                res.put("confirmContractStackTrace", sw.toString());
+            }
+        }
+
+        if (configured && orderCode == null && confirm == null && confirmContract == null) {
             try {
                 long testOrderCode = (System.currentTimeMillis() % 900000000L) + 100000000L;
                 String testDescription = "TEST" + (testOrderCode % 10000);
