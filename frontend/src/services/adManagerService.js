@@ -56,14 +56,40 @@ export function sendBookingProposal(contractId, expectedRevisionNo) {
     );
 }
 
-export function requestAnotherBookingPeriod(contractId, expectedRevisionNo, reason) {
+export function requestAnotherBookingPeriod(contractId, expectedRevisionNo) {
     return apiRequest(
         `/api/ad-manager/bookings/${encodeURIComponent(contractId)}/request-another-period`,
         {
             method: "POST",
-            body: JSON.stringify({ expectedRevisionNo, reason }),
+            body: JSON.stringify({ expectedRevisionNo }),
         },
     );
+}
+
+export function getContractStatus(contractId, signal) {
+    return apiRequest(`/api/ad-manager/contracts/${encodeURIComponent(contractId)}`, { signal });
+}
+
+export function getContractStatusQueue(filters, signal) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== "" && value !== null && value !== undefined) query.set(key, value);
+    }
+    return apiRequest(`/api/ad-manager/contracts?${query}`, { signal });
+}
+
+export function sendContractPaymentReminder(contractId, expectedRevisionNo) {
+    return apiRequest(`/api/ad-manager/contracts/${encodeURIComponent(contractId)}/payment-reminder`, {
+        method: "POST",
+        body: JSON.stringify({ expectedRevisionNo }),
+    });
+}
+
+export function closeExpiredContract(contractId, expectedRevisionNo) {
+    return apiRequest(`/api/ad-manager/contracts/${encodeURIComponent(contractId)}/close-expired`, {
+        method: "POST",
+        body: JSON.stringify({ expectedRevisionNo }),
+    });
 }
 
 export function getPartnership(companyId, signal) {

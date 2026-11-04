@@ -180,6 +180,33 @@ public class PayOSService {
         return "PENDING";
     }
 
+    /** Hủy payment link PayOS khi doanh nghiệp hủy booking trước khi thanh toán. */
+    public void cancelPaymentLink(long orderCode, String cancellationReason) {
+        if (!isConfigured()) return;
+        try {
+            String reason = cancellationReason == null ? "Booking cancelled" : cancellationReason.trim();
+            if (reason.length() > 500) reason = reason.substring(0, 500);
+            String jsonPayload = objectMapper.writeValueAsString(Map.of("cancellationReason", reason));
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(PAYOS_API_URL + "/" + orderCode + "/cancel"))
+                    .header("Content-Type", "application/json")
+                    .header("x-client-id", clientId)
+                    .header("x-api-key", apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonPayload, StandardCharsets.UTF_8))
+                    .timeout(Duration.ofSeconds(10))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            JsonNode root = objectMapper.readTree(response.body());
+            if (response.statusCode() < 200 || response.statusCode() >= 300
+                    || !"00".equals(root.path("code").asText(""))) {
+                throw new IllegalStateException(root.path("desc").asText("PayOS could not cancel the payment link."));
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException("Không thể hủy payment link PayOS: " + ex.getMessage(), ex);
+        }
+    }
+
     /**
      * Xác thực Webhook chữ ký từ PayOS
      */

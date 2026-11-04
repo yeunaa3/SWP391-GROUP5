@@ -16,6 +16,7 @@ import PartnershipStatus from "./PartnershipStatus.jsx";
 import "../../assets/partnership-status.css";
 import ContractDraftEditor from "./ContractDraftEditor.jsx";
 import { applicationSubmitBlockReason, legalDocumentError } from "../../utils/partnershipApplication.js";
+import { addDays } from "../../utils/bookingCalendar.js";
 
 const statusLabels = {
   DRAFT: "Bản nháp",
@@ -32,11 +33,18 @@ const statusLabels = {
   COMPLETED: "Đã hoàn thành",
   CANCELLED: "Đã hủy",
   EXPIRED: "Hết hạn",
+  PENDING: "Đang chờ thanh toán",
+  FAILED: "Thất bại",
 };
 
 const status = (value) => statusLabels[value] || value || "Chưa có";
 const currency = (value) => Number(value || 0).toLocaleString("vi-VN") + " ₫";
 const time = (value) => (value ? String(value).replace("T", " ").slice(0, 16) : "—");
+const inclusiveProposalEnd = (value) => {
+  if (!value) return "—";
+  const normalized = String(value).replace(" ", "T").slice(0, 16);
+  return `${addDays(normalized.slice(0, 10), -1)} ${normalized.slice(11, 16)}`;
+};
 const datetime = (value) =>
   value ? String(value).replace(" ", "T").slice(0, 16) : "";
 const editable = (value) => ["DRAFT", "NEEDS_REVISION"].includes(value);
@@ -141,6 +149,9 @@ export default function BusinessWorkspacePage({ screen }) {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [proposalRevisionReason, setProposalRevisionReason] = useState("");
+  const [showProposalRevisionForm, setShowProposalRevisionForm] = useState(false);
+  const [showBookingCancellation, setShowBookingCancellation] = useState(false);
+  const [bookingCancellationReason, setBookingCancellationReason] = useState("");
 
   // UC-38/BUS-02: dữ liệu đang chỉnh sửa của hồ sơ công ty, độc lập với hồ sơ cá nhân ở UC-08.
   const [companyForm, setCompanyForm] = useState({
@@ -221,6 +232,15 @@ export default function BusinessWorkspacePage({ screen }) {
       ? data.contracts.find((item) => item.status === "PENDING_PAYMENT" || item.payment_status === "UNPAID" || item.payment_status === "PENDING") ||
         data.contracts[0]
       : null);
+
+  const activeContractId = contract?.contract_id || targetContractId || "";
+  const linkedCampaigns = data.campaigns.filter(
+    (item) => String(item.contract_id) === String(contract?.contract_id),
+  );
+  const canCancelContract = Boolean(contract && (
+    ["PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED", "ACCEPTED", "PENDING_PAYMENT", "PAYMENT_FAILED"].includes(contract.status)
+    || (contract.status === "ACTIVE" && contract.payment_status === "PAID")
+  ));
 
   // Tự động kiểm tra và xác nhận thanh toán khi PayOS redirect về có mã thành công
   useEffect(() => {
@@ -374,7 +394,7 @@ export default function BusinessWorkspacePage({ screen }) {
     }
   }
 
-  function handleProposalDecision(decision, reason = "") {
+  function handleProposalDecision(decision, reason = "", changeType = "") {
     if (!contract) return;
 
     action(
@@ -387,15 +407,21 @@ export default function BusinessWorkspacePage({ screen }) {
               expectedRevisionNo: Number(contract.revision_no),
               proposalRevisionNo: Number(contract.latest_proposal_revision_no),
               decision,
+              changeType: decision === "REQUEST_REVISION" ? changeType : null,
               reason: decision === "REQUEST_REVISION" ? reason.trim() : null,
             }),
           },
         ),
       decision === "ACCEPT"
         ? "Đã đồng ý đề xuất. Hợp đồng đang chờ thanh toán."
-        : "Đã gửi yêu cầu sửa điều khoản cho Ad Manager.",
+        : changeType === "CONTRACT_INFO"
+          ? "Đã gửi yêu cầu đổi thông tin hợp đồng cho Ad Manager."
+          : "Đã gửi yêu cầu sửa điều khoản cho Ad Manager.",
       decision === "REQUEST_REVISION"
-        ? () => setProposalRevisionReason("")
+        ? () => {
+          setProposalRevisionReason("");
+          setShowProposalRevisionForm(false);
+        }
         : undefined,
     );
   }
@@ -1001,7 +1027,7 @@ export default function BusinessWorkspacePage({ screen }) {
                       (result) =>
                         navigate(
                           saveDraft
-                            ? `/business/contracts/${result.id}`
+                            ? `/business/bookings/${result.id}/proposal`
                             : "/business/contracts",
                         ),
                     );
@@ -1147,6 +1173,7 @@ export default function BusinessWorkspacePage({ screen }) {
                     packages={catalog?.offers || []}
                     startDate={booking.startDate}
                     endDate={booking.endDate}
+                    focusDate={booking.startDate}
                     onSelectRange={({
                       startDate,
                       endDate,
@@ -1185,16 +1212,13 @@ export default function BusinessWorkspacePage({ screen }) {
 
                     <Field label="Ngày kết thúc (từ lịch)">
                       <input
-                        type="date"
-                        required
-                        value={booking.endDate}
-                        onChange={(event) => {
-                          setBooking({
-                            ...booking,
-                            endDate: event.target.value,
-                          });
-                          setCalendarValid(false);
-                        }}
+                        type="text"
+                        value={booking.endDate
+                          ? new Date(`${booking.endDate}T12:00:00`).toLocaleDateString("vi-VN")
+                          : ""}
+                        placeholder="Ngày kết thúc được chọn trên lịch"
+                        readOnly
+                        aria-readonly="true"
                       />
                     </Field>
                   </div>
@@ -1352,6 +1376,75 @@ export default function BusinessWorkspacePage({ screen }) {
           )}
 
           {["BUS-08", "BUS-09", "BUS-10", "BUS-12"].includes(screen.id) && (
+            <nav className="business-booking-tabs" aria-label="Các bước booking và hợp đồng">
+              {[
+                ["BUS-08", "Xem đề xuất", `/business/bookings/${activeContractId}/proposal`],
+                ["BUS-09", "Thanh toán", `/business/contracts/${activeContractId}/checkout`],
+                ["BUS-10", "Kết quả thanh toán", `/business/contracts/payment-result?contractId=${activeContractId}`],
+                ["BUS-12", "Chi tiết hợp đồng", `/business/contracts/${activeContractId}`],
+              ].map(([id, label, to]) => (
+                <Link key={id} to={to} className={screen.id === id ? "is-active" : ""} aria-current={screen.id === id ? "page" : undefined}>{label}</Link>
+              ))}
+            </nav>
+          )}
+
+          {["BUS-09", "BUS-10", "BUS-12"].includes(screen.id) && (
+            <section className="dashboard-section business-booking-panel">
+              {!contract ? <p>Chọn hợp đồng từ <Link to="/business/contracts">danh sách hợp đồng</Link>.</p> : <>
+                <header className="business-booking-summary">
+                  <div><span>Mã hợp đồng</span><strong>{contract.contract_code || "—"}</strong></div>
+                  <div><span>Trạng thái</span><Badge value={contract.status} /></div>
+                  <div><span>Thanh toán</span><Badge value={contract.payment_status} /></div>
+                  <div><span>Giá trị</span><strong>{currency(contract.total_value)}</strong></div>
+                </header>
+
+                {screen.id === "BUS-09" && <>
+                  <h2>Thanh toán quảng cáo</h2>
+                  <dl className="business-details">
+                    <div><dt>Đơn hàng</dt><dd>{contract.contract_name || contract.package_name_snapshot || "Booking quảng cáo"}</dd></div>
+                    <div><dt>Vị trí</dt><dd>{contract.slot_name_snapshot || "—"}</dd></div>
+                    <div><dt>Thời gian</dt><dd>{time(contract.start_at)} – {time(contract.end_at)}</dd></div>
+                    <div><dt>Số tiền cần thanh toán</dt><dd>{currency(contract.total_value)}</dd></div>
+                    <div><dt>Hạn thanh toán</dt><dd>{time(contract.payment_due_at)}</dd></div>
+                    <div><dt>Phương thức</dt><dd>VietQR / PayOS</dd></div>
+                  </dl>
+                  {contract.status === "PENDING_PAYMENT" && contract.payment_status !== "PAID" ? <AutoPaymentTimerCard type="CONTRACT" referenceId={contract.contract_id} amount={contract.total_value} itemName={`Hợp đồng ${contract.contract_code}`} onSuccess={async () => { await refresh(); navigate(`/business/contracts/payment-result?contractId=${contract.contract_id}`); }} /> : contract.payment_status === "PAID" ? <p role="status" className="info-note">Hợp đồng đã thanh toán. Xem kết quả tại <Link to={`/business/contracts/payment-result?contractId=${contract.contract_id}`}>BUS-10</Link>.</p> : <p role="status" className="info-note">Hợp đồng chưa ở trạng thái có thể thanh toán.</p>}
+                </>}
+
+                {screen.id === "BUS-10" && <>
+                  <h2>Kết quả thanh toán</h2>
+                  <dl className="business-details">
+                    <div><dt>Trạng thái thanh toán</dt><dd><Badge value={contract.payment_status} /></dd></div>
+                    <div><dt>Mã hợp đồng</dt><dd>{contract.contract_code || "—"}</dd></div>
+                    <div><dt>Số tiền</dt><dd>{currency(contract.total_value)}</dd></div>
+                    <div><dt>Trạng thái hợp đồng</dt><dd><Badge value={contract.status} /></dd></div>
+                  </dl>
+                  {contract.payment_status === "PAID" ? <p role="status" className="info-note">Thanh toán thành công. Hợp đồng đã được kích hoạt nếu đáp ứng điều kiện nghiệp vụ.</p> : <p role="status" className="info-note">Chưa ghi nhận thanh toán thành công. Bạn có thể thử lại ở <Link to={`/business/contracts/${contract.contract_id}/checkout`}>BUS-09</Link>.</p>}
+                  <p>Mã giao dịch và thời điểm xử lý chưa được API workspace hiện tại cung cấp.</p>
+                  {contract.payment_status === "PAID" && <Link className="button-link" to={`/business/contracts/${contract.contract_id}`}>Mở hợp đồng →</Link>}
+                </>}
+
+                {screen.id === "BUS-12" && <>
+                  <h2>Chi tiết hợp đồng</h2>
+                  <dl className="business-details">
+                    <div><dt>Tên hợp đồng</dt><dd>{contract.contract_name || "—"}</dd></div>
+                    <div><dt>Gói</dt><dd>{contract.package_name_snapshot || "—"}</dd></div>
+                    <div><dt>Vị trí</dt><dd>{contract.slot_name_snapshot || "—"}</dd></div>
+                    <div><dt>Thời gian</dt><dd>{time(contract.start_at)} – {time(contract.end_at)}</dd></div>
+                    <div><dt>Giá trị</dt><dd>{currency(contract.total_value)}</dd></div>
+                    <div><dt>Thanh toán</dt><dd><Badge value={contract.payment_status} /></dd></div>
+                  </dl>
+                  {contract.latest_proposal_terms && <section className="business-contract-terms"><h3>Điều khoản thương mại</h3><p style={{whiteSpace:"pre-wrap"}}>{contract.latest_proposal_terms}</p></section>}
+                  <h3>Chiến dịch liên kết</h3>
+                  {linkedCampaigns.length ? <ul>{linkedCampaigns.map(item => <li key={item.campaign_id}><Link to={`/business/campaigns/${item.campaign_id}`}>{item.campaign_name}</Link> · {status(item.status)}</li>)}</ul> : <p>Chưa có chiến dịch liên kết.</p>}
+                  {contract.status === "ACTIVE" && contract.payment_status === "PAID" && <Link className="button-link" to={`/business/campaigns/edit?contractId=${contract.contract_id}`}>Tạo chiến dịch →</Link>}
+                  <p><Link to="/business/contracts">← Danh sách hợp đồng</Link></p>
+                </>}
+              </>}
+            </section>
+          )}
+
+          {screen.id === "BUS-08" && (
             <section className="dashboard-section">
               <h2>Thông tin hợp đồng</h2>
 
@@ -1390,7 +1483,7 @@ export default function BusinessWorkspacePage({ screen }) {
                           <dd>
                             {time(contract.latest_proposal_start_at)}
                             {" đến "}
-                            {time(contract.latest_proposal_end_at)}
+                            {inclusiveProposalEnd(contract.latest_proposal_end_at)}
                           </dd>
                         </div>
                         <div>
@@ -1409,6 +1502,65 @@ export default function BusinessWorkspacePage({ screen }) {
                       </p>
                     </section>
                   )}
+                  {contract.status === "PENDING_REVIEW"
+                    && contract.latest_proposal_status === "REVISION_REQUESTED" && (
+                      <section className="dashboard-section">
+                        <h3>
+                          {contract.latest_proposal_response_type === "CONTRACT_INFO"
+                            ? "Đã gửi yêu cầu đổi thông tin hợp đồng"
+                            : "Đã gửi yêu cầu sửa điều khoản"}
+                        </h3>
+                        <p role="status" className="info-note">
+                          Ad Manager đang xem xét yêu cầu của bạn và sẽ gửi đề xuất cập nhật.
+                        </p>
+                        {contract.latest_proposal_response_reason && (
+                          <p style={{ whiteSpace: "pre-wrap" }}>
+                            <strong>Lý do đã gửi: </strong>{contract.latest_proposal_response_reason}
+                          </p>
+                        )}
+                      </section>
+                    )}
+                  {contract.status !== "PROPOSED"
+                    && contract.latest_proposal_id
+                    && ["SENT", "REVISION_REQUESTED"].includes(contract.latest_proposal_status) && (
+                      <section className="dashboard-section">
+                        <h3>Proposal gần nhất · phiên bản {contract.latest_proposal_revision_no}</h3>
+                        <dl className="business-details">
+                          <div>
+                            <dt>Thời gian đề xuất</dt>
+                            <dd>
+                              {time(contract.latest_proposal_start_at)}
+                              {" đến "}
+                              {inclusiveProposalEnd(contract.latest_proposal_end_at)}
+                            </dd>
+                          </div>
+                          {contract.latest_proposal_package_name && (
+                            <div>
+                              <dt>Package đề xuất</dt>
+                              <dd>{contract.latest_proposal_package_name}</dd>
+                            </div>
+                          )}
+                          {contract.latest_proposal_slot_name && (
+                            <div>
+                              <dt>Ad slot đề xuất</dt>
+                              <dd>{contract.latest_proposal_slot_name}</dd>
+                            </div>
+                          )}
+                          <div>
+                            <dt>Giá đề xuất</dt>
+                            <dd>{currency(contract.latest_proposal_amount)}</dd>
+                          </div>
+                          <div>
+                            <dt>Hạn phản hồi</dt>
+                            <dd>{time(contract.latest_proposal_expires_at)}</dd>
+                          </div>
+                        </dl>
+                        <p><strong>Điều khoản thương mại</strong></p>
+                        <p style={{ whiteSpace: "pre-wrap" }}>
+                          {contract.latest_proposal_terms || "Chưa có điều khoản."}
+                        </p>
+                      </section>
+                    )}
                   {contract.status === "PROPOSED" ? (
                     <>
                       <h3>Đề xuất hợp đồng từ Ad Manager</h3>
@@ -1424,9 +1576,21 @@ export default function BusinessWorkspacePage({ screen }) {
                               <dd>
                                 {time(contract.latest_proposal_start_at)}
                                 {" đến "}
-                                {time(contract.latest_proposal_end_at)}
+                                {inclusiveProposalEnd(contract.latest_proposal_end_at)}
                               </dd>
                             </div>
+                            {contract.latest_proposal_package_name && (
+                              <div>
+                                <dt>Package đề xuất</dt>
+                                <dd>{contract.latest_proposal_package_name}</dd>
+                              </div>
+                            )}
+                            {contract.latest_proposal_slot_name && (
+                              <div>
+                                <dt>Ad slot đề xuất</dt>
+                                <dd>{contract.latest_proposal_slot_name}</dd>
+                              </div>
+                            )}
                             <div>
                               <dt>Giá đề xuất</dt>
                               <dd>{currency(contract.latest_proposal_amount)}</dd>
@@ -1441,7 +1605,6 @@ export default function BusinessWorkspacePage({ screen }) {
                           <p style={{ whiteSpace: "pre-wrap" }}>
                             {contract.latest_proposal_terms}
                           </p>
-
                           {contract.latest_proposal_status === "SENT"
                             && new Date(
                               String(contract.latest_proposal_expires_at).replace(" ", "T"),
@@ -1454,6 +1617,14 @@ export default function BusinessWorkspacePage({ screen }) {
                               <div className="form-actions">
                                 <button
                                   type="button"
+                                  className="secondary-button"
+                                  aria-expanded={showProposalRevisionForm}
+                                  onClick={() => setShowProposalRevisionForm((shown) => !shown)}
+                                >
+                                  {showProposalRevisionForm ? "Ẩn yêu cầu" : "Gửi yêu cầu"}
+                                </button>
+                                <button
+                                  type="button"
                                   disabled={busy}
                                   onClick={() => handleProposalDecision("ACCEPT")}
                                 >
@@ -1461,34 +1632,49 @@ export default function BusinessWorkspacePage({ screen }) {
                                 </button>
                               </div>
 
-                              <form
-                                onSubmit={(event) => {
-                                  event.preventDefault();
-                                  handleProposalDecision("REQUEST_REVISION", proposalRevisionReason);
-                                }}
-                              >
-                                <label className="business-field">
-                                  <span>Lý do yêu cầu sửa điều khoản</span>
-                                  <textarea
-                                    required
-                                    maxLength={2000}
-                                    rows={4}
-                                    value={proposalRevisionReason}
-                                    onChange={(event) => setProposalRevisionReason(event.target.value)}
-                                  />
-                                </label>
-
-                                <button
-                                  type="submit"
-                                  disabled={busy || !proposalRevisionReason.trim()}
+                              {showProposalRevisionForm && (
+                                <form
+                                  onSubmit={(event) => {
+                                    event.preventDefault();
+                                    handleProposalDecision("REQUEST_REVISION", proposalRevisionReason, "TERMS");
+                                  }}
                                 >
-                                  Yêu cầu sửa điều khoản
-                                </button>
-                              </form>
+                                  <label className="business-field">
+                                    <span>Lý do yêu cầu</span>
+                                    <textarea
+                                      required
+                                      maxLength={2000}
+                                      rows={4}
+                                      value={proposalRevisionReason}
+                                      onChange={(event) => setProposalRevisionReason(event.target.value)}
+                                    />
+                                  </label>
+
+                                  <div className="form-actions">
+                                    <button
+                                      type="submit"
+                                      disabled={busy || !proposalRevisionReason.trim()}
+                                    >
+                                      Yêu cầu sửa điều khoản
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy || !proposalRevisionReason.trim()}
+                                      onClick={() => handleProposalDecision(
+                                        "REQUEST_REVISION", proposalRevisionReason, "CONTRACT_INFO",
+                                      )}
+                                    >
+                                      Yêu cầu đổi thông tin hợp đồng
+                                    </button>
+                                  </div>
+                                </form>
+                              )}
                             </>
                           ) : contract.latest_proposal_status === "REVISION_REQUESTED" ? (
                             <p role="status" className="info-note">
-                              Đã gửi yêu cầu sửa điều khoản. Đang chờ Ad Manager gửi đề xuất mới.
+                              {contract.latest_proposal_response_type === "CONTRACT_INFO"
+                                ? "Đã gửi yêu cầu đổi thông tin hợp đồng."
+                                : "Đã gửi yêu cầu sửa điều khoản."} Đang chờ Ad Manager gửi đề xuất mới.
                             </p>
                           ) : (
                             <p role="status" className="info-note">
@@ -1505,26 +1691,25 @@ export default function BusinessWorkspacePage({ screen }) {
                   ) : contract.status === "REVISION_REQUESTED" ? (
                     <>
                       <p role="status" className="info-note">
-                        Quản lý yêu cầu chọn thời gian khác. Hãy sửa lịch booking, lưu thay đổi,
-                        rồi gửi lại để được xem xét.
+                        Quản lý yêu cầu thay đổi thông tin booking. Nếu đổi package hoặc ad slot, hãy chọn lại khoảng ngày trên lịch rồi gửi booking.
                       </p>
-
                       {editingBooking ? (
                         <ContractDraftEditor
                           key={contract.contract_id}
                           contract={contract}
                           catalog={catalog}
                           busy={busy}
+                          submitImmediately
                           onCancel={() => setEditingBooking(false)}
                           onSave={(payload) =>
                             action(
                               () =>
                                 json(
-                                  `/api/business/bookings/${contract.contract_id}`,
+                                  `/api/business/bookings/${contract.contract_id}/submit`,
                                   payload,
                                   "PUT",
                                 ),
-                              "Đã lưu thay đổi. Gửi lại booking để quản lý xem xét.",
+                              "Đã lưu và gửi lại booking để quản lý xem xét.",
                               () => setEditingBooking(false),
                             )
                           }
@@ -1541,29 +1726,9 @@ export default function BusinessWorkspacePage({ screen }) {
                               setMessage("");
                             }}
                           >
-                            Sửa thời gian booking
+                            Sửa thông tin booking
                           </button>
 
-                          <button
-                            disabled={busy || data.company.application_status !== "APPROVED"}
-                            onClick={() =>
-                              action(
-                                () =>
-                                  apiRequest(
-                                    `/api/business/bookings/${contract.contract_id}/submit`,
-                                    {
-                                      method: "POST",
-                                      body: JSON.stringify({
-                                        expectedRevisionNo: Number(contract.revision_no),
-                                      }),
-                                    },
-                                  ),
-                                "Đã gửi lại booking để quản lý xem xét.",
-                              )
-                            }
-                          >
-                            {busy ? "Đang gửi…" : "Gửi lại booking"}
-                          </button>
                         </div>
                       )}
                     </>
@@ -1832,18 +1997,24 @@ export default function BusinessWorkspacePage({ screen }) {
                           </Link>
                         </div>
                       )}
-                      <AutoPaymentTimerCard
-                        type="CONTRACT"
-                        referenceId={contract.contract_id}
-                        amount={contract.total_value}
-                        itemName={`Hợp đồng ${contract.contract_code}`}
-                        onSuccess={async () => {
-                          setMessage(
-                            "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp."
-                          );
-                          await refresh();
-                        }}
-                      />
+                      {contract.status === "PENDING_PAYMENT" || screen.id === "BUS-09" ? (
+                        <AutoPaymentTimerCard
+                          type="CONTRACT"
+                          referenceId={contract.contract_id}
+                          amount={contract.total_value}
+                          itemName={`Hợp đồng ${contract.contract_code}`}
+                          onSuccess={async () => {
+                            setMessage(
+                              "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp."
+                            );
+                            await refresh();
+                          }}
+                        />
+                      ) : (
+                        <p role="status" className="info-note">
+                          Hợp đồng chưa ở trạng thái thanh toán. Kiểm tra trạng thái tại BUS-12.
+                        </p>
+                      )}
                     </div>
                   )}
                 </>
@@ -1855,6 +2026,64 @@ export default function BusinessWorkspacePage({ screen }) {
               )}
             </section>
           )}
+
+          {["BUS-08", "BUS-09", "BUS-10", "BUS-12"].includes(screen.id)
+            && canCancelContract && (
+              <section className="dashboard-section business-booking-cancel">
+                <h3>Hủy booking</h3>
+                <p>
+                  Booking sẽ chuyển sang trạng thái đã hủy và được lưu lại trong lịch sử.
+                  {contract.payment_status === "PAID"
+                    ? " Hợp đồng và các chiến dịch liên kết sẽ dừng; khoản đã thanh toán không được hoàn tự động."
+                    : " Nếu đã mở link PayOS, hệ thống sẽ yêu cầu PayOS hủy link thanh toán."}
+                </p>
+                {!showBookingCancellation ? (
+                  <button type="button" className="outline-button" disabled={busy}
+                    onClick={() => setShowBookingCancellation(true)}>
+                    Hủy booking
+                  </button>
+                ) : (
+                  <form onSubmit={(event) => {
+                    event.preventDefault();
+                    const reason = bookingCancellationReason.trim();
+                    if (!reason || busy) return;
+                    const warning = contract.payment_status === "PAID"
+                      ? "Xác nhận hủy booking đã thanh toán? Việc này sẽ dừng hợp đồng và chiến dịch liên kết, không tự động hoàn tiền."
+                      : "Xác nhận hủy booking? Thao tác này không thể gửi lại booking đã hủy.";
+                    if (!window.confirm(warning)) return;
+                    action(
+                      () => apiRequest(`/api/business/bookings/${contract.contract_id}/cancel`, {
+                        method: "POST",
+                        body: JSON.stringify({
+                          expectedRevisionNo: Number(contract.revision_no),
+                          reason,
+                        }),
+                      }),
+                      "Booking đã chuyển sang trạng thái đã hủy.",
+                      () => {
+                        setShowBookingCancellation(false);
+                        setBookingCancellationReason("");
+                      },
+                    );
+                  }}>
+                    <label className="business-field">
+                      <span>Lý do hủy (bắt buộc)</span>
+                      <textarea required maxLength={500} rows={3} value={bookingCancellationReason}
+                        onChange={(event) => setBookingCancellationReason(event.target.value)} />
+                    </label>
+                    <div className="form-actions">
+                      <button type="submit" disabled={busy || !bookingCancellationReason.trim()}>
+                        {busy ? "Đang hủy…" : "Xác nhận hủy booking"}
+                      </button>
+                      <button type="button" className="outline-button" disabled={busy}
+                        onClick={() => { setShowBookingCancellation(false); setBookingCancellationReason(""); }}>
+                        Giữ booking
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
+            )}
 
           {screen.id === "BUS-13" && (
             <section className="dashboard-section">

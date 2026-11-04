@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,7 +45,8 @@ public final class AdManagerDtos {
 
         public record BookingQueueItem(long contractId, String contractCode, String contractName,
                         String companyName, String slotName, Instant startAt, Instant endAt,
-                        BigDecimal totalValue, String currency, String status, Instant submittedAt) {
+                        BigDecimal totalValue, String currency, String status, Instant submittedAt,
+                        String cancellationReason) {
         }
 
         public record BookingDetail(
@@ -54,11 +56,65 @@ public final class AdManagerDtos {
                         List<String> allowedActions) {
         }
 
+        public record ContractStatusDetail(
+                        ContractStatusSnapshot contract,
+                        Instant lastPaymentReminderAt,
+                        List<String> allowedActions) {
+        }
+
+        public record ContractStatusQueuePage(
+                        List<ContractStatusQueueItem> items,
+                        long total,
+                        int page,
+                        int size,
+                        int totalPages) {
+        }
+
+        public record ContractStatusQueueItem(
+                        long contractId,
+                        String contractCode,
+                        String contractName,
+                        String companyName,
+                        String packageName,
+                        String slotName,
+                        LocalDateTime startAt,
+                        LocalDateTime endAt,
+                        BigDecimal totalValue,
+                        String currency,
+                        String status,
+                        String paymentStatus,
+                        LocalDateTime paymentDueAt) {
+        }
+
+        public record ContractStatusSnapshot(
+                        long contractId,
+                        String contractCode,
+                        String contractName,
+                        String companyName,
+                        String packageName,
+                        String slotName,
+                        String slotPosition,
+                        LocalDateTime startAt,
+                        LocalDateTime endAt,
+                        BigDecimal totalValue,
+                        String currency,
+                        String status,
+                        String paymentStatus,
+                        LocalDateTime paymentDueAt,
+                        int revisionNo) {
+        }
+
+        public record ContractActionRequest(
+                        @NotNull @Min(1) Integer expectedRevisionNo) {
+        }
+
         public record BookingSnapshot(
                         long contractId,
                         String contractCode,
                         String contractName,
                         String companyName,
+                        long packageId,
+                        long slotId,
                         String packageName,
                         String slotName,
                         String slotPosition,
@@ -83,9 +139,14 @@ public final class AdManagerDtos {
                         int revisionNo,
                         String status,
                         String businessResponseReason,
+                        String businessResponseType,
                         String commercialTerms,
                         BigDecimal proposedAmount,
                         String currency,
+                        Long proposedPackageId,
+                        Long proposedSlotId,
+                        String proposedPackageName,
+                        String proposedSlotName,
                         LocalDateTime proposedStartAt,
                         LocalDateTime proposedEndAt,
                         LocalDateTime expiresAt,
@@ -97,6 +158,8 @@ public final class AdManagerDtos {
         public record SaveProposalRequest(
                         @NotNull @Min(1) Integer expectedRevisionNo,
                         @NotBlank @Size(max = 10000) String commercialTerms,
+                        @NotNull @Positive Long packageId,
+                        @NotNull @Positive Long slotId,
                         @NotNull LocalDateTime proposedStartAt,
                         @NotNull LocalDateTime proposedEndAt,
                         @NotNull LocalDateTime expiresAt) {
@@ -107,13 +170,12 @@ public final class AdManagerDtos {
         }
 
         public record RequestAnotherPeriodRequest(
-                        @NotNull @Min(1) Integer expectedRevisionNo,
-                        @NotBlank @Size(max = 500) String reason) {
+                        @NotNull @Min(1) Integer expectedRevisionNo) {
         }
 
         public record BookingQueueFilter(
                         @Size(max = 150) String q,
-                        @Pattern(regexp = "|PENDING_REVIEW") String status,
+                        @Pattern(regexp = "|PENDING_REVIEW|CANCELLED") String status,
                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
                         @Min(0) int page,

@@ -53,6 +53,36 @@ public class AdManagerPartnershipController {
         return service.bookingDetail(contractId);
     }
 
+    @GetMapping("/contracts")
+    public AdManagerDtos.ContractStatusQueuePage contractStatusQueue(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "") String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return service.contractStatusQueue(q, status, page, size);
+    }
+
+    @GetMapping("/contracts/{contractId}")
+    public AdManagerDtos.ContractStatusDetail contractStatusDetail(@PathVariable long contractId) {
+        return service.contractStatusDetail(contractId);
+    }
+
+    @PostMapping("/contracts/{contractId}/payment-reminder")
+    public AdManagerDtos.ContractStatusDetail sendPaymentReminder(
+            @PathVariable long contractId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal manager,
+            @Valid @RequestBody AdManagerDtos.ContractActionRequest request) {
+        return service.sendPaymentReminder(contractId, manager, request);
+    }
+
+    @PostMapping("/contracts/{contractId}/close-expired")
+    public AdManagerDtos.ContractStatusDetail closeExpiredBooking(
+            @PathVariable long contractId,
+            @AuthenticationPrincipal AuthenticatedUserPrincipal manager,
+            @Valid @RequestBody AdManagerDtos.ContractActionRequest request) {
+        return service.closeExpiredBooking(contractId, manager, request);
+    }
+
     @PutMapping("/bookings/{contractId}/proposal")
     public AdManagerDtos.BookingDetail saveProposal(
             @PathVariable long contractId,

@@ -18,7 +18,7 @@ Booking and Contract Proposal|Đề xuất đặt chỗ và hợp đồng
 Advertising Checkout|Thanh toán quảng cáo
 Advertising Payment Result|Kết quả thanh toán quảng cáo
 Contract List|Danh sách hợp đồng
-Contract Detail and Invoice|Chi tiết hợp đồng và hóa đơn
+Contract Detail|Chi tiết hợp đồng
 Campaign List|Danh sách chiến dịch
 Campaign Create and Edit|Tạo và chỉnh sửa chiến dịch
 Creative and Targeting|Nội dung quảng cáo và nhắm đối tượng
@@ -31,7 +31,8 @@ Partnership Review Queue|Danh sách đăng ký chờ duyệt
 Partnership Review Detail|Chi tiết xét duyệt hợp tác
 Booking Review Queue|Danh sách đặt quảng cáo chờ duyệt
 Booking Availability and Proposal|Kiểm tra vị trí và lập đề xuất
-Contract Revision and Payment Status|Chỉnh sửa hợp đồng và trạng thái thanh toán
+Contract Payment Tracking|Theo dõi thanh toán hợp đồng
+Payment Tracking|Theo dõi thanh toán
 Campaign Review Queue|Danh sách chiến dịch chờ duyệt
 Campaign and Creative Review|Duyệt chiến dịch và nội dung quảng cáo
 Active Campaign Monitor|Theo dõi chiến dịch đang chạy

@@ -57,13 +57,16 @@ public class BusinessWorkspaceService {
                        p.proposal_id AS latest_proposal_id,
                        p.revision_no AS latest_proposal_revision_no,
                        p.status AS latest_proposal_status,
+                       p.business_response_type AS latest_proposal_response_type,
                        p.commercial_terms AS latest_proposal_terms,
                        p.proposed_amount AS latest_proposal_amount,
                        p.currency AS latest_proposal_currency,
                        p.proposed_start_at AS latest_proposal_start_at,
                        p.proposed_end_at AS latest_proposal_end_at,
                        p.expires_at AS latest_proposal_expires_at,
-                       p.sent_at AS latest_proposal_sent_at
+                       p.sent_at AS latest_proposal_sent_at,
+                       p.proposed_package_name_snapshot AS latest_proposal_package_name,
+                       p.proposed_slot_name_snapshot AS latest_proposal_slot_name
                 FROM contracts c
                 LEFT JOIN contract_proposals p
                   ON p.proposal_id = (
@@ -206,9 +209,8 @@ public class BusinessWorkspaceService {
     }
 
     /**
-     * BUS-03: chỉ chốt phiên bản khi toàn bộ tài liệu còn đọc được trên kho thực.
-     * Metadata không đủ chứng minh file tồn tại; lỗi kho/mất file phải giữ hồ sơ nháp
-     * để doanh nghiệp gỡ tài liệu lỗi và tải lại trước khi gửi.
+     * BUS-03: chỉ gửi phiên bản hồ sơ khi mọi tài liệu còn đọc được trong kho.
+     * Metadata trong DB không đủ để xác nhận tệp vẫn tồn tại.
      */
     private void requireAvailableApplicationDocuments(Long companyId, int expectedCount) {
         List<Map<String, Object>> documents = jdbc.queryForList(
@@ -292,10 +294,15 @@ public class BusinessWorkspaceService {
             if ("REVISION_REQUESTED".equals(existingBooking.get("status"))) {
                 LocalDateTime previousStart = dateTime(existingBooking.get("start_at"));
                 LocalDateTime previousEnd = dateTime(existingBooking.get("end_at"));
+                long previousPackageId = ((Number) existingBooking.get("b2b_package_id")).longValue();
+                long previousSlotId = ((Number) existingBooking.get("slot_id")).longValue();
 
-                if (start.equals(previousStart) && end.equals(previousEnd)) {
+                if (request.packageId() == previousPackageId
+                        && request.slotId() == previousSlotId
+                        && start.equals(previousStart)
+                        && end.equals(previousEnd)) {
                     throw new InvalidStateTransitionException(
-                            "Hãy chọn khoảng thời gian mới trước khi lưu booking.");
+                            "Hãy thay đổi package, ad slot hoặc khoảng thời gian trước khi gửi lại booking.");
                 }
             }
         }
@@ -357,7 +364,11 @@ public class BusinessWorkspaceService {
                 "UPDATE contracts SET quote_snapshot=JSON_OBJECT('packagePrice',?,'slotMonthlyPrice',?,'days',?,'total',?,'currency',?,'quotedAt',CURRENT_TIMESTAMP(6)) WHERE contract_id=?",
                 pack.get("price"), slot.get("base_price"), days, price, slot.get("currency"), contract);
         if (submit) {
-            submitBooking(user, contract);
+            if (existingBooking == null) {
+                submitBooking(user, contract);
+            } else {
+                submitBooking(user, contract, request.expectedRevisionNo() + 1);
+            }
         }
         String resultStatus = submit
                 ? "PENDING_REVIEW"
@@ -428,7 +439,12 @@ public class BusinessWorkspaceService {
             String reason = request.reason() == null ? "" : request.reason().trim();
             if (reason.isBlank()) {
                 throw new InvalidStateTransitionException(
-                        "Cần nhập lý do yêu cầu sửa điều khoản.");
+                        "Cần nhập lý do cho yêu cầu thay đổi.");
+            }
+            if (!"TERMS".equals(request.changeType())
+                    && !"CONTRACT_INFO".equals(request.changeType())) {
+                throw new InvalidStateTransitionException(
+                        "Hãy chọn loại yêu cầu: sửa điều khoản hoặc đổi thông tin hợp đồng.");
             }
 
             int contractChanged = jdbc.update("""
@@ -449,9 +465,10 @@ public class BusinessWorkspaceService {
             int changed = jdbc.update("""
                     UPDATE contract_proposals
                     SET status='REVISION_REQUESTED',
+                        business_response_type=?,
                         business_response_reason=?
                     WHERE proposal_id=? AND status='SENT'
-                    """, reason, proposalId);
+                    """, request.changeType(), reason, proposalId);
 
             if (changed != 1) {
                 throw new ConflictException(
@@ -473,6 +490,7 @@ public class BusinessWorkspaceService {
                         JSON_OBJECT(
                             'status', 'PENDING_REVIEW',
                             'proposalStatus', 'REVISION_REQUESTED',
+                            'requestType', ?,
                             'revisionNo', ?
                         ),
                         ?
@@ -481,6 +499,7 @@ public class BusinessWorkspaceService {
                     user.id(),
                     String.valueOf(contractId),
                     request.proposalRevisionNo(),
+                    request.changeType(),
                     currentRevision + 1,
                     reason);
 
@@ -492,7 +511,7 @@ public class BusinessWorkspaceService {
                     )
                     SELECT DISTINCT
                         u.user_id,
-                        'Business yêu cầu sửa điều khoản',
+                        ?,
                         ?,
                         'WORKFLOW',
                         'CONTRACT',
@@ -506,8 +525,13 @@ public class BusinessWorkspaceService {
                       AND r.status='ACTIVE'
                       AND u.status='ACTIVE'
                     """,
+                    "CONTRACT_INFO".equals(request.changeType())
+                            ? "Business yêu cầu đổi thông tin hợp đồng"
+                            : "Business yêu cầu sửa điều khoản",
                     "Booking " + contract.get("contract_code")
-                            + " cần sửa điều khoản. Lý do: " + reason,
+                            + ("CONTRACT_INFO".equals(request.changeType())
+                                    ? " cần đổi thông tin hợp đồng. Lý do: "
+                                    : " cần sửa điều khoản. Lý do: ") + reason,
                     String.valueOf(contractId));
 
             return overview(user);
@@ -515,7 +539,30 @@ public class BusinessWorkspaceService {
 
         LocalDateTime proposedStartAt = dateTime(proposal.get("proposed_start_at"));
         LocalDateTime proposedEndAt = dateTime(proposal.get("proposed_end_at"));
-        long slotId = ((Number) contract.get("slot_id")).longValue();
+        long packageId = ((Number) (proposal.get("proposed_package_id") == null
+                ? contract.get("b2b_package_id")
+                : proposal.get("proposed_package_id"))).longValue();
+        long slotId = ((Number) (proposal.get("proposed_slot_id") == null
+                ? contract.get("slot_id")
+                : proposal.get("proposed_slot_id"))).longValue();
+        Object packageCode = proposal.get("proposed_package_code_snapshot") == null
+                ? contract.get("package_code_snapshot") : proposal.get("proposed_package_code_snapshot");
+        Object packageName = proposal.get("proposed_package_name_snapshot") == null
+                ? contract.get("package_name_snapshot") : proposal.get("proposed_package_name_snapshot");
+        Object packagePrice = proposal.get("proposed_package_price_snapshot") == null
+                ? contract.get("package_price_snapshot") : proposal.get("proposed_package_price_snapshot");
+        Object durationDays = proposal.get("proposed_duration_days_snapshot") == null
+                ? contract.get("duration_days_snapshot") : proposal.get("proposed_duration_days_snapshot");
+        Object impressionsQuota = proposal.get("proposed_impressions_quota_snapshot") == null
+                ? contract.get("impressions_quota_snapshot") : proposal.get("proposed_impressions_quota_snapshot");
+        Object slotName = proposal.get("proposed_slot_name_snapshot") == null
+                ? contract.get("slot_name_snapshot") : proposal.get("proposed_slot_name_snapshot");
+        Object slotPosition = proposal.get("proposed_slot_position_snapshot") == null
+                ? contract.get("slot_position_snapshot") : proposal.get("proposed_slot_position_snapshot");
+        BigDecimal slotPrice = proposal.get("proposed_slot_price_snapshot") == null
+                ? jdbc.queryForObject("SELECT base_price FROM ad_slots WHERE slot_id=?", BigDecimal.class, slotId)
+                : (BigDecimal) proposal.get("proposed_slot_price_snapshot");
+        Object currency = proposal.get("currency") == null ? contract.get("currency") : proposal.get("currency");
 
         one("SELECT slot_id FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",
                 slotId);
@@ -536,9 +583,27 @@ public class BusinessWorkspaceService {
         int contractChanged = jdbc.update("""
                 UPDATE contracts
                 SET status='ACCEPTED',
+                    b2b_package_id=?,
+                    slot_id=?,
+                    package_code_snapshot=?,
+                    package_name_snapshot=?,
+                    package_price_snapshot=?,
+                    duration_days_snapshot=?,
+                    impressions_quota_snapshot=?,
+                    slot_name_snapshot=?,
+                    slot_position_snapshot=?,
                     total_value=?,
+                    currency=?,
                     start_at=?,
                     end_at=?,
+                    quote_snapshot=JSON_OBJECT(
+                        'packagePrice', ?,
+                        'slotMonthlyPrice', ?,
+                        'days', ?,
+                        'total', ?,
+                        'currency', ?,
+                        'quotedAt', CURRENT_TIMESTAMP(6)
+                    ),
                     payment_status='PENDING',
                     accepted_at=CURRENT_TIMESTAMP(6),
                     payment_due_at=DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 48 HOUR),
@@ -549,9 +614,24 @@ public class BusinessWorkspaceService {
                   AND revision_no=?
                   AND status='PROPOSED'
                 """,
+                packageId,
+                slotId,
+                packageCode,
+                packageName,
+                packagePrice,
+                durationDays,
+                impressionsQuota,
+                slotName,
+                slotPosition,
                 proposal.get("proposed_amount"),
+                currency,
                 proposedStartAt,
                 proposedEndAt,
+                packagePrice,
+                slotPrice,
+                ChronoUnit.DAYS.between(proposedStartAt.toLocalDate(), proposedEndAt.toLocalDate()),
+                proposal.get("proposed_amount"),
+                currency,
                 contractId,
                 companyId,
                 currentRevision);
@@ -587,6 +667,27 @@ public class BusinessWorkspaceService {
                 String.valueOf(contractId),
                 currentRevision,
                 request.proposalRevisionNo());
+
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT DISTINCT u.user_id,
+                       'Booking được chấp nhận, đang chờ thanh toán',
+                       ?, 'WORKFLOW', 'CONTRACT', ?,
+                       'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users u
+                JOIN user_roles ur ON ur.user_id=u.user_id
+                JOIN roles r ON r.role_id=ur.role_id
+                WHERE r.role_name='AD_MANAGER'
+                  AND r.status='ACTIVE'
+                  AND u.status='ACTIVE'
+                """,
+                "Business đã chấp nhận proposal của booking " + contract.get("contract_code")
+                        + ". Theo dõi thanh toán tại ADM-06.",
+                String.valueOf(contractId));
 
         return overview(user);
     }
@@ -641,7 +742,7 @@ public class BusinessWorkspaceService {
         }
 
         if ("REVISION_REQUESTED".equals(currentStatus)) {
-            requireDifferentFromRequestedPeriod(id, start, end);
+            requireDifferentFromRequestedBooking(id, contract);
         }
 
         one("SELECT * FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",
@@ -691,12 +792,13 @@ public class BusinessWorkspaceService {
         return booking;
     }
 
-    private void requireDifferentFromRequestedPeriod(
+    private void requireDifferentFromRequestedBooking(
             Long contractId,
-            LocalDateTime currentStart,
-            LocalDateTime currentEnd) {
+            Map<String, Object> currentBooking) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
                 SELECT
+                    JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.packageId')) AS previous_package_id,
+                    JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.slotId')) AS previous_slot_id,
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.startAt')) AS DATETIME(6))
                         AS previous_start,
                     CAST(JSON_UNQUOTE(JSON_EXTRACT(old_value, '$.endAt')) AS DATETIME(6))
@@ -704,7 +806,7 @@ public class BusinessWorkspaceService {
                 FROM audit_logs
                 WHERE entity_type='CONTRACT'
                   AND entity_id=?
-                  AND action='REQUEST_ANOTHER_PERIOD'
+                  AND action='MANAGER_REQUEST_CONTRACT_CHANGE'
                 ORDER BY audit_log_id DESC
                 LIMIT 1
                 """, String.valueOf(contractId));
@@ -714,12 +816,22 @@ public class BusinessWorkspaceService {
                     "Không tìm thấy yêu cầu đổi thời gian. Hãy tải lại booking.");
         }
 
-        LocalDateTime previousStart = dateTime(rows.getFirst().get("previous_start"));
-        LocalDateTime previousEnd = dateTime(rows.getFirst().get("previous_end"));
+        Map<String, Object> previous = rows.getFirst();
+        long previousPackageId = Long.parseLong(String.valueOf(previous.get("previous_package_id")));
+        long previousSlotId = Long.parseLong(String.valueOf(previous.get("previous_slot_id")));
+        LocalDateTime previousStart = dateTime(previous.get("previous_start"));
+        LocalDateTime previousEnd = dateTime(previous.get("previous_end"));
+        long currentPackageId = ((Number) currentBooking.get("b2b_package_id")).longValue();
+        long currentSlotId = ((Number) currentBooking.get("slot_id")).longValue();
+        LocalDateTime currentStart = dateTime(currentBooking.get("start_at"));
+        LocalDateTime currentEnd = dateTime(currentBooking.get("end_at"));
 
-        if (currentStart.equals(previousStart) && currentEnd.equals(previousEnd)) {
+        if (currentPackageId == previousPackageId
+                && currentSlotId == previousSlotId
+                && currentStart.equals(previousStart)
+                && currentEnd.equals(previousEnd)) {
             throw new InvalidStateTransitionException(
-                    "Booking cần có khoảng thời gian mới trước khi gửi lại.");
+                    "Hãy thay đổi package, ad slot hoặc khoảng thời gian trước khi gửi lại booking.");
         }
     }
 
@@ -755,6 +867,72 @@ public class BusinessWorkspaceService {
         jdbc.update("DELETE FROM contracts WHERE contract_id=?", id);
         audit(user, "DELETE_BOOKING_DRAFT", "CONTRACT", id);
         return Map.of("id", id);
+    }
+
+    @Transactional
+    public Map<String, Object> cancelBooking(
+            AuthenticatedUserPrincipal user,
+            Long id,
+            BusinessRequests.BookingCancellationRequest request) {
+        Long companyId = requireCompany(user);
+        Map<String, Object> booking = one(
+                "SELECT status,payment_status,revision_no FROM contracts WHERE contract_id=? AND company_id=? FOR UPDATE",
+                id,
+                companyId);
+        String currentStatus = String.valueOf(booking.get("status"));
+        String paymentStatus = String.valueOf(booking.get("payment_status"));
+        int currentRevision = ((Number) booking.get("revision_no")).intValue();
+        String reason = request.reason().trim();
+
+        if (currentRevision != request.expectedRevisionNo()) {
+            throw new ConflictException("Booking đã thay đổi. Hãy tải lại trước khi hủy.");
+        }
+        if (!List.of("PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED", "ACCEPTED",
+                "PENDING_PAYMENT", "PAYMENT_FAILED", "ACTIVE").contains(currentStatus)
+                || ("ACTIVE".equals(currentStatus) && !"PAID".equals(paymentStatus))
+                || (!"ACTIVE".equals(currentStatus) && "PAID".equals(paymentStatus))) {
+            throw new InvalidStateTransitionException(
+                    "Booking này không thể hủy ở trạng thái hiện tại.");
+        }
+
+        int changed = jdbc.update("""
+                UPDATE contracts
+                SET status='CANCELLED', revision_no=revision_no+1,
+                    reservation_expires_at=NULL, updated_at=CURRENT_TIMESTAMP(6)
+                WHERE contract_id=? AND company_id=? AND revision_no=? AND status=?
+                """, id, companyId, currentRevision, currentStatus);
+        if (changed != 1) {
+            throw new ConflictException("Booking đã thay đổi. Hãy tải lại trước khi hủy.");
+        }
+
+        List<Long> campaigns = jdbc.query("""
+                SELECT campaign_id FROM ad_campaigns
+                WHERE contract_id=? AND status NOT IN ('CANCELLED','COMPLETED','REJECTED')
+                FOR UPDATE
+                """, (rs, row) -> rs.getLong("campaign_id"), id);
+        for (Long campaignId : campaigns) {
+            jdbc.update("""
+                    UPDATE ad_campaigns
+                    SET ended_at=IF(status IN ('ACTIVE','PAUSED','SCHEDULED'),CURRENT_TIMESTAMP(6),ended_at),
+                        status='CANCELLED',
+                        edit_version=edit_version+1
+                    WHERE campaign_id=?
+                    """, campaignId);
+            String campaignNote = "Đã hủy cùng booking " + id + ". Lý do: " + reason;
+            jdbc.update(
+                    "INSERT INTO campaign_activity(campaign_id,actor_id,action,note) VALUES(?,?,'CONTRACT_CANCELLED',?)",
+                    campaignId, user.id(), campaignNote);
+        }
+
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,old_value,new_value,reason)
+                VALUES(?, 'BUSINESS_CANCEL_BOOKING', 'CONTRACT', ?,
+                    JSON_OBJECT('status',?,'paymentStatus',?,'revisionNo',?),
+                    JSON_OBJECT('status','CANCELLED','paymentStatus',?,'revisionNo',?), ?)
+                """, user.id(), String.valueOf(id), currentStatus, paymentStatus, currentRevision,
+                paymentStatus, currentRevision + 1, reason);
+
+        return Map.of("id", id, "status", "CANCELLED", "paymentStatus", paymentStatus);
     }
 
     // Toàn bộ mutation campaign chuyển sang CampaignWorkflowService để dùng chung

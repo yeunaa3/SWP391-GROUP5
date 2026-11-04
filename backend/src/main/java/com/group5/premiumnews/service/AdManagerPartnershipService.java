@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -76,7 +77,7 @@ public class AdManagerPartnershipService {
         validateDates(filter.from(), filter.to());
         String keyword = filter.q() == null ? "" : filter.q().trim();
         String status = filter.status() == null ? "" : filter.status();
-        StringBuilder where = new StringBuilder(" WHERE ct.status='PENDING_REVIEW' ");
+        StringBuilder where = new StringBuilder(" WHERE ct.status IN ('PENDING_REVIEW','CANCELLED') ");
         List<Object> arguments = new ArrayList<>();
         if (!keyword.isEmpty()) {
             where.append(
@@ -108,7 +109,12 @@ public class AdManagerPartnershipService {
         List<AdManagerDtos.BookingQueueItem> items = jdbc.query("""
                 SELECT ct.contract_id, ct.contract_code, ct.contract_name, c.company_name,
                        ct.slot_name_snapshot, ct.start_at, ct.end_at, ct.total_value,
-                       ct.currency, ct.status, ct.updated_at
+                       ct.currency, ct.status, ct.updated_at,
+                       (SELECT al.reason FROM audit_logs al
+                        WHERE al.entity_type='CONTRACT'
+                          AND al.entity_id=CAST(ct.contract_id AS CHAR)
+                          AND al.action='BUSINESS_CANCEL_BOOKING'
+                        ORDER BY al.audit_log_id DESC LIMIT 1) AS cancellation_reason
                 """ + fromClause + """
                 ORDER BY ct.updated_at ASC, ct.contract_id ASC
                 LIMIT ? OFFSET ?
@@ -118,7 +124,7 @@ public class AdManagerPartnershipService {
                 rs.getString("slot_name_snapshot"), instant(rs.getTimestamp("start_at")),
                 instant(rs.getTimestamp("end_at")), rs.getBigDecimal("total_value"),
                 rs.getString("currency"), rs.getString("status"),
-                instant(rs.getTimestamp("updated_at"))), pageArguments.toArray());
+                instant(rs.getTimestamp("updated_at")), rs.getString("cancellation_reason")), pageArguments.toArray());
 
         int totalPages = total == 0 ? 0 : (int) ((total + filter.size() - 1) / filter.size());
         return new AdManagerDtos.BookingQueuePage(items, total, filter.page(), filter.size(), totalPages);
@@ -137,17 +143,23 @@ public class AdManagerPartnershipService {
 
         AdManagerDtos.ProposalSnapshot latest = latestProposal(contractId);
 
-        LocalDateTime startAt = latest != null && "DRAFT".equals(latest.status())
+        boolean proposalControlsSchedule = latest != null
+                && List.of("DRAFT", "SENT").contains(latest.status());
+        LocalDateTime startAt = proposalControlsSchedule
                 ? latest.proposedStartAt()
                 : contractDateTime(contract.get("start_at"));
 
-        LocalDateTime endAt = latest != null && "DRAFT".equals(latest.status())
+        LocalDateTime endAt = proposalControlsSchedule
                 ? latest.proposedEndAt()
                 : contractDateTime(contract.get("end_at"));
+        long conflictSlotId = proposalControlsSchedule
+                && latest.proposedSlotId() != null
+                        ? latest.proposedSlotId()
+                        : ((Number) contract.get("slot_id")).longValue();
 
         List<AdManagerDtos.BookingConflict> conflicts = bookingConflicts(
                 contractId,
-                ((Number) contract.get("slot_id")).longValue(),
+                conflictSlotId,
                 startAt,
                 endAt);
 
@@ -170,6 +182,8 @@ public class AdManagerPartnershipService {
                         (String) contract.get("contract_code"),
                         (String) contract.get("contract_name"),
                         (String) contract.get("company_name"),
+                        ((Number) contract.get("b2b_package_id")).longValue(),
+                        ((Number) contract.get("slot_id")).longValue(),
                         (String) contract.get("package_name_snapshot"),
                         (String) contract.get("slot_name_snapshot"),
                         (String) contract.get("slot_position_snapshot"),
@@ -187,6 +201,241 @@ public class AdManagerPartnershipService {
                 allowedActions);
     }
 
+    @Transactional(readOnly = true)
+    public AdManagerDtos.ContractStatusQueuePage contractStatusQueue(
+            String q,
+            String requestedStatus,
+            int page,
+            int size) {
+        String keyword = q == null ? "" : q.trim();
+        String status = requestedStatus == null ? "" : requestedStatus.trim();
+        List<String> allowedStatuses = List.of(
+                "", "PENDING_PAYMENT", "PAYMENT_FAILED", "ACTIVE", "EXPIRED", "CANCELLED", "COMPLETED");
+        if (page < 0 || size < 1 || size > 100 || keyword.length() > 150
+                || !allowedStatuses.contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc hợp đồng không hợp lệ.");
+        }
+
+        StringBuilder where = new StringBuilder(
+                " WHERE ct.status IN ('PENDING_PAYMENT','PAYMENT_FAILED','ACTIVE','EXPIRED','CANCELLED','COMPLETED') ");
+        List<Object> arguments = new ArrayList<>();
+        if (!keyword.isBlank()) {
+            where.append(" AND (LOCATE(?,ct.contract_code)>0 OR LOCATE(?,ct.contract_name)>0 OR LOCATE(?,c.company_name)>0)");
+            arguments.add(keyword);
+            arguments.add(keyword);
+            arguments.add(keyword);
+        }
+        if (!status.isBlank()) {
+            where.append(" AND ct.status=?");
+            arguments.add(status);
+        }
+
+        String fromClause = " FROM contracts ct JOIN companies c ON c.company_id=ct.company_id" + where;
+        long total = nullableCount("SELECT COUNT(*)" + fromClause, arguments.toArray());
+        List<Object> pageArguments = new ArrayList<>(arguments);
+        pageArguments.add(size);
+        pageArguments.add(page * size);
+        List<AdManagerDtos.ContractStatusQueueItem> items = jdbc.query("""
+                SELECT ct.contract_id, ct.contract_code, ct.contract_name, c.company_name,
+                       ct.package_name_snapshot, ct.slot_name_snapshot, ct.start_at, ct.end_at, ct.total_value,
+                       ct.currency, ct.status, ct.payment_status, ct.payment_due_at
+                """ + fromClause + """
+                ORDER BY ct.updated_at DESC, ct.contract_id DESC
+                LIMIT ? OFFSET ?
+                """, (rs, row) -> new AdManagerDtos.ContractStatusQueueItem(
+                rs.getLong("contract_id"),
+                rs.getString("contract_code"),
+                rs.getString("contract_name"),
+                rs.getString("company_name"),
+                rs.getString("package_name_snapshot"),
+                rs.getString("slot_name_snapshot"),
+                contractDateTime(rs.getTimestamp("start_at")),
+                contractDateTime(rs.getTimestamp("end_at")),
+                rs.getBigDecimal("total_value"),
+                rs.getString("currency"),
+                rs.getString("status"),
+                rs.getString("payment_status"),
+                rs.getTimestamp("payment_due_at") == null
+                        ? null : contractDateTime(rs.getTimestamp("payment_due_at"))),
+                pageArguments.toArray());
+
+        int totalPages = total == 0 ? 0 : (int) ((total + size - 1) / size);
+        return new AdManagerDtos.ContractStatusQueuePage(items, total, page, size, totalPages);
+    }
+
+    @Transactional(readOnly = true)
+    public AdManagerDtos.ContractStatusDetail contractStatusDetail(long contractId) {
+        Map<String, Object> contract = bookingRow(contractId);
+        if ("DRAFT".equals(contract.get("status"))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hợp đồng đã gửi.");
+        }
+
+        Timestamp lastReminder = jdbc.query("""
+                SELECT MAX(created_at)
+                FROM audit_logs
+                WHERE entity_type='CONTRACT' AND entity_id=?
+                  AND action='AD_MANAGER_SEND_PAYMENT_REMINDER'
+                """, rs -> rs.next() ? rs.getTimestamp(1) : null, String.valueOf(contractId));
+        Object dueValue = contract.get("payment_due_at");
+        LocalDateTime paymentDueAt = dueValue == null ? null : contractDateTime(dueValue);
+        String status = String.valueOf(contract.get("status"));
+        String paymentStatus = String.valueOf(contract.get("payment_status"));
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        LocalDateTime now = LocalDateTime.now(VIETNAM);
+
+        List<String> allowedActions = new ArrayList<>();
+        if ("PENDING_PAYMENT".equals(status)
+                && "PENDING".equals(paymentStatus)
+                && paymentDueAt != null
+                && paymentDueAt.isAfter(now)
+                && (lastReminder == null
+                        || lastReminder.toLocalDateTime().isBefore(now.minusHours(24)))) {
+            allowedActions.add("SEND_PAYMENT_REMINDER");
+        }
+        if (List.of("PENDING_PAYMENT", "PAYMENT_FAILED").contains(status)
+                && !"PAID".equals(paymentStatus)
+                && paymentDueAt != null
+                && !paymentDueAt.isAfter(now)) {
+            allowedActions.add("CLOSE_BOOKING");
+        }
+
+        return new AdManagerDtos.ContractStatusDetail(
+                new AdManagerDtos.ContractStatusSnapshot(
+                        ((Number) contract.get("contract_id")).longValue(),
+                        (String) contract.get("contract_code"),
+                        (String) contract.get("contract_name"),
+                        (String) contract.get("company_name"),
+                        (String) contract.get("package_name_snapshot"),
+                        (String) contract.get("slot_name_snapshot"),
+                        (String) contract.get("slot_position_snapshot"),
+                        contractDateTime(contract.get("start_at")),
+                        contractDateTime(contract.get("end_at")),
+                        (BigDecimal) contract.get("total_value"),
+                        (String) contract.get("currency"),
+                        status,
+                        paymentStatus,
+                        paymentDueAt,
+                        revisionNo),
+                instant(lastReminder),
+                allowedActions);
+    }
+
+    @Transactional
+    public AdManagerDtos.ContractStatusDetail sendPaymentReminder(
+            long contractId,
+            AuthenticatedUserPrincipal manager,
+            AdManagerDtos.ContractActionRequest request) {
+        Map<String, Object> contract = bookingRow(contractId, true);
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        if (revisionNo != request.expectedRevisionNo()) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi gửi nhắc thanh toán.");
+        }
+
+        LocalDateTime dueAt = contract.get("payment_due_at") == null
+                ? null : contractDateTime(contract.get("payment_due_at"));
+        if (!"PENDING_PAYMENT".equals(contract.get("status"))
+                || !"PENDING".equals(contract.get("payment_status"))
+                || dueAt == null
+                || !dueAt.isAfter(LocalDateTime.now(VIETNAM))) {
+            throw new InvalidStateTransitionException(
+                    "Chỉ có thể nhắc thanh toán cho hợp đồng đang chờ thanh toán và chưa hết hạn.");
+        }
+
+        Timestamp lastReminder = jdbc.query("""
+                SELECT MAX(created_at)
+                FROM audit_logs
+                WHERE entity_type='CONTRACT' AND entity_id=?
+                  AND action='AD_MANAGER_SEND_PAYMENT_REMINDER'
+                """, rs -> rs.next() ? rs.getTimestamp(1) : null, String.valueOf(contractId));
+        if (lastReminder != null
+                && !lastReminder.toLocalDateTime().isBefore(LocalDateTime.now(VIETNAM).minusHours(24))) {
+            throw new ConflictException("Đã gửi nhắc thanh toán trong 24 giờ qua. Hãy thử lại sau.");
+        }
+
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT user_id, ?, ?, 'WORKFLOW', 'CONTRACT', ?,
+                       'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users WHERE company_id=? AND status='ACTIVE'
+                """,
+                "Nhắc thanh toán hợp đồng",
+                "Hợp đồng " + contract.get("contract_code") + " đang chờ thanh toán. Hạn thanh toán: " + dueAt + ".",
+                String.valueOf(contractId),
+                contract.get("company_id"));
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, old_value, new_value)
+                VALUES(?, 'AD_MANAGER_SEND_PAYMENT_REMINDER', 'CONTRACT', ?,
+                       JSON_OBJECT('status', ?, 'paymentStatus', ?, 'revisionNo', ?),
+                       JSON_OBJECT('reminderSent', TRUE, 'status', ?, 'paymentStatus', ?, 'revisionNo', ?))
+                """,
+                manager.id(), String.valueOf(contractId), contract.get("status"), contract.get("payment_status"),
+                revisionNo, contract.get("status"), contract.get("payment_status"), revisionNo);
+
+        return contractStatusDetail(contractId);
+    }
+
+    @Transactional
+    public AdManagerDtos.ContractStatusDetail closeExpiredBooking(
+            long contractId,
+            AuthenticatedUserPrincipal manager,
+            AdManagerDtos.ContractActionRequest request) {
+        Map<String, Object> contract = bookingRow(contractId, true);
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        if (revisionNo != request.expectedRevisionNo()) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi đóng booking.");
+        }
+
+        LocalDateTime dueAt = contract.get("payment_due_at") == null
+                ? null : contractDateTime(contract.get("payment_due_at"));
+        if (!List.of("PENDING_PAYMENT", "PAYMENT_FAILED").contains(contract.get("status"))
+                || "PAID".equals(contract.get("payment_status"))
+                || dueAt == null
+                || dueAt.isAfter(LocalDateTime.now(VIETNAM))) {
+            throw new InvalidStateTransitionException(
+                    "Chỉ có thể đóng booking chưa thanh toán sau khi đã hết hạn thanh toán.");
+        }
+
+        int changed = jdbc.update("""
+                UPDATE contracts
+                SET status='EXPIRED', reservation_expires_at=NULL,
+                    revision_no=revision_no+1, updated_at=CURRENT_TIMESTAMP(6)
+                WHERE contract_id=? AND revision_no=? AND status=? AND payment_status<>'PAID'
+                """,
+                contractId, revisionNo, contract.get("status"));
+        if (changed != 1) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi đóng booking.");
+        }
+
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, old_value, new_value, reason)
+                VALUES(?, 'AD_MANAGER_CLOSE_EXPIRED_BOOKING', 'CONTRACT', ?,
+                       JSON_OBJECT('status', ?, 'paymentStatus', ?, 'revisionNo', ?),
+                       JSON_OBJECT('status', 'EXPIRED', 'paymentStatus', ?, 'revisionNo', ?),
+                       'Quá hạn thanh toán')
+                """,
+                manager.id(), String.valueOf(contractId), contract.get("status"), contract.get("payment_status"),
+                revisionNo, contract.get("payment_status"), revisionNo + 1);
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT user_id, 'Booking đã hết hạn', ?, 'WORKFLOW',
+                       'CONTRACT', ?, 'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users WHERE company_id=? AND status='ACTIVE'
+                """,
+                "Booking " + contract.get("contract_code")
+                        + " đã được đóng vì quá hạn thanh toán. Nếu bạn đã chuyển khoản, hãy liên hệ hỗ trợ để đối soát.",
+                String.valueOf(contractId), contract.get("company_id"));
+
+        return contractStatusDetail(contractId);
+    }
+
     @Transactional
     public AdManagerDtos.BookingDetail saveProposal(
             long contractId,
@@ -194,33 +443,122 @@ public class AdManagerPartnershipService {
             AdManagerDtos.SaveProposalRequest request) {
         Map<String, Object> contract = lockedPendingBooking(contractId, request.expectedRevisionNo());
 
+        AdManagerDtos.ProposalSnapshot previousProposal = latestProposal(contractId);
+        boolean canChangeContractInfo = previousProposal != null
+                && List.of("REVISION_REQUESTED", "DRAFT").contains(previousProposal.status())
+                && "CONTRACT_INFO".equals(previousProposal.businessResponseType());
+        long currentPackageId = ((Number) contract.get("b2b_package_id")).longValue();
+        long currentSlotId = ((Number) contract.get("slot_id")).longValue();
+        LocalDateTime currentStartAt = contractDateTime(contract.get("start_at"));
+        LocalDateTime currentEndAt = contractDateTime(contract.get("end_at"));
+        Map<String, Object> previousSnapshot = previousProposal == null ? null : one("""
+                SELECT proposed_package_id, proposed_slot_id,
+                       proposed_package_name_snapshot, proposed_package_code_snapshot,
+                       proposed_slot_name_snapshot, proposed_slot_position_snapshot,
+                       proposed_duration_days_snapshot, proposed_impressions_quota_snapshot,
+                       proposed_package_price_snapshot, proposed_slot_price_snapshot,
+                       proposed_start_at, proposed_end_at
+                FROM contract_proposals
+                WHERE proposal_id=?
+                """, previousProposal.proposalId());
+        long baselinePackageId = previousProposal == null || previousProposal.proposedPackageId() == null
+                ? currentPackageId
+                : previousProposal.proposedPackageId();
+        long baselineSlotId = previousProposal == null || previousProposal.proposedSlotId() == null
+                ? currentSlotId
+                : previousProposal.proposedSlotId();
+        LocalDateTime baselineStartAt = previousProposal == null || previousProposal.proposedStartAt() == null
+                ? currentStartAt
+                : previousProposal.proposedStartAt();
+        LocalDateTime baselineEndAt = previousProposal == null || previousProposal.proposedEndAt() == null
+                ? currentEndAt
+                : previousProposal.proposedEndAt();
+        // Với yêu cầu TERMS, luôn dùng dữ liệu của proposal trước đó (hoặc booking gốc
+        // nếu đây là proposal đầu tiên), không dùng các giá trị lịch gửi từ frontend.
+        if (canChangeContractInfo
+                && !request.commercialTerms().trim().equals(previousProposal.commercialTerms())) {
+            throw new InvalidStateTransitionException(
+                    "Yêu cầu này chỉ cho phép sửa thông tin hợp đồng; điều khoản phải giữ nguyên.");
+        }
+        if (canChangeContractInfo
+                && "REVISION_REQUESTED".equals(previousProposal.status())
+                && request.packageId() == baselinePackageId
+                && request.slotId() == baselineSlotId
+                && request.proposedStartAt().equals(baselineStartAt)
+                && request.proposedEndAt().equals(baselineEndAt)) {
+            throw new InvalidStateTransitionException(
+                    "Hãy thay đổi ít nhất một mục package, ad slot hoặc ngày theo yêu cầu của Business.");
+        }
+
         LocalDateTime now = LocalDateTime.now(VIETNAM);
         if (request.expiresAt() == null || !request.expiresAt().isAfter(now)) {
             throw new InvalidStateTransitionException(
                     "Hạn đề xuất phải nằm trong tương lai.");
         }
 
-        LocalDate startDate = request.proposedStartAt().toLocalDate();
+        LocalDate startDate = (canChangeContractInfo
+                ? request.proposedStartAt()
+                : baselineStartAt).toLocalDate();
         if (startDate.isBefore(LocalDate.now(VIETNAM))
                 || startDate.isAfter(LocalDate.now(VIETNAM).plusYears(1))) {
             throw new InvalidStateTransitionException(
                     "Ngày bắt đầu phải từ hôm nay và không quá một năm tới.");
         }
 
-        long slotId = ((Number) contract.get("slot_id")).longValue();
+        long packageId = canChangeContractInfo ? request.packageId() : baselinePackageId;
+        long slotId = canChangeContractInfo ? request.slotId() : baselineSlotId;
         lockActiveSlot(slotId);
 
+        Map<String, Object> selectedPackage;
+        Map<String, Object> selectedSlot;
+        if (canChangeContractInfo) {
+            selectedPackage = one(
+                    "SELECT * FROM b2b_packages WHERE b2b_package_id=? AND status='ACTIVE' FOR UPDATE",
+                    packageId);
+            selectedSlot = one(
+                    "SELECT * FROM ad_slots WHERE slot_id=? AND status='ACTIVE' FOR UPDATE",
+                    slotId);
+        } else if (previousSnapshot != null) {
+            selectedPackage = new HashMap<>();
+            selectedPackage.put("code", previousSnapshot.get("proposed_package_code_snapshot"));
+            selectedPackage.put("name", previousSnapshot.get("proposed_package_name_snapshot"));
+            selectedPackage.put("price", previousSnapshot.get("proposed_package_price_snapshot"));
+            selectedPackage.put("duration_days", previousSnapshot.get("proposed_duration_days_snapshot"));
+            selectedPackage.put("impressions_quota", previousSnapshot.get("proposed_impressions_quota_snapshot"));
+            selectedSlot = new HashMap<>();
+            selectedSlot.put("slot_name", previousSnapshot.get("proposed_slot_name_snapshot"));
+            selectedSlot.put("position_code", previousSnapshot.get("proposed_slot_position_snapshot"));
+            selectedSlot.put("base_price", previousSnapshot.get("proposed_slot_price_snapshot"));
+        } else {
+            selectedPackage = Map.of(
+                    "code", contract.get("package_code_snapshot"),
+                    "name", contract.get("package_name_snapshot"),
+                    "price", contract.get("package_price_snapshot"),
+                    "duration_days", contract.get("duration_days_snapshot"),
+                    "impressions_quota", contract.get("impressions_quota_snapshot"));
+            selectedSlot = Map.of(
+                    "slot_name", contract.get("slot_name_snapshot"),
+                    "position_code", contract.get("slot_position_snapshot"),
+                    "base_price", slotPriceSnapshot(contractId, contract));
+        }
+
+        LocalDateTime proposedStartAt = canChangeContractInfo
+                ? request.proposedStartAt()
+                : baselineStartAt;
+        LocalDateTime proposedEndAt = canChangeContractInfo
+                ? request.proposedEndAt()
+                : baselineEndAt;
         BigDecimal amount = calculateProposalAmount(
-                contractId,
-                contract,
-                request.proposedStartAt(),
-                request.proposedEndAt());
+                selectedPackage,
+                selectedSlot,
+                proposedStartAt,
+                proposedEndAt);
 
         if (!bookingConflicts(
                 contractId,
                 slotId,
-                request.proposedStartAt(),
-                request.proposedEndAt()).isEmpty()) {
+                proposedStartAt,
+                proposedEndAt).isEmpty()) {
             throw new ConflictException(
                     "Vị trí đã có hợp đồng hoặc giữ chỗ trong khoảng đề xuất. Hãy chọn kỳ khác.");
         }
@@ -239,19 +577,39 @@ public class AdManagerPartnershipService {
 
         jdbc.update("""
                 INSERT INTO contract_proposals(
-                    contract_id, revision_no, status, commercial_terms,
+                    contract_id, revision_no, status, business_response_reason,
+                    business_response_type,
+                    proposed_package_id, proposed_slot_id,
+                    proposed_package_name_snapshot, proposed_package_code_snapshot,
+                    proposed_slot_name_snapshot, proposed_slot_position_snapshot,
+                    proposed_duration_days_snapshot, proposed_impressions_quota_snapshot,
+                    proposed_package_price_snapshot, proposed_slot_price_snapshot,
+                    commercial_terms,
                     proposed_amount, currency, proposed_start_at,
                     proposed_end_at, expires_at, created_by
                 )
-                VALUES(?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?)
+                VALUES(?, ?, 'DRAFT', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 contractId,
                 proposalRevision,
+                previousProposal == null ? null : previousProposal.businessResponseReason(),
+                canChangeContractInfo ? "CONTRACT_INFO" : previousProposal == null ? null
+                        : previousProposal.businessResponseType(),
+                packageId,
+                slotId,
+                selectedPackage.get("name"),
+                selectedPackage.get("code"),
+                selectedSlot.get("slot_name"),
+                selectedSlot.get("position_code"),
+                selectedPackage.get("duration_days"),
+                selectedPackage.get("impressions_quota"),
+                selectedPackage.get("price"),
+                selectedSlot.get("base_price"),
                 request.commercialTerms().trim(),
                 amount,
                 contract.get("currency"),
-                request.proposedStartAt(),
-                request.proposedEndAt(),
+                proposedStartAt,
+                proposedEndAt,
                 request.expiresAt(),
                 manager.id());
 
@@ -311,7 +669,9 @@ public class AdManagerPartnershipService {
                     "Proposal đã hết hạn. Hãy cập nhật hạn trước khi gửi.");
         }
 
-        long slotId = ((Number) contract.get("slot_id")).longValue();
+        long slotId = proposal.get("proposed_slot_id") == null
+                ? ((Number) contract.get("slot_id")).longValue()
+                : ((Number) proposal.get("proposed_slot_id")).longValue();
         lockActiveSlot(slotId);
 
         LocalDateTime startAt = contractDateTime(proposal.get("proposed_start_at"));
@@ -376,12 +736,6 @@ public class AdManagerPartnershipService {
             AdManagerDtos.RequestAnotherPeriodRequest request) {
         Map<String, Object> contract = lockedPendingBooking(contractId, request.expectedRevisionNo());
 
-        String reason = request.reason().trim();
-        if (reason.isBlank()) {
-            throw new InvalidStateTransitionException(
-                    "Cần nhập lý do yêu cầu đổi thời gian.");
-        }
-
         int oldRevision = ((Number) contract.get("revision_no")).intValue();
         int changed = jdbc.update("""
                 UPDATE contracts
@@ -406,37 +760,40 @@ public class AdManagerPartnershipService {
         jdbc.update("""
                 INSERT INTO audit_logs(
                     actor_id, action, entity_type, entity_id,
-                    old_value, new_value, reason
+                    old_value, new_value
                 )
                 VALUES(
-                    ?, 'REQUEST_ANOTHER_PERIOD', 'CONTRACT', ?,
+                    ?, 'MANAGER_REQUEST_CONTRACT_CHANGE', 'CONTRACT', ?,
                     JSON_OBJECT(
                         'status', ?,
                         'revisionNo', ?,
+                        'packageId', ?,
+                        'slotId', ?,
                         'startAt', ?,
                         'endAt', ?
                     ),
                     JSON_OBJECT(
                         'status', 'REVISION_REQUESTED',
+                        'requestType', 'CONTRACT_INFO',
                         'revisionNo', ?
-                    ),
-                    ?
+                    )
                 )
                 """,
                 manager.id(),
                 String.valueOf(contractId),
                 "PENDING_REVIEW",
                 oldRevision,
+                contract.get("b2b_package_id"),
+                contract.get("slot_id"),
                 contract.get("start_at"),
                 contract.get("end_at"),
-                oldRevision + 1,
-                reason);
+                oldRevision + 1);
 
         notifyBusinessContract(
                 ((Number) contract.get("company_id")).longValue(),
                 contractId,
-                "Booking cần chọn thời gian khác",
-                "Lý do từ Ad Manager: " + reason);
+                "Booking cần cập nhật thông tin",
+                "Ad Manager yêu cầu cập nhật thông tin booking.");
 
         return bookingDetail(contractId);
     }
@@ -747,7 +1104,7 @@ public class AdManagerPartnershipService {
         String status = filter.status() == null ? "" : filter.status();
         if (filter.page() < 0 || filter.size() < 1 || filter.size() > 100
                 || (filter.q() != null && filter.q().length() > 150)
-                || !List.of("", "PENDING_REVIEW").contains(status)) {
+                || !List.of("", "PENDING_REVIEW", "CANCELLED").contains(status)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc booking không hợp lệ.");
         }
     }
@@ -812,8 +1169,11 @@ public class AdManagerPartnershipService {
 
     private AdManagerDtos.ProposalSnapshot latestProposal(long contractId) {
         List<AdManagerDtos.ProposalSnapshot> rows = jdbc.query("""
-                SELECT proposal_id, revision_no, status, business_response_reason, commercial_terms,
-                       proposed_amount, currency, proposed_start_at, proposed_end_at,
+                SELECT proposal_id, revision_no, status, business_response_reason,
+                       business_response_type, commercial_terms,
+                       proposed_amount, currency, proposed_package_id, proposed_slot_id,
+                       proposed_package_name_snapshot, proposed_slot_name_snapshot,
+                       proposed_start_at, proposed_end_at,
                        expires_at, created_at, sent_at, accepted_at
                 FROM contract_proposals
                 WHERE contract_id=?
@@ -825,11 +1185,16 @@ public class AdManagerPartnershipService {
                         rs.getInt("revision_no"),
                         rs.getString("status"),
                         rs.getString("business_response_reason"),
+                        rs.getString("business_response_type"),
                         rs.getString("commercial_terms"),
                         rs.getBigDecimal("proposed_amount"),
                         rs.getString("currency"),
-                        contractDateTime(rs.getTimestamp("proposed_start_at")),
-                        contractDateTime(rs.getTimestamp("proposed_end_at")),
+                        (Long) rs.getObject("proposed_package_id"),
+                        (Long) rs.getObject("proposed_slot_id"),
+                        rs.getString("proposed_package_name_snapshot"),
+                        rs.getString("proposed_slot_name_snapshot"),
+                        rs.getObject("proposed_start_at", LocalDateTime.class),
+                        rs.getObject("proposed_end_at", LocalDateTime.class),
                         contractDateTime(rs.getTimestamp("expires_at")),
                         contractDateTime(rs.getTimestamp("created_at")),
                         rs.getTimestamp("sent_at") == null
@@ -935,8 +1300,8 @@ public class AdManagerPartnershipService {
     }
 
     private BigDecimal calculateProposalAmount(
-            long contractId,
-            Map<String, Object> contract,
+            Map<String, Object> selectedPackage,
+            Map<String, Object> selectedSlot,
             LocalDateTime proposedStartAt,
             LocalDateTime proposedEndAt) {
         if (!LocalTime.MIDNIGHT.equals(proposedStartAt.toLocalTime())
@@ -950,15 +1315,24 @@ public class AdManagerPartnershipService {
                 proposedStartAt.toLocalDate(),
                 proposedEndAt.toLocalDate());
 
-        long packageDuration = ((Number) contract.get("duration_days_snapshot")).longValue();
+        long packageDuration = ((Number) selectedPackage.get("duration_days")).longValue();
         if (proposedDays <= 0 || proposedDays > packageDuration) {
             throw new InvalidStateTransitionException(
                     "Khoảng đề xuất không hợp lệ hoặc vượt thời hạn của gói.");
         }
 
-        BigDecimal packagePrice = (BigDecimal) contract.get("package_price_snapshot");
-        BigDecimal slotPrice = slotPriceSnapshot(contractId, contract);
+        BigDecimal packagePrice = (BigDecimal) selectedPackage.get("price");
+        BigDecimal slotPrice = (BigDecimal) selectedSlot.get("base_price");
         return packagePrice.add(slotPrice).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private Map<String, Object> one(String sql, Object... args) {
+        List<Map<String, Object>> rows = jdbc.queryForList(sql, args);
+        if (rows.isEmpty()) {
+            throw new InvalidStateTransitionException(
+                    "Package hoặc ad slot không còn hoạt động. Hãy tải lại danh mục.");
+        }
+        return rows.getFirst();
     }
 
     private LocalDateTime contractDateTime(Object value) {
