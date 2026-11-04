@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <defs>
+    <linearGradient id="bg-onlies" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0a14"/>
+      <stop offset="40%" stop-color="#14092b"/>
+      <stop offset="70%" stop-color="#1f0a38"/>
+      <stop offset="100%" stop-color="#050b1a"/>
+    </linearGradient>
+    <linearGradient id="btn-onlies" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="glow-neon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#ec4899" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="shadow-onlies" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#8b5cf6" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="300" rx="16" fill="url(#bg-onlies)"/>
+
+  <!-- Cyber grid accents -->
+  <circle cx="1040" cy="150" r="130" fill="url(#glow-neon)"/>
+  <circle cx="920" cy="80" r="60" fill="#06b6d4" opacity="0.12"/>
+  <circle cx="1120" cy="220" r="90" fill="#ec4899" opacity="0.15"/>
+
+  <!-- Geometric accent lines -->
+  <path d="M 820 40 L 980 260 M 880 30 L 1040 250" stroke="#8b5cf6" stroke-width="1.5" stroke-opacity="0.25" stroke-dasharray="6,6"/>
+
+  <!-- Badge -->
+  <rect x="50" y="38" width="290" height="32" rx="16" fill="#8b5cf6" opacity="0.22"/>
+  <rect x="50" y="38" width="290" height="32" rx="16" fill="none" stroke="#a78bfa" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="66" y="59" fill="#c4b5fd" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">⚡ ON-LIES GAME · TRÒ CHƠI ONLINE</text>
+
+  <!-- Main Headline -->
+  <text x="50" y="124" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="36" letter-spacing="-0.5">Sự Thật hay Dối Trá? Bạn có dám thử thách?</text>
+
+  <!-- Subtitle -->
+  <text x="50" y="168" fill="#cbd5e1" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="19">Đấu trí thời gian thực, vén màn bí mật và lật ngược tình thế cùng bạn bè ngay trên trình duyệt.</text>
+
+  <!-- CTA Button -->
+  <g filter="url(#shadow-onlies)">
+    <rect x="50" y="202" width="220" height="52" rx="26" fill="url(#btn-onlies)"/>
+    <text x="78" y="235" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="17">Chơi ngay miễn phí →</text>
+  </g>
+
+  <!-- Background decorative text -->
+  <text x="800" y="190" fill="#ffffff" opacity="0.08" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="120" font-weight="900" letter-spacing="-3">ON-LIES</text>
+  <text x="860" y="240" fill="#06b6d4" opacity="0.3" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" letter-spacing="4">ARE YOU LYING?</text>
+</svg>

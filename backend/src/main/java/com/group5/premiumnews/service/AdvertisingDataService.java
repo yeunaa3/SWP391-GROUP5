@@ -117,7 +117,7 @@ public class AdvertisingDataService {
      * @return Danh sách tối đa 3 banner phù hợp nhất
      */
     public List<Map<String, Object>> banners(String position, String device, String country, Long article) {
-        return jdbc.queryForList("""
+        List<Map<String, Object>> matched = jdbc.queryForList("""
             SELECT 
                 cr.creative_id AS id,
                 cr.title,
@@ -168,6 +168,38 @@ public class AdvertisingDataService {
             ORDER BY cr.creative_id 
             LIMIT 3
             """, position, device, country, article, article);
+
+        if (!matched.isEmpty()) {
+            return matched;
+        }
+
+        // Dự phòng phân phối: Nếu vị trí chưa có chiến dịch độc quyền, phân phối các chiến dịch thật đang ACTIVE của hệ thống
+        return jdbc.queryForList("""
+            SELECT 
+                cr.creative_id AS id,
+                cr.title,
+                cr.media_url AS mediaUrl,
+                cr.target_url AS targetUrl,
+                ? AS position,
+                c.campaign_name AS campaignName,
+                cr.creative_type AS creativeType,
+                cr.mime_type AS mimeType
+            FROM ad_creatives cr 
+            JOIN ad_campaigns c ON c.campaign_id = cr.campaign_id
+            JOIN contracts ct ON ct.contract_id = c.contract_id 
+            JOIN companies cp ON cp.company_id = ct.company_id
+            WHERE cr.status = 'APPROVED'
+              AND cp.application_status = 'APPROVED'
+              AND c.status = 'ACTIVE' 
+              AND ct.status = 'ACTIVE' 
+              AND ct.payment_status = 'PAID'
+              AND c.scheduled_start_time <= CURRENT_TIMESTAMP 
+              AND c.scheduled_end_time > CURRENT_TIMESTAMP
+              AND ct.start_at <= CURRENT_TIMESTAMP 
+              AND ct.end_at > CURRENT_TIMESTAMP
+            ORDER BY cr.creative_id 
+            LIMIT 3
+            """, position);
     }
 
     /**
@@ -258,13 +290,13 @@ public class AdvertisingDataService {
             """, creativeId);
 
         if (rows.isEmpty()) return "/";
-        var row = rows.getFirst();
+        var row = rows.get(0);
 
         String url = (String) row.get("target_url");
         CampaignWorkflowService.validateUrl(url);
 
-        // Anti-fraud: Băm session trong cửa sổ 30 giây để chống đếm lặp gian lận
-        String fingerprint = hash(session + ":" + creativeId + ":" + (System.currentTimeMillis() / 30000));
+        // Anti-fraud: Băm session trong cửa sổ 2 giây để chống đếm lặp gian lận hoặc double click vô tình
+        String fingerprint = hash(session + ":" + creativeId + ":" + (System.currentTimeMillis() / 2000));
         Long existingCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM ad_events WHERE request_fingerprint = ? AND event_type = ?",
             Long.class, fingerprint, type

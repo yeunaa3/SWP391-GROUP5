@@ -2,11 +2,69 @@ import { Link, useSearchParams } from "react-router-dom";
 
 export default function AdvertisingDemoPage() {
   const [params] = useSearchParams();
-  const brands = { novalearn: ["NovaLearn", "Học kỹ năng mới cho một thế giới đang thay đổi", "Công nghệ · Phân tích dữ liệu · Thiết kế sản phẩm"],
-    greenfarm: ["GreenFarm", "Cùng xây dựng nông nghiệp bền vững", "Canh tác thông minh · Theo dõi mùa vụ · Tiết kiệm tài nguyên"],
-    clouddesk: ["CloudDesk", "Không gian làm việc cho ý tưởng lớn", "Linh hoạt · Kết nối · Sáng tạo"] };
-  const brand = brands[params.get("brand")] || brands.novalearn;
-  return <main className="public-content demo-landing"><p className="eyebrow">Trang đích quảng cáo · Dữ liệu giả lập</p><h1>{brand[0]}</h1>
-    <h2>{brand[1]}</h2><p>{brand[2]}</p><p>Thương hiệu này được tạo để nhóm thử banner và điều hướng quảng cáo. Đây không phải doanh nghiệp hay chương trình khuyến mại thật.</p>
-    <Link className="button-link pulse-button" to="/">Quay lại đọc báo</Link></main>;
+  const brands = {
+    thepluse: [
+      "The Pluse",
+      "Đọc báo tập trung. Không quảng cáo.",
+      "Cập nhật tin tức thời sự, kinh doanh, công nghệ 24/7 cùng gói hội viên chất lượng cao.",
+      "/premium/packages"
+    ],
+    onlies: [
+      "On-Lies Game",
+      "Sự thật hay Dối trá? Bạn có dám thử thách?",
+      "Trò chơi đấu trí trực tuyến kịch tính, lật ngược tình thế cùng người chơi trên toàn quốc.",
+      "https://on-lies-game.onrender.com/"
+    ],
+    gemini: [
+      "Google Gemini",
+      "Trí tuệ nhân tạo Gemini — Bứt phá sáng tạo",
+      "Trợ lý AI đa phương thức hỗ trợ bạn lập trình, viết lách, phân tích dữ liệu và học tập thông minh.",
+      "https://gemini.google.com/"
+    ],
+    novalearn: [
+      "The Pluse",
+      "Đọc báo tập trung. Không quảng cáo.",
+      "Cập nhật tin tức thời sự, kinh doanh, công nghệ 24/7 cùng gói hội viên chất lượng cao.",
+      "/premium/packages"
+    ],
+    greenfarm: [
+      "On-Lies Game",
+      "Sự thật hay Dối trá? Bạn có dám thử thách?",
+      "Trò chơi đấu trí trực tuyến kịch tính, lật ngược tình thế cùng người chơi trên toàn quốc.",
+      "https://on-lies-game.onrender.com/"
+    ],
+    clouddesk: [
+      "Google Gemini",
+      "Trí tuệ nhân tạo Gemini — Bứt phá sáng tạo",
+      "Trợ lý AI đa phương thức hỗ trợ bạn lập trình, viết lách, phân tích dữ liệu và học tập thông minh.",
+      "https://gemini.google.com/"
+    ]
+  };
+
+  const key = params.get("brand") || "thepluse";
+  const brand = brands[key] || brands.thepluse;
+  const isExternal = brand[3]?.startsWith("http");
+
+  return (
+    <main className="public-content demo-landing">
+      <p className="eyebrow">Quảng cáo đối tác · The Pluse Network</p>
+      <h1>{brand[0]}</h1>
+      <h2>{brand[1]}</h2>
+      <p>{brand[2]}</p>
+      <div style={{ display: "flex", gap: "12px", marginTop: "24px" }}>
+        {isExternal ? (
+          <a className="button-link pulse-button" href={brand[3]} target="_blank" rel="noopener noreferrer">
+            Truy cập trang web →
+          </a>
+        ) : (
+          <Link className="button-link pulse-button" to={brand[3]}>
+            Khám phá dịch vụ →
+          </Link>
+        )}
+        <Link className="button-link" style={{ background: "transparent", color: "inherit", border: "1px solid currentColor" }} to="/">
+          Quay lại đọc báo
+        </Link>
+      </div>
+    </main>
+  );
 }

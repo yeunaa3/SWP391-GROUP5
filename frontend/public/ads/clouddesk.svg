@@ -1,1 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600" viewBox="0 0 300 600"><rect width="300" height="600" rx="16" fill="#f2dfca"/><circle cx="220" cy="300" r="200" fill="#d77646" opacity=".13"/><text x="24" y="53" fill="#72432d" font-family="Arial" font-size="13">CLOUDDESK · DEMO</text><text x="24" y="124" fill="#3e291e" font-family="Arial" font-size="33" font-weight="bold">Làm việc</text><text x="24" y="168" fill="#3e291e" font-family="Arial" font-size="33" font-weight="bold">theo cách</text><text x="24" y="212" fill="#3e291e" font-family="Arial" font-size="33" font-weight="bold">của bạn.</text><rect x="24" y="267" width="252" height="144" rx="10" fill="#725241"/><rect x="43" y="284" width="214" height="104" rx="5" fill="#e6ecdb"/><path d="M43 388L115 315L165 362L200 320L257 388Z" fill="#b2c39e"/><text x="24" y="459" fill="#72432d" font-family="Arial" font-size="17">Không gian sáng tạo.</text><text x="24" y="485" fill="#72432d" font-family="Arial" font-size="17">Kết nối linh hoạt.</text><rect x="24" y="521" width="252" height="48" rx="24" fill="#442e24"/><text x="79" y="551" fill="white" font-family="Arial" font-size="18">Khám phá →</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <defs>
+    <linearGradient id="bg-gemini" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#050814"/>
+      <stop offset="45%" stop-color="#0f172a"/>
+      <stop offset="80%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="gemini-sparkle" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285f4"/>
+      <stop offset="35%" stop-color="#9333ea"/>
+      <stop offset="70%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="btn-gemini" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="shadow-gemini" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#3b82f6" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="300" rx="16" fill="url(#bg-gemini)"/>
+
+  <!-- Google Gemini Glowing Orb / Star Effect -->
+  <circle cx="1030" cy="150" r="140" fill="#3b82f6" opacity="0.08"/>
+  <circle cx="980" cy="110" r="90" fill="#a855f7" opacity="0.12"/>
+  <circle cx="1080" cy="190" r="80" fill="#38bdf8" opacity="0.12"/>
+
+  <!-- Iconic 4-point Sparkle SVG symbol -->
+  <path d="M 1000 60 Q 1000 130 930 130 Q 1000 130 1000 200 Q 1000 130 1070 130 Q 1000 130 1000 60 Z" fill="url(#gemini-sparkle)" opacity="0.85"/>
+  <path d="M 1090 90 Q 1090 120 1060 120 Q 1090 120 1090 150 Q 1090 120 1120 120 Q 1090 120 1090 90 Z" fill="url(#gemini-sparkle)" opacity="0.6"/>
+
+  <!-- Badge -->
+  <rect x="50" y="38" width="300" height="32" rx="16" fill="#3b82f6" opacity="0.2"/>
+  <rect x="50" y="38" width="300" height="32" rx="16" fill="none" stroke="#60a5fa" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="66" y="59" fill="#93c5fd" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">✦ GOOGLE GEMINI · AI THẾ HỆ MỚI</text>
+
+  <!-- Main Headline -->
+  <text x="50" y="124" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="36" letter-spacing="-0.5">Trí Tuệ Nhân Tạo Gemini — Bứt Phá Sáng Tạo</text>
+
+  <!-- Subtitle -->
+  <text x="50" y="168" fill="#cbd5e1" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="19">Trợ lý AI đa phương thức hỗ trợ bạn lập trình, viết lách, phân tích dữ liệu và học tập thông minh.</text>
+
+  <!-- CTA Button -->
+  <g filter="url(#shadow-gemini)">
+    <rect x="50" y="202" width="230" height="52" rx="26" fill="url(#btn-gemini)"/>
+    <text x="76" y="235" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="17">Trải nghiệm Gemini →</text>
+  </g>
+
+  <!-- Background decorative text -->
+  <text x="760" y="245" fill="#ffffff" opacity="0.05" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="100" font-weight="900" letter-spacing="2">GEMINI</text>
+</svg>

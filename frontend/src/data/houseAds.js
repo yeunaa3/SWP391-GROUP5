@@ -1,4 +1,4 @@
-// House promotions fill unused placements; these are not paid campaigns or measured delivery.
+// House promotions fill unused placements; these are internal promotions that navigate within the app.
 export const houseAds = [
   { id: "pluse-daily", title: "The Pluse · Một góc nhìn mới mỗi ngày", headline: "Chạm vào tin mới. Mở rộng góc nhìn.", description: "Theo dõi thời sự, kinh doanh, công nghệ và nông nghiệp trong một không gian đọc.", cta: "Khám phá tin mới", targetUrl: "/search", symbol: "NEWS", tone: "ink" },
   { id: "pluse-premium", title: "The Pluse Premium", headline: "Đọc tập trung. Nghe theo nhịp sống.", description: "Premium mở tiện ích đọc tập trung, đọc thành tiếng và không quảng cáo khi gói còn hiệu lực.", cta: "Xem quyền lợi Premium", targetUrl: "/premium/packages", symbol: "✦", tone: "gold" },

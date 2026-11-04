@@ -152,23 +152,41 @@ export default function AdBanner({ position = "HOME_HERO", compact = false, arti
   }
 
   const brandDetails = {
+    "preview-thepluse": [
+      "THE PLUSE",
+      "Đọc báo tập trung. Không quảng cáo.",
+      "Cập nhật tin tức thời sự, kinh doanh, công nghệ 24/7 cùng không gian đọc báo bản quyền đỉnh cao.",
+      "PLUSE",
+    ],
+    "preview-onlies": [
+      "ON-LIES GAME",
+      "Sự thật hay Dối trá? Bạn có dám thử thách?",
+      "Đấu trí thời gian thực, vén màn bí mật và lật ngược tình thế cùng bạn bè ngay trên trình duyệt.",
+      "GAME",
+    ],
+    "preview-gemini": [
+      "GOOGLE GEMINI",
+      "Trí tuệ nhân tạo Gemini — Bứt phá sáng tạo",
+      "Trợ lý AI đa phương thức hỗ trợ lập trình, viết lách, phân tích dữ liệu và học tập thông minh.",
+      "GEMINI",
+    ],
     "preview-nova": [
-      "NOVA LEARN",
-      "Kỹ năng mới. Cơ hội mới.",
-      "Học công nghệ, dữ liệu và tư duy sáng tạo mỗi ngày.",
-      "LEARN",
+      "THE PLUSE",
+      "Đọc báo tập trung. Không quảng cáo.",
+      "Cập nhật tin tức thời sự, kinh doanh, công nghệ 24/7 cùng không gian đọc báo bản quyền đỉnh cao.",
+      "PLUSE",
     ],
     "preview-farm": [
-      "GREEN FARM",
-      "Công nghệ xanh. Mùa vụ tốt hơn.",
-      "Giải pháp thông minh cho một tương lai bền vững.",
-      "GROW",
+      "ON-LIES GAME",
+      "Sự thật hay Dối trá? Bạn có dám thử thách?",
+      "Đấu trí thời gian thực, vén màn bí mật và lật ngược tình thế cùng bạn bè ngay trên trình duyệt.",
+      "GAME",
     ],
     "preview-cloud": [
-      "CLOUD DESK",
-      "Không gian mới. Ý tưởng lớn.",
-      "Kết nối đội ngũ, làm việc linh hoạt và hiệu quả.",
-      "CREATE",
+      "GOOGLE GEMINI",
+      "Trí tuệ nhân tạo Gemini — Bứt phá sáng tạo",
+      "Trợ lý AI đa phương thức hỗ trợ lập trình, viết lách, phân tích dữ liệu và học tập thông minh.",
+      "GEMINI",
     ],
   };
 
