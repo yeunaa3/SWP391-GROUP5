@@ -9,6 +9,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,7 +184,9 @@ public class PaymentService {
             return new PaymentQrResponse(qrUrl, bankCode, accountNumber, accountName, amount, "VND", memo, "PREMIUM", referenceId, "Gói " + pkgName, checkoutUrl, orderCode, payOsActive);
         } else if ("CONTRACT".equals(paymentType)) {
             var contracts = jdbc.queryForList("""
-                    SELECT c.contract_id, c.contract_code, c.contract_name, c.total_value, c.currency, c.payment_status, c.company_id
+                    SELECT c.contract_id, c.contract_code, c.contract_name, c.total_value, c.currency,
+                           c.payment_status, c.status, c.payment_due_at, c.company_id,
+                           (c.payment_due_at IS NULL OR c.payment_due_at > CURRENT_TIMESTAMP(6)) AS payment_window_open
                     FROM contracts c
                     WHERE c.contract_id = ?
                     """, referenceId);
@@ -193,6 +196,18 @@ public class PaymentService {
             }
 
             var ct = contracts.get(0);
+            String contractStatus = String.valueOf(ct.get("status"));
+            if (!List.of("PENDING_PAYMENT", "PAYMENT_FAILED").contains(contractStatus)
+                    || "PAID".equalsIgnoreCase(String.valueOf(ct.get("payment_status")))) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Hợp đồng không còn ở trạng thái cho phép thanh toán.");
+            }
+            Object paymentWindowOpenValue = ct.get("payment_window_open");
+            boolean paymentWindowOpen = Boolean.TRUE.equals(paymentWindowOpenValue)
+                    || paymentWindowOpenValue instanceof Number number && number.intValue() == 1;
+            if (!paymentWindowOpen) {
+                throw new ResponseStatusException(HttpStatus.GONE, "Hợp đồng đã quá hạn thanh toán.");
+            }
             BigDecimal totalValue = (BigDecimal) ct.get("total_value");
             String code = (String) ct.get("contract_code");
             String memo = "HOP DONG " + referenceId;
@@ -549,7 +564,8 @@ public class PaymentService {
 
         var ct = contracts.get(0);
         String paymentStatus = (String) ct.get("payment_status");
-        boolean contractCancelled = "CANCELLED".equals(ct.get("status"));
+        String contractStatus = String.valueOf(ct.get("status"));
+        boolean contractClosed = List.of("CANCELLED", "EXPIRED").contains(contractStatus);
         long companyId = ((Number) ct.get("company_id")).longValue();
         String contractCode = (String) ct.get("contract_code");
         String contractName = (String) ct.get("contract_name");
@@ -562,21 +578,22 @@ public class PaymentService {
         // Idempotent: Nếu đã PAID thì trả về thành công luôn
         if ("PAID".equals(paymentStatus)) {
             return Map.of("success", true,
-                    "message", contractCancelled
-                            ? "Khoản thanh toán đã được ghi nhận; hợp đồng vẫn giữ trạng thái đã hủy để đối soát."
+                    "message", contractClosed
+                            ? "Khoản thanh toán đã được ghi nhận; hợp đồng vẫn giữ trạng thái đã đóng để đối soát."
                             : "Hợp đồng đã thanh toán thành công trước đó.",
-                    "contractId", contractId);
+                    "contractId", contractId,
+                    "status", contractStatus);
         }
 
-        // 1. Ghi nhận tiền về nhưng không kích hoạt lại booking đã bị hủy.
+        // Không kích hoạt lại booking đã hủy hoặc hết hạn nếu cổng thanh toán báo thành công muộn.
         jdbc.update("""
                 UPDATE contracts
                 SET payment_status = 'PAID',
-                    status = CASE WHEN ? THEN 'CANCELLED' ELSE 'ACTIVE' END,
+                    status = CASE WHEN ? THEN ? ELSE 'ACTIVE' END,
                     signed_at = CASE WHEN ? THEN signed_at ELSE CURRENT_TIMESTAMP(6) END,
                     updated_at = CURRENT_TIMESTAMP(6)
                 WHERE contract_id = ?
-                """, contractCancelled, contractCancelled, contractId);
+                """, contractClosed, contractStatus, contractClosed, contractId);
 
         // 2. Ghi nhận giao dịch (ck_transactions_type cho phép: ADVERTISING_PAYMENT)
         Long txUserId = user != null ? user.id() : null;
@@ -600,33 +617,54 @@ public class PaymentService {
                     INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
                     VALUES (?, ?, ?, 'CAMPAIGN', 'CONTRACT', ?, 'SENT', CURRENT_TIMESTAMP(6))
                     """, txUserId,
-                    contractCancelled ? "Đã nhận thanh toán cho booking đã hủy" : "Hợp đồng quảng cáo đã kích hoạt",
-                    contractCancelled
-                            ? "Đã nhận khoản thanh toán cho hợp đồng " + contractCode + " sau khi booking bị hủy. Cần đối soát/hoàn tiền thủ công."
+                    contractClosed ? "Đã nhận thanh toán cho booking đã đóng" : "Hợp đồng quảng cáo đã kích hoạt",
+                    contractClosed
+                            ? "Đã nhận khoản thanh toán cho hợp đồng " + contractCode + " sau khi booking đã đóng. Cần đối soát/hoàn tiền thủ công."
                             : "Hợp đồng " + contractCode + " đã thanh toán thành công và chuyển sang ACTIVE. Bạn có thể tạo chiến dịch quảng cáo ngay bây giờ.",
                     String.valueOf(contractId));
         }
+
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT DISTINCT u.user_id, ?, ?, 'WORKFLOW', 'CONTRACT', ?,
+                       'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users u
+                JOIN user_roles ur ON ur.user_id=u.user_id
+                JOIN roles r ON r.role_id=ur.role_id
+                WHERE r.role_name='AD_MANAGER'
+                  AND r.status='ACTIVE'
+                  AND u.status='ACTIVE'
+                """,
+                contractClosed ? "Khoản thanh toán hợp đồng cần đối soát" : "Hợp đồng đã được thanh toán",
+                contractClosed
+                        ? "Hợp đồng " + contractCode + " đã nhận thanh toán sau khi đóng. Hãy kiểm tra và đối soát."
+                        : "Hợp đồng " + contractCode + " đã thanh toán và chuyển sang hiệu lực.",
+                String.valueOf(contractId));
 
         // 4. GỬI EMAIL BIÊN LAI THẬT CHO DOANH NGHIỆP (Nếu có email)
         if (companyEmail != null && !companyEmail.isBlank() && companyEmail.contains("@")) {
             java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     Map<String, Object> emailData = Map.of(
-                            "title", contractCancelled
-                                    ? "THANH TOÁN NHẬN SAU KHI BOOKING ĐÃ HỦY"
+                            "title", contractClosed
+                                    ? "THANH TOÁN NHẬN SAU KHI BOOKING ĐÃ ĐÓNG"
                                     : "XÁC NHẬN THANH TOÁN HỢP ĐỒNG B2B",
                             "customerName", contactName + " (" + companyName + ")",
                             "itemName", contractName + " (" + contractCode + ")",
                             "itemType", "Hợp đồng Quảng cáo Doanh nghiệp B2B",
                             "txnRef", txnRef,
                             "amount", String.format("%,d VND", totalValue.longValue()),
-                            "effectiveDuration", contractCancelled
-                                    ? "Booking đã hủy; khoản tiền cần được đối soát/hoàn thủ công"
+                            "effectiveDuration", contractClosed
+                                    ? "Booking đã đóng; khoản tiền cần được đối soát/hoàn thủ công"
                                     : "Hợp đồng đã có hiệu lực (ACTIVE)",
                             "paymentGateway", "PayOS VietQR Napas (Tự động)"
                     );
                     emailService.sendReceiptEmail(companyEmail,
-                            contractCancelled
+                            contractClosed
                                     ? "The Pluse - Cần đối soát khoản thanh toán hợp đồng " + contractCode
                                     : "The Pluse - Xác nhận thanh toán hợp đồng " + contractCode,
                             emailData);
@@ -638,12 +676,12 @@ public class PaymentService {
 
         return Map.of(
                 "success", true,
-                "message", contractCancelled
-                        ? "Đã nhận thanh toán sau khi booking bị hủy; hợp đồng vẫn CANCELLED và cần đối soát/hoàn tiền thủ công."
+                "message", contractClosed
+                        ? "Đã nhận thanh toán sau khi booking đã đóng; trạng thái hợp đồng được giữ nguyên để đối soát/hoàn tiền thủ công."
                         : "Thanh toán hợp đồng thành công! Hợp đồng đã chuyển sang ACTIVE, doanh nghiệp có thể tạo chiến dịch ngay.",
                 "contractId", contractId,
                 "contractCode", contractCode,
-                "status", contractCancelled ? "CANCELLED" : "ACTIVE"
+                "status", contractClosed ? contractStatus : "ACTIVE"
         );
     }
 }
