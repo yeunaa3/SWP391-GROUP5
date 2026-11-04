@@ -41,7 +41,7 @@ export const screenFields = {
   "ADM-03": ["Company information", "Tax and contact information", "Application content", "Legal document preview", "Validation summary", "Decision", "Reason", "Submit decision"],
   "ADM-04": ["Search and filters", "Booking number", "Company", "Slot", "Requested period", "Estimated amount", "Status", "Open booking"],
   "ADM-05": ["Booking summary", "Availability calendar", "Conflict list", "Calculated price", "Commercial terms", "Proposal expiry", "Send proposal"],
-  "ADM-06": ["Contract summary", "Requested revision", "Manager response", "Revision status", "Payment status", "Payment deadline", "Reminder action", "Close booking"],
+  "ADM-06": ["Contract code", "Company", "Amount", "Contract status", "Payment status", "Payment deadline", "Reminder action", "Close booking"],
   "ADM-07": ["Search and filters", "Campaign code", "Company", "Submitted time", "Campaign status", "Creative status", "Open review"],
   "ADM-08": ["Campaign and contract summary", "Schedule and slot", "Target URL", "Targeting summary", "Creative preview", "Technical checks", "Decision", "Reason", "Submit decision"],
   "ADM-09": ["Status filter", "Campaign", "Delivery status", "Impressions", "Clicks", "Quota progress", "Last delivery", "Operational alert"],

@@ -41,7 +41,7 @@ export const screens = [
   { id: "ADM-03", name: "Partnership Review Detail", feature: "Partnership Review", path: "/ad-manager/partnerships/:companyId", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-04"], uc: ["UC-19", "UC-20"] },
   { id: "ADM-04", name: "Booking Review Queue", feature: "Contract Review", path: "/ad-manager/bookings", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-05"], uc: ["UC-23"] },
   { id: "ADM-05", name: "Booking Availability and Proposal", feature: "Contract Review", path: "/ad-manager/bookings/:contractId/proposal", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-05"], uc: ["UC-23"] },
-  { id: "ADM-06", name: "Contract Revision and Payment Status", feature: "Contract Review", path: "/ad-manager/contracts/:contractId", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-05"], uc: ["UC-23", "UC-24"] },
+  { id: "ADM-06", name: "Contract Payment Tracking", feature: "Payment Tracking", path: "/ad-manager/contracts", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-05"], uc: ["UC-23", "UC-24"] },
   { id: "ADM-07", name: "Campaign Review Queue", feature: "Campaign Review", path: "/ad-manager/campaigns", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-07"], uc: ["UC-28", "UC-29"] },
   { id: "ADM-08", name: "Campaign and Creative Review", feature: "Campaign Review", path: "/ad-manager/campaigns/:campaignId/review", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-07"], uc: ["UC-28", "UC-29", "UC-30"] },
   { id: "ADM-09", name: "Active Campaign Monitor", feature: "Campaign Operations", path: "/ad-manager/campaign-monitor", area: "adManager", roles: ["AD_MANAGER"], bf: ["BF-08"], uc: ["UC-30", "UC-39"] },

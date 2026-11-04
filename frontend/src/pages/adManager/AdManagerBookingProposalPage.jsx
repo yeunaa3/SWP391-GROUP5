@@ -205,9 +205,16 @@ export default function AdManagerBookingProposalPage() {
                         Kiểm tra lịch, giá và điều khoản trước khi gửi đề xuất cho Business.
                     </p>
                 </div>
-                <Link className="secondary-button" to={returnTo}>
-                    Quay lại hàng chờ
-                </Link>
+                <div className="form-actions">
+                    {contractId && (
+                        <Link className="secondary-button" to={`/ad-manager/contracts/${contractId}`}>
+                            Theo dõi hợp đồng · ADM-06
+                        </Link>
+                    )}
+                    <Link className="secondary-button" to={returnTo}>
+                        Quay lại hàng chờ
+                    </Link>
+                </div>
             </header>
 
             {loading && <p role="status">Đang tải thông tin booking…</p>}

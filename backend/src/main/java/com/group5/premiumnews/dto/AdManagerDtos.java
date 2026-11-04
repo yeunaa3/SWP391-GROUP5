@@ -56,6 +56,58 @@ public final class AdManagerDtos {
                         List<String> allowedActions) {
         }
 
+        public record ContractStatusDetail(
+                        ContractStatusSnapshot contract,
+                        Instant lastPaymentReminderAt,
+                        List<String> allowedActions) {
+        }
+
+        public record ContractStatusQueuePage(
+                        List<ContractStatusQueueItem> items,
+                        long total,
+                        int page,
+                        int size,
+                        int totalPages) {
+        }
+
+        public record ContractStatusQueueItem(
+                        long contractId,
+                        String contractCode,
+                        String contractName,
+                        String companyName,
+                        String packageName,
+                        String slotName,
+                        LocalDateTime startAt,
+                        LocalDateTime endAt,
+                        BigDecimal totalValue,
+                        String currency,
+                        String status,
+                        String paymentStatus,
+                        LocalDateTime paymentDueAt) {
+        }
+
+        public record ContractStatusSnapshot(
+                        long contractId,
+                        String contractCode,
+                        String contractName,
+                        String companyName,
+                        String packageName,
+                        String slotName,
+                        String slotPosition,
+                        LocalDateTime startAt,
+                        LocalDateTime endAt,
+                        BigDecimal totalValue,
+                        String currency,
+                        String status,
+                        String paymentStatus,
+                        LocalDateTime paymentDueAt,
+                        int revisionNo) {
+        }
+
+        public record ContractActionRequest(
+                        @NotNull @Min(1) Integer expectedRevisionNo) {
+        }
+
         public record BookingSnapshot(
                         long contractId,
                         String contractCode,

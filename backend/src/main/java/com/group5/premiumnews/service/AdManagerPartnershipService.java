@@ -201,6 +201,241 @@ public class AdManagerPartnershipService {
                 allowedActions);
     }
 
+    @Transactional(readOnly = true)
+    public AdManagerDtos.ContractStatusQueuePage contractStatusQueue(
+            String q,
+            String requestedStatus,
+            int page,
+            int size) {
+        String keyword = q == null ? "" : q.trim();
+        String status = requestedStatus == null ? "" : requestedStatus.trim();
+        List<String> allowedStatuses = List.of(
+                "", "PENDING_PAYMENT", "PAYMENT_FAILED", "ACTIVE", "EXPIRED", "CANCELLED", "COMPLETED");
+        if (page < 0 || size < 1 || size > 100 || keyword.length() > 150
+                || !allowedStatuses.contains(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bộ lọc hợp đồng không hợp lệ.");
+        }
+
+        StringBuilder where = new StringBuilder(
+                " WHERE ct.status IN ('PENDING_PAYMENT','PAYMENT_FAILED','ACTIVE','EXPIRED','CANCELLED','COMPLETED') ");
+        List<Object> arguments = new ArrayList<>();
+        if (!keyword.isBlank()) {
+            where.append(" AND (LOCATE(?,ct.contract_code)>0 OR LOCATE(?,ct.contract_name)>0 OR LOCATE(?,c.company_name)>0)");
+            arguments.add(keyword);
+            arguments.add(keyword);
+            arguments.add(keyword);
+        }
+        if (!status.isBlank()) {
+            where.append(" AND ct.status=?");
+            arguments.add(status);
+        }
+
+        String fromClause = " FROM contracts ct JOIN companies c ON c.company_id=ct.company_id" + where;
+        long total = nullableCount("SELECT COUNT(*)" + fromClause, arguments.toArray());
+        List<Object> pageArguments = new ArrayList<>(arguments);
+        pageArguments.add(size);
+        pageArguments.add(page * size);
+        List<AdManagerDtos.ContractStatusQueueItem> items = jdbc.query("""
+                SELECT ct.contract_id, ct.contract_code, ct.contract_name, c.company_name,
+                       ct.package_name_snapshot, ct.slot_name_snapshot, ct.start_at, ct.end_at, ct.total_value,
+                       ct.currency, ct.status, ct.payment_status, ct.payment_due_at
+                """ + fromClause + """
+                ORDER BY ct.updated_at DESC, ct.contract_id DESC
+                LIMIT ? OFFSET ?
+                """, (rs, row) -> new AdManagerDtos.ContractStatusQueueItem(
+                rs.getLong("contract_id"),
+                rs.getString("contract_code"),
+                rs.getString("contract_name"),
+                rs.getString("company_name"),
+                rs.getString("package_name_snapshot"),
+                rs.getString("slot_name_snapshot"),
+                contractDateTime(rs.getTimestamp("start_at")),
+                contractDateTime(rs.getTimestamp("end_at")),
+                rs.getBigDecimal("total_value"),
+                rs.getString("currency"),
+                rs.getString("status"),
+                rs.getString("payment_status"),
+                rs.getTimestamp("payment_due_at") == null
+                        ? null : contractDateTime(rs.getTimestamp("payment_due_at"))),
+                pageArguments.toArray());
+
+        int totalPages = total == 0 ? 0 : (int) ((total + size - 1) / size);
+        return new AdManagerDtos.ContractStatusQueuePage(items, total, page, size, totalPages);
+    }
+
+    @Transactional(readOnly = true)
+    public AdManagerDtos.ContractStatusDetail contractStatusDetail(long contractId) {
+        Map<String, Object> contract = bookingRow(contractId);
+        if ("DRAFT".equals(contract.get("status"))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy hợp đồng đã gửi.");
+        }
+
+        Timestamp lastReminder = jdbc.query("""
+                SELECT MAX(created_at)
+                FROM audit_logs
+                WHERE entity_type='CONTRACT' AND entity_id=?
+                  AND action='AD_MANAGER_SEND_PAYMENT_REMINDER'
+                """, rs -> rs.next() ? rs.getTimestamp(1) : null, String.valueOf(contractId));
+        Object dueValue = contract.get("payment_due_at");
+        LocalDateTime paymentDueAt = dueValue == null ? null : contractDateTime(dueValue);
+        String status = String.valueOf(contract.get("status"));
+        String paymentStatus = String.valueOf(contract.get("payment_status"));
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        LocalDateTime now = LocalDateTime.now(VIETNAM);
+
+        List<String> allowedActions = new ArrayList<>();
+        if ("PENDING_PAYMENT".equals(status)
+                && "PENDING".equals(paymentStatus)
+                && paymentDueAt != null
+                && paymentDueAt.isAfter(now)
+                && (lastReminder == null
+                        || lastReminder.toLocalDateTime().isBefore(now.minusHours(24)))) {
+            allowedActions.add("SEND_PAYMENT_REMINDER");
+        }
+        if (List.of("PENDING_PAYMENT", "PAYMENT_FAILED").contains(status)
+                && !"PAID".equals(paymentStatus)
+                && paymentDueAt != null
+                && !paymentDueAt.isAfter(now)) {
+            allowedActions.add("CLOSE_BOOKING");
+        }
+
+        return new AdManagerDtos.ContractStatusDetail(
+                new AdManagerDtos.ContractStatusSnapshot(
+                        ((Number) contract.get("contract_id")).longValue(),
+                        (String) contract.get("contract_code"),
+                        (String) contract.get("contract_name"),
+                        (String) contract.get("company_name"),
+                        (String) contract.get("package_name_snapshot"),
+                        (String) contract.get("slot_name_snapshot"),
+                        (String) contract.get("slot_position_snapshot"),
+                        contractDateTime(contract.get("start_at")),
+                        contractDateTime(contract.get("end_at")),
+                        (BigDecimal) contract.get("total_value"),
+                        (String) contract.get("currency"),
+                        status,
+                        paymentStatus,
+                        paymentDueAt,
+                        revisionNo),
+                instant(lastReminder),
+                allowedActions);
+    }
+
+    @Transactional
+    public AdManagerDtos.ContractStatusDetail sendPaymentReminder(
+            long contractId,
+            AuthenticatedUserPrincipal manager,
+            AdManagerDtos.ContractActionRequest request) {
+        Map<String, Object> contract = bookingRow(contractId, true);
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        if (revisionNo != request.expectedRevisionNo()) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi gửi nhắc thanh toán.");
+        }
+
+        LocalDateTime dueAt = contract.get("payment_due_at") == null
+                ? null : contractDateTime(contract.get("payment_due_at"));
+        if (!"PENDING_PAYMENT".equals(contract.get("status"))
+                || !"PENDING".equals(contract.get("payment_status"))
+                || dueAt == null
+                || !dueAt.isAfter(LocalDateTime.now(VIETNAM))) {
+            throw new InvalidStateTransitionException(
+                    "Chỉ có thể nhắc thanh toán cho hợp đồng đang chờ thanh toán và chưa hết hạn.");
+        }
+
+        Timestamp lastReminder = jdbc.query("""
+                SELECT MAX(created_at)
+                FROM audit_logs
+                WHERE entity_type='CONTRACT' AND entity_id=?
+                  AND action='AD_MANAGER_SEND_PAYMENT_REMINDER'
+                """, rs -> rs.next() ? rs.getTimestamp(1) : null, String.valueOf(contractId));
+        if (lastReminder != null
+                && !lastReminder.toLocalDateTime().isBefore(LocalDateTime.now(VIETNAM).minusHours(24))) {
+            throw new ConflictException("Đã gửi nhắc thanh toán trong 24 giờ qua. Hãy thử lại sau.");
+        }
+
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT user_id, ?, ?, 'WORKFLOW', 'CONTRACT', ?,
+                       'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users WHERE company_id=? AND status='ACTIVE'
+                """,
+                "Nhắc thanh toán hợp đồng",
+                "Hợp đồng " + contract.get("contract_code") + " đang chờ thanh toán. Hạn thanh toán: " + dueAt + ".",
+                String.valueOf(contractId),
+                contract.get("company_id"));
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, old_value, new_value)
+                VALUES(?, 'AD_MANAGER_SEND_PAYMENT_REMINDER', 'CONTRACT', ?,
+                       JSON_OBJECT('status', ?, 'paymentStatus', ?, 'revisionNo', ?),
+                       JSON_OBJECT('reminderSent', TRUE, 'status', ?, 'paymentStatus', ?, 'revisionNo', ?))
+                """,
+                manager.id(), String.valueOf(contractId), contract.get("status"), contract.get("payment_status"),
+                revisionNo, contract.get("status"), contract.get("payment_status"), revisionNo);
+
+        return contractStatusDetail(contractId);
+    }
+
+    @Transactional
+    public AdManagerDtos.ContractStatusDetail closeExpiredBooking(
+            long contractId,
+            AuthenticatedUserPrincipal manager,
+            AdManagerDtos.ContractActionRequest request) {
+        Map<String, Object> contract = bookingRow(contractId, true);
+        int revisionNo = ((Number) contract.get("revision_no")).intValue();
+        if (revisionNo != request.expectedRevisionNo()) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi đóng booking.");
+        }
+
+        LocalDateTime dueAt = contract.get("payment_due_at") == null
+                ? null : contractDateTime(contract.get("payment_due_at"));
+        if (!List.of("PENDING_PAYMENT", "PAYMENT_FAILED").contains(contract.get("status"))
+                || "PAID".equals(contract.get("payment_status"))
+                || dueAt == null
+                || dueAt.isAfter(LocalDateTime.now(VIETNAM))) {
+            throw new InvalidStateTransitionException(
+                    "Chỉ có thể đóng booking chưa thanh toán sau khi đã hết hạn thanh toán.");
+        }
+
+        int changed = jdbc.update("""
+                UPDATE contracts
+                SET status='EXPIRED', reservation_expires_at=NULL,
+                    revision_no=revision_no+1, updated_at=CURRENT_TIMESTAMP(6)
+                WHERE contract_id=? AND revision_no=? AND status=? AND payment_status<>'PAID'
+                """,
+                contractId, revisionNo, contract.get("status"));
+        if (changed != 1) {
+            throw new ConflictException("Hợp đồng đã thay đổi. Hãy tải lại trước khi đóng booking.");
+        }
+
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, old_value, new_value, reason)
+                VALUES(?, 'AD_MANAGER_CLOSE_EXPIRED_BOOKING', 'CONTRACT', ?,
+                       JSON_OBJECT('status', ?, 'paymentStatus', ?, 'revisionNo', ?),
+                       JSON_OBJECT('status', 'EXPIRED', 'paymentStatus', ?, 'revisionNo', ?),
+                       'Quá hạn thanh toán')
+                """,
+                manager.id(), String.valueOf(contractId), contract.get("status"), contract.get("payment_status"),
+                revisionNo, contract.get("payment_status"), revisionNo + 1);
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT user_id, 'Booking đã hết hạn', ?, 'WORKFLOW',
+                       'CONTRACT', ?, 'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users WHERE company_id=? AND status='ACTIVE'
+                """,
+                "Booking " + contract.get("contract_code")
+                        + " đã được đóng vì quá hạn thanh toán. Nếu bạn đã chuyển khoản, hãy liên hệ hỗ trợ để đối soát.",
+                String.valueOf(contractId), contract.get("company_id"));
+
+        return contractStatusDetail(contractId);
+    }
+
     @Transactional
     public AdManagerDtos.BookingDetail saveProposal(
             long contractId,

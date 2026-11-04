@@ -668,6 +668,27 @@ public class BusinessWorkspaceService {
                 currentRevision,
                 request.proposalRevisionNo());
 
+        jdbc.update("""
+                INSERT INTO notifications(
+                    user_id, title, content, notification_type,
+                    related_entity_type, related_entity_id,
+                    delivery_channel, delivery_status, sent_at
+                )
+                SELECT DISTINCT u.user_id,
+                       'Booking được chấp nhận, đang chờ thanh toán',
+                       ?, 'WORKFLOW', 'CONTRACT', ?,
+                       'IN_APP', 'SENT', CURRENT_TIMESTAMP(6)
+                FROM users u
+                JOIN user_roles ur ON ur.user_id=u.user_id
+                JOIN roles r ON r.role_id=ur.role_id
+                WHERE r.role_name='AD_MANAGER'
+                  AND r.status='ACTIVE'
+                  AND u.status='ACTIVE'
+                """,
+                "Business đã chấp nhận proposal của booking " + contract.get("contract_code")
+                        + ". Theo dõi thanh toán tại ADM-06.",
+                String.valueOf(contractId));
+
         return overview(user);
     }
 

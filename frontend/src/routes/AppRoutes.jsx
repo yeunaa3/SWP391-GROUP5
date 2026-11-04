@@ -43,6 +43,7 @@ import ActiveCampaignMonitorPage from "../pages/adManager/ActiveCampaignMonitorP
 import CampaignReviewPage from "../pages/adManager/CampaignReviewPage.jsx";
 import AdManagerBookingQueuePage from "../pages/adManager/AdManagerBookingQueuePage.jsx";
 import AdManagerBookingProposalPage from "../pages/adManager/AdManagerBookingProposalPage.jsx";
+import AdManagerPaymentTrackingPage from "../pages/adManager/AdManagerPaymentTrackingPage.jsx";
 import AdSlotManagementPage from "../pages/admin/AdSlotManagementPage.jsx";
 import B2bPackageManagementPage from "../pages/admin/B2bPackageManagementPage.jsx";
 
@@ -52,6 +53,7 @@ const specialPages = {
   "ADM-03": <PartnershipDetailPage />,
   "ADM-04": <AdManagerBookingQueuePage />,
   "ADM-05": <AdManagerBookingProposalPage />,
+  "ADM-06": <AdManagerPaymentTrackingPage />,
   "ADM-07": <CampaignReviewPage />,
   "ADM-08": <CampaignReviewPage />,
   "ADM-09": <ActiveCampaignMonitorPage />,
@@ -143,6 +145,13 @@ export default function AppRoutes() {
                 element={screenElement(screen)}
               />
             ))}
+
+          {area === "adManager" && (
+            <Route
+              path="/ad-manager/contracts/:contractId"
+              element={screenElement(screens.find((screen) => screen.id === "ADM-06"))}
+            />
+          )}
 
           {area === "admin" && (
             <Route
