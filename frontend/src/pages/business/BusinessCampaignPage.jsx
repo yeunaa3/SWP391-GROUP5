@@ -84,7 +84,40 @@ import "../../assets/business-campaign.css";
                 const [dirty, setDirty] = useState(false),
         [confirm, setConfirm] = useState(null),
         [utm, setUtm] = useState({source: "thepulse", medium: "display", campaign: ""});
-                const dirtyRef = useUnsaved(dirty), savingRef = useRef(false), requestKey = useRef(crypto.randomUUID()), loadGeneration = useRef(0);
+                  function makeSampleBanner(w, h, title) {
+    const canvas = document.createElement("canvas");
+    canvas.width = Number(w) || 728;
+    canvas.height = Number(h) || 90;
+    const ctx = canvas.getContext("2d");
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, "#0f172a");
+    grad.addColorStop(1, "#1e3a8a");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = Math.max(2, Math.min(6, Math.floor(canvas.height * 0.05)));
+    ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+    ctx.fillStyle = "#ffffff";
+    const fontSize = Math.max(12, Math.min(24, Math.floor(canvas.height * 0.28)));
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(title || "THE PULSE B2B BANNER", canvas.width / 2, canvas.height / 2 - fontSize * 0.4);
+    ctx.fillStyle = "#93c5fd";
+    const subSize = Math.max(9, Math.floor(fontSize * 0.65));
+    ctx.font = `${subSize}px sans-serif`;
+    ctx.fillText(`Kích thước chuẩn: ${canvas.width} × ${canvas.height} px`, canvas.width / 2, canvas.height / 2 + fontSize * 0.7);
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const sampleFile = new File([blob], `sample-banner-${canvas.width}x${canvas.height}.png`, { type: "image/png" });
+        setFile(sampleFile);
+        setDirty(true);
+        dirtyRef.current = true;
+      }
+    }, "image/png");
+  }
+
+  const dirtyRef = useUnsaved(dirty), savingRef = useRef(false), requestKey = useRef(crypto.randomUUID()), loadGeneration = useRef(0);
                 const c = detail?.campaign, ct = detail?.contract, creatives = detail?.creatives || [], latest = creatives.find(x => x.status !== "ARCHIVED"), approved = creatives.find(x => x.status === "APPROVED");
                 const company = workspace?.company || {}, allowed = company.application_status === "APPROVED";
                 const profileEditable = !company.company_id || ["DRAFT", "NEEDS_REVISION"].includes(company.application_status);
@@ -234,7 +267,7 @@ import "../../assets/business-campaign.css";
                         const filtered = sortCampaigns((workspace?.campaigns || []).filter(x => `${x.code} ${x.campaign_name} ${x.contract_code}`.toLocaleLowerCase("vi").includes(q.toLocaleLowerCase("vi")) && (filter === "ALL" || campaignStatuses(x.status).review === filter) && (delivery === "ALL" || campaignStatuses(x.status).delivery === delivery)), sortOrder);
                                 const metrics = workspace?.metrics || {}, hasMetrics = Number(metrics.sampleCount) > 0;
                                 const steps = [['BUS-14', 'Thông tin', `/business/campaigns/edit/${campaignId || ""}`], ['BUS-15', 'Banner và đối tượng', `/business/campaigns/${campaignId}/creative`], ['BUS-16', 'Kiểm tra', `/business/campaigns/${campaignId}/submit`], ['BUS-17', 'Trạng thái', `/business/campaigns/${campaignId}`]];
-                                return <main className={`page-content campaign-workspace ${["BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id)?"campaign-flow":""} screen-${screen.id}`}><header className="page-heading"><div><p className="eyebrow">THE PULSE BUSINESS · {screen.id}</p><h1>{names[screen.id]}</h1><p>Hồ sơ, nội dung quảng cáo và lịch sử xét duyệt của doanh nghiệp.</p></div><button className="secondary-button" disabled={busy || loading} onClick={() => {if (!dirty || window.confirm("Bỏ thay đổi chưa lưu và tải lại?")){setLoading(true); load().catch(e => setError(e.message)).finally(() => setLoading(false)); }}}>Làm mới</button></header>
+                                return <main className={`page-content campaign-workspace ${["BUS-14","BUS-15","BUS-16","BUS-17"].includes(screen.id)?"campaign-flow":""} screen-${screen.id}`}><header className="page-heading"><div><p className="eyebrow">CỔNG DOANH NGHIỆP · VẬN HÀNH QUẢNG CÁO</p><h1>{names[screen.id]}</h1><p>Hồ sơ, nội dung quảng cáo và lịch sử xét duyệt của doanh nghiệp.</p></div><button className="secondary-button" disabled={busy || loading} onClick={() => {if (!dirty || window.confirm("Bỏ thay đổi chưa lưu và tải lại?")){setLoading(true); load().catch(e => setError(e.message)).finally(() => setLoading(false)); }}}>Làm mới</button></header>
     {error && <p role="alert" className="form-error">{error}</p>}{message && <p role="status" className="success-message">{message}</p>}
     {loading?<p>Đang tải dữ liệu…</p>:!workspace?<button onClick={() => location.reload()}>Thử tải lại</button>:<>
     {screen.id === "BUS-01" && <>
@@ -264,15 +297,25 @@ import "../../assets/business-campaign.css";
             {screen.id === "BUS-15" && c && <>
             <form className="dashboard-section" onSubmit={upload}><h2>1. Tệp quảng cáo và URL đích</h2><p className="campaign-section-intro">Tải nội dung đúng kích thước vị trí, sau đó kiểm tra trang đích và bản xem trước.</p><fieldset className="campaign-fieldset" disabled={busy || !editable(c.status)}><Field label={`PNG/JPEG hoặc MP4 ≤ 60 giây · ${ct.width_px}
     × ${ct.height_px}
-    px · tối đa 8 MB`}><input type="file" accept="image/png,image/jpeg,video/mp4" required onChange={e => {setFile(e.target.files?.[0] || null); setDirty(true); }}/></Field><Field label="URL đích"><input required type="url" maxLength={1000} value={form.targetUrl} onChange={e => update("targetUrl", e.target.value)}/></Field><details><summary>Thêm UTM để phân biệt nguồn truy cập</summary>{Object.keys(utm).map(key => <Field key={key} label={key}><input value={utm[key]} maxLength={100} onChange={e => setUtm(x => ({...x, [key]:e.target.value}))}/></Field>)}<button type="button" className="secondary-button" onClick={() => {try{update("targetUrl", withUtm(form.targetUrl, utm.source, utm.medium, utm.campaign)); } catch (e){setError(e.message); }}}>Áp dụng UTM</button></details><button disabled={!file}>Tải và lưu phiên bản mới</button>{latest && <button type="button" disabled={!!file} className="secondary-button" onClick={() => run(() => json(`/api/business/campaigns/${campaignId}`
+    px · tối đa 8 MB`}><input type="file" accept="image/png,image/jpeg,video/mp4" required onChange={e => {setFile(e.target.files?.[0] || null); setDirty(true); }}/></Field>
+            <div style={{ margin: "8px 0 16px", display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+              <button type="button" className="secondary-button" style={{ fontSize: "12.5px", padding: "6px 14px", fontWeight: "600", borderColor: "#059669", color: "#059669" }} onClick={() => makeSampleBanner(ct.width_px, ct.height_px, c.campaign_name)}>
+                🎨 Tạo nhanh banner mẫu chuẩn ({ct.width_px} × {ct.height_px} px)
+              </button>
+              {file && <span style={{ fontSize: "12.5px", color: "#059669", fontWeight: "600" }}>✓ Đã chọn: {file.name}</span>}
+            </div><Field label="URL đích"><input required type="url" maxLength={1000} value={form.targetUrl} onChange={e => update("targetUrl", e.target.value)}/></Field><details><summary>Thêm UTM để phân biệt nguồn truy cập</summary>{Object.keys(utm).map(key => <Field key={key} label={key}><input value={utm[key]} maxLength={100} onChange={e => setUtm(x => ({...x, [key]:e.target.value}))}/></Field>)}<button type="button" className="secondary-button" onClick={() => {try{update("targetUrl", withUtm(form.targetUrl, utm.source, utm.medium, utm.campaign)); } catch (e){setError(e.message); }}}>Áp dụng UTM</button></details><button disabled={!file}>Tải và lưu phiên bản mới</button>{latest && <button type="button" disabled={!!file} className="secondary-button" onClick={() => run(() => json(`/api/business/campaigns/${campaignId}`
                                 , {contractId:c.contract_id, name:c.campaign_name, description:c.description, startTime:c.scheduled_start_time, endTime:c.scheduled_end_time, targetUrl:form.targetUrl, editVersion:version}, "PUT"), "Đã lưu URL thành phiên bản nháp mới.", undefined, targetChanged?{target}:{})}>Lưu URL vào bản nháp</button>}</fieldset></form>
             <section className="dashboard-section"><div className="section-heading"><h2>Xem trước trên trang báo</h2><select aria-label="Thiết bị xem trước" value={device} onChange={e => setDevice(e.target.value)}><option value="desktop">Desktop</option><option value="mobile">Mobile</option></select></div><div className={`campaign-news-preview ${device}`
                                                                                                                                                                                                         }><header>THE PULSE <small>Xem trước · không phân phối thật</small></header><div className={ct.slot_position_snapshot === "ARTICLE_SIDEBAR"?"preview-sidebar":""}><article><h3>Bản tin hôm nay</h3><p>Bố cục mô phỏng trang báo để kiểm tra vị trí và tỷ lệ banner.</p></article><aside><small>Quảng cáo · {ct.slot_name_snapshot}</small><Media creative={preview || latest}/></aside></div></div></section>
             <form className="dashboard-section" onSubmit={e => {e.preventDefault(); run(() => json(`/api/business/campaigns/${campaignId}/targeting`, {...target, editVersion:version}, "PUT"), "Đã lưu đối tượng.", undefined, creativeChanged?{form}:{}); }}><h2>2. Đối tượng và phạm vi</h2><fieldset className="campaign-fieldset" disabled={busy || !editable(c.status)}><p>Không chọn chuyên mục/thẻ nghĩa là tất cả; vị trí, hợp đồng và lịch chạy vẫn phải hợp lệ.</p>{[["categoryIds", "Chuyên mục", workspace.categories], ["tagIds", "Thẻ", workspace.tags]].map(([key, label, items]) => <fieldset key={key}><legend>{label}</legend><div className="campaign-checkboxes">{items.map(x => <label key={x.id}><input type="checkbox" checked={target[key].includes(x.id)} onChange={() => toggleTarget(key, x.id)}/>{x.name}</label>)}</div></fieldset>)}<Field label="Quốc gia theo vùng trình duyệt"><input value={target.geoScope} maxLength={255} placeholder="ALL hoặc mã ISO, ví dụ VN,US (không định vị GPS)" onChange={e => {setTarget(x => ({...x, geoScope:e.target.value})); setDirty(true); }}/></Field><Field label="Mô tả đối tượng"><textarea maxLength={500} value={target.audience} onChange={e => {setTarget(x => ({...x, audience:e.target.value})); setDirty(true); }}/></Field><Field label="Thiết bị"><select value={target.deviceType} onChange={e => {setTarget(x => ({...x, deviceType:e.target.value})); setDirty(true); }}>{["ALL", "DESKTOP", "MOBILE", "TABLET"].map(v => <option key={v} value={v}>{v}</option>)}</select></Field><button>Lưu đối tượng</button></fieldset></form>
             <section className="dashboard-section"><h2>3. Các phiên bản nội dung</h2>
                 {creatives.map(cr => <article className="campaign-version" key={cr.creative_id}><strong>v{cr.version_no} · {cr.creative_type}</strong><Badge value={cr.status}/><p>{cr.width_px} × {cr.height_px} px · {Number(cr.file_size).toLocaleString()} bytes · {dateLabel(cr.created_at)}</p><a href={cr.media_url} target="_blank" rel="noreferrer">Mở phiên bản</a>{cr.status === "DRAFT" && editable(c.status) && <button className="secondary-button" disabled={busy || dirty} onClick={() => ask("Bỏ creative nháp?", "Creative đã nộp và tệp có lịch sử sẽ được giữ.", () => apiRequest(`/api/business/campaigns/${campaignId}/creatives/${cr.creative_id}`, {
-                        method:"DELETE"}))}>Bỏ bản nháp</button>}</article>)}</section><Link className="button-link" to={`/business/campaigns/${campaignId}/submit`}
-                                                              >Tiếp tục kiểm tra</Link>
+                        method:"DELETE"}))}>Bỏ bản nháp</button>}</article>)}</section><div className="form-actions" style={{ marginTop: "24px" }}><button type="button" className="button-link" disabled={busy} onClick={async () => {
+                if (targetChanged) {
+                  await run(() => json(`/api/business/campaigns/${campaignId}/targeting`, {...target, editVersion:version}, "PUT"), "Đã lưu đối tượng.");
+                }
+                navigate(`/business/campaigns/${campaignId}/submit`);
+              }}>Tiếp tục kiểm tra điều kiện nộp →</button></div>
             </>}
 
             {screen.id === "BUS-16" && c && <>

@@ -146,7 +146,7 @@ export default function SlotCalendarPage() {
     <main className="page-content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">BUS-06 LỊCH QUẢNG CÁO</p>
+          <p className="eyebrow">CỔNG DOANH NGHIỆP · LỊCH VỊ TRÍ QUẢNG CÁO</p>
           <h1>Lịch vị trí quảng cáo</h1>
           <p className="page-subtitle">
             Chọn vị trí, ngày bắt đầu và ngày kết thúc để tiếp tục đặt chỗ.
@@ -155,6 +155,25 @@ export default function SlotCalendarPage() {
         <Link className="outline-button" to="/business/advertising/prices">
           Xem báo giá
         </Link>
+      </div>
+
+      <div className="calendar-guide-banner" style={{
+        background: "linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)",
+        border: "1px solid #a7f3d0",
+        borderRadius: "12px",
+        padding: "14px 18px",
+        marginBottom: "20px",
+        display: "flex",
+        alignItems: "center",
+        gap: "14px"
+      }}>
+        <div style={{ fontSize: "22px" }}>📅</div>
+        <div>
+          <h4 style={{ margin: "0 0 3px", fontSize: "13.5px", color: "#065f46", fontWeight: "700" }}>3 bước chọn lịch quảng cáo:</h4>
+          <p style={{ margin: 0, fontSize: "13px", color: "#047857", lineHeight: "1.5" }}>
+            <strong>1. Chọn gói &amp; vị trí</strong> ➔ <strong>2. Nhấp vào ngày bắt đầu trống (xanh lá)</strong> trên lịch ➔ <strong>3. Nhấn "Tiếp tục đặt chỗ"</strong> ở cột bên phải.
+          </p>
+        </div>
       </div>
 
       {state === "loading" ? (
@@ -285,9 +304,9 @@ export default function SlotCalendarPage() {
               }}
             >
               <span style={{ color: "#9ca3af" }}>● Lịch đã qua (Xám)</span>
-              <span style={{ color: "#059669" }}>● Được phép đặt (Xanh)</span>
+              <span style={{ color: "#059669" }}>● Trống - Có thể đặt (Xanh lá)</span>
               <span style={{ color: "#dc2626" }}>● Đã có người đặt (Đỏ)</span>
-              <span style={{ color: "#991b1b" }}>● Đang chọn</span>
+              <span style={{ color: "#047857", fontWeight: "700" }}>● Đang chọn (Xanh đậm)</span>
             </div>
           </section>
 

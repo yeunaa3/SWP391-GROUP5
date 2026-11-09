@@ -267,6 +267,77 @@ export default function BusinessDashboardPage() {
         </article>
       </section>
 
+      {/* Lộ trình quy trình 4 bước chuẩn hóa dành cho Doanh nghiệp */}
+      <section className="business-roadmap-section" aria-label="Quy trình hợp tác 4 bước">
+        <div className="business-roadmap-header">
+          <span className="business-eyebrow">QUY TRÌNH HỢP TÁC B2B &amp; QUẢNG CÁO</span>
+          <h2>Lộ trình 4 bước từ hồ sơ đến phát sóng banner</h2>
+          <p>Theo dõi tiến độ từ xét duyệt pháp lý, đặt giữ vị trí slot, nộp banner đến đo lường số liệu thực tế.</p>
+        </div>
+
+        <div className="business-roadmap-steps">
+          {/* Bước 1: Hồ sơ pháp lý & KYC */}
+          <div className={`roadmap-step-card ${company.application_status === "APPROVED" ? "is-complete" : company.application_status === "PENDING_REVIEW" ? "is-pending" : "is-active"}`}>
+            <div className="roadmap-step-number">1</div>
+            <div className="roadmap-step-content">
+              <div className="roadmap-step-badge">
+                {company.application_status === "APPROVED" ? "✓ Đã duyệt KYC" : company.application_status === "PENDING_REVIEW" ? "◷ Đang xét duyệt" : "Chưa hoàn tất"}
+              </div>
+              <h3>Hồ sơ Doanh nghiệp</h3>
+              <p>Khai báo MST, thông tin pháp lý &amp; tải Giấy phép kinh doanh lên hệ thống.</p>
+              <Link to="/business/company" className="roadmap-step-link">
+                {company.application_status === "APPROVED" ? "Xem hồ sơ →" : "Cập nhật hồ sơ →"}
+              </Link>
+            </div>
+          </div>
+
+          {/* Bước 2: Đặt Slot & Hợp đồng */}
+          <div className={`roadmap-step-card ${activeContracts.length > 0 ? "is-complete" : company.application_status === "APPROVED" ? "is-active" : "is-disabled"}`}>
+            <div className="roadmap-step-number">2</div>
+            <div className="roadmap-step-content">
+              <div className="roadmap-step-badge">
+                {activeContracts.length > 0 ? `✓ ${activeContracts.length} Hợp đồng hiệu lực` : "Chọn vị trí & lịch"}
+              </div>
+              <h3>Đặt Slot &amp; Hợp đồng</h3>
+              <p>Tra cứu lịch trống IAB, chọn gói B2B, chốt điều khoản &amp; thanh toán kích hoạt.</p>
+              <Link to={company.application_status === "APPROVED" ? "/business/bookings/new" : "/business/advertising/calendar"} className="roadmap-step-link">
+                {activeContracts.length > 0 ? "Quản lý hợp đồng →" : "Đặt slot mới →"}
+              </Link>
+            </div>
+          </div>
+
+          {/* Bước 3: Tạo Chiến dịch & Nộp Banner */}
+          <div className={`roadmap-step-card ${campaigns.length > 0 ? "is-complete" : activeContracts.length > 0 ? "is-active" : "is-disabled"}`}>
+            <div className="roadmap-step-number">3</div>
+            <div className="roadmap-step-content">
+              <div className="roadmap-step-badge">
+                {campaigns.length > 0 ? `✓ ${campaigns.length} Chiến dịch` : "Tải banner IAB"}
+              </div>
+              <h3>Khởi tạo &amp; Duyệt Banner</h3>
+              <p>Tải ảnh/video đúng tỷ lệ, gắn link đích UTM và gửi Ad Manager kiểm duyệt.</p>
+              <Link to={activeContracts.length > 0 ? "/business/campaigns/edit" : "/business/campaigns"} className="roadmap-step-link">
+                {campaigns.length > 0 ? "Xem danh sách →" : "Tạo chiến dịch →"}
+              </Link>
+            </div>
+          </div>
+
+          {/* Bước 4: Phát sóng & Đo lường */}
+          <div className={`roadmap-step-card ${activeCampaigns.length > 0 ? "is-complete" : campaigns.some(c => c.status === "SCHEDULED" || c.status === "ACTIVE") ? "is-active" : "is-disabled"}`}>
+            <div className="roadmap-step-number">4</div>
+            <div className="roadmap-step-content">
+              <div className="roadmap-step-badge">
+                {activeCampaigns.length > 0 ? "● Đang phát sóng" : "Realtime Analytics"}
+              </div>
+              <h3>Phát sóng &amp; Hiệu suất</h3>
+              <p>Banner tự động hiển thị trên báo The Pulse; theo dõi Clicks, Impressions và CTR.</p>
+              <Link to="/business/performance" className="roadmap-step-link">
+                Báo cáo chi tiết →
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 3. Bố cục 2 cột chính: Biểu đồ & Chiến dịch + Cột lối tắt nghiệp vụ */}
       <div className="business-main-grid">
         {/* Cột trái: Biểu đồ hiệu suất & Bảng chiến dịch */}

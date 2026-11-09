@@ -584,7 +584,7 @@ export default function BusinessWorkspacePage({ screen }) {
       <div className="page-heading">
         <div>
           <p className="eyebrow">
-            THE PULSE BUSINESS · {screen.id}
+            CỔNG DOANH NGHIỆP · THE PULSE B2B
           </p>
           <h1>{tr(screen.name)}</h1>
           <p className="page-subtitle">
@@ -1080,14 +1080,14 @@ export default function BusinessWorkspacePage({ screen }) {
                 >
                   <div className="section-heading">
                     <div>
-                      <p className="section-kicker">ĐẶT QUẢNG CÁO · BUS-07</p>
+                      <p className="section-kicker">CỔNG DOANH NGHIỆP · ĐẶT GIỮ CHỖ</p>
                       <h2>Yêu cầu đặt quảng cáo</h2>
                     </div>
                     <Link
                       className="outline-button"
                       to="/business/advertising/calendar"
                     >
-                      Xem toàn bộ lịch (BUS-06) ↗
+                      Xem toàn bộ lịch phân phối ↗
                     </Link>
                   </div>
 
@@ -1355,7 +1355,7 @@ export default function BusinessWorkspacePage({ screen }) {
             <section className="dashboard-section business-contract-list" aria-labelledby="business-contract-list-title">
               <header className="business-contract-list-heading">
                 <div>
-                  <p className="business-contract-kicker">THE PULSE BUSINESS · BUS-11</p>
+                  <p className="business-contract-kicker">CỔNG DOANH NGHIỆP · QUẢN LÝ HỢP ĐỒNG</p>
                   <h2 id="business-contract-list-title">Hợp đồng và yêu cầu đặt quảng cáo</h2>
                   <p className="business-contract-list-description">
                     Theo dõi lịch chạy, giá trị, trạng thái hợp đồng và thanh toán của từng booking.
@@ -1506,7 +1506,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 </header>
 
                 {screen.id === "BUS-09" && <>
-                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-09</p>
+                  <p className="business-flow-kicker">CỔNG DOANH NGHIỆP · THANH TOÁN QUẢNG CÁO</p>
                   <h2>Thanh toán quảng cáo</h2>
                   <dl className="business-details">
                     <div><dt>Đơn hàng</dt><dd>{contract.contract_name || contract.package_name_snapshot || "Booking quảng cáo"}</dd></div>
@@ -1516,11 +1516,11 @@ export default function BusinessWorkspacePage({ screen }) {
                     <div><dt>Hạn thanh toán</dt><dd>{time(contract.payment_due_at)}</dd></div>
                     <div><dt>Phương thức</dt><dd>VietQR / PayOS</dd></div>
                   </dl>
-                  {contract.status === "PENDING_PAYMENT" && contract.payment_status !== "PAID" ? <AutoPaymentTimerCard type="CONTRACT" referenceId={contract.contract_id} amount={contract.total_value} itemName={`Hợp đồng ${contract.contract_code}`} onSuccess={async () => { await refresh(); navigate(`/business/contracts/payment-result?contractId=${contract.contract_id}`); }} /> : contract.payment_status === "PAID" ? <p role="status" className="info-note">Hợp đồng đã thanh toán. Xem kết quả tại <Link to={`/business/contracts/payment-result?contractId=${contract.contract_id}`}>BUS-10</Link>.</p> : <p role="status" className="info-note">Hợp đồng chưa ở trạng thái có thể thanh toán.</p>}
+                  {contract.status === "PENDING_PAYMENT" && contract.payment_status !== "PAID" ? <AutoPaymentTimerCard type="CONTRACT" referenceId={contract.contract_id} amount={contract.total_value} itemName={`Hợp đồng ${contract.contract_code}`} onSuccess={async () => { await refresh(); navigate(`/business/contracts/payment-result?contractId=${contract.contract_id}`); }} /> : contract.payment_status === "PAID" ? <p role="status" className="info-note">Hợp đồng đã thanh toán. Xem kết quả tại <Link to={`/business/contracts/payment-result?contractId=${contract.contract_id}`}>Kết quả thanh toán</Link>.</p> : <p role="status" className="info-note">Hợp đồng chưa ở trạng thái có thể thanh toán.</p>}
                 </>}
 
                 {screen.id === "BUS-10" && <>
-                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-10</p>
+                  <p className="business-flow-kicker">CỔNG DOANH NGHIỆP · KẾT QUẢ GIAO DỊCH</p>
                   <h2>Kết quả thanh toán</h2>
                   <dl className="business-details">
                     <div><dt>Trạng thái thanh toán</dt><dd><Badge value={contract.payment_status} /></dd></div>
@@ -1543,7 +1543,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 </>}
 
                 {screen.id === "BUS-12" && <>
-                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-12</p>
+                  <p className="business-flow-kicker">CỔNG DOANH NGHIỆP · CHI TIẾT HỢP ĐỒNG</p>
                   <h2>Chi tiết hợp đồng</h2>
                   <dl className="business-details">
                     <div><dt>Tên hợp đồng</dt><dd>{contract.contract_name || "—"}</dd></div>
@@ -1565,7 +1565,7 @@ export default function BusinessWorkspacePage({ screen }) {
 
           {screen.id === "BUS-08" && (
             <section className="dashboard-section business-booking-panel business-booking-proposal-panel">
-              <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-08</p>
+              <p className="business-flow-kicker">CỔNG DOANH NGHIỆP · ĐỀ XUẤT HỢP ĐỒNG</p>
               <h2>Thông tin hợp đồng</h2>
 
               {contract ? (
@@ -2373,7 +2373,7 @@ export default function BusinessWorkspacePage({ screen }) {
       )}
       {applicationConfirm && <div className="campaign-dialog-backdrop"><section className="campaign-dialog" role="dialog" aria-modal="true" aria-labelledby="application-confirm-title" style={{ maxHeight: "85vh", overflowY: "auto" }}>
         <h2 id="application-confirm-title">Xác nhận gửi đăng ký hợp tác</h2>
-        <p>Thông tin doanh nghiệp đã lưu và tài liệu sau sẽ được gửi xét duyệt. Sau khi gửi, BUS-02 và BUS-03 bị khóa sửa.</p>
+        <p>Thông tin doanh nghiệp đã lưu và tài liệu sau sẽ được gửi xét duyệt. Sau khi gửi, hồ sơ doanh nghiệp và tài liệu pháp lý sẽ được khóa để chờ quản lý xét duyệt.</p>
         <dl className="business-details">{[["Doanh nghiệp", "company_name"], ["Mã số thuế", "tax_code"], ["Ngành nghề", "industry"], ["Người liên hệ", "contact_person"], ["Email", "email"], ["Điện thoại", "phone"], ["Địa chỉ", "address"], ["Địa chỉ xuất hóa đơn", "billing_address"]].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{data.company[key] || "—"}</dd></div>)}</dl>
         <h3>Tài liệu pháp lý</h3><ul>{data.documents.map(doc => <li key={doc.document_id}><a href={`/api/media/document/${doc.document_id}`} target="_blank" rel="noreferrer">{doc.original_file_name}</a> · Phiên bản {doc.version_no}</li>)}</ul>
         {error && <p className="form-error" role="alert">{error}</p>}

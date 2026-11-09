@@ -2,8 +2,8 @@
   --bus05-ink: #172b4d;
   --bus05-muted: #66758b;
   --bus05-border: #e2e8f0;
-  --bus05-primary: #245fce;
-  --bus05-primary-dark: #194ca9;
+  --bus05-primary: #059669;
+  --bus05-primary-dark: #047857;
   --bus05-surface: #ffffff;
   --bus05-soft: #f5f8fc;
   max-width: 1480px;
@@ -26,7 +26,7 @@
   border: 1px solid var(--bus05-border);
   border-radius: 18px;
   background:
-    radial-gradient(ellipse at 90% 0%, rgba(59, 130, 246, .10), transparent 42%),
+    radial-gradient(ellipse at 90% 0%, rgba(5, 150, 105, .08), transparent 42%),
     var(--bus05-surface);
 }
 

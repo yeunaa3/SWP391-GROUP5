@@ -84,6 +84,7 @@ public class CampaignWorkflowService {
                 VALUES(?,?,?,?,?,?,?,?,?,?)
                 """,r.contractId(),"CMP-"+UUID.randomUUID().toString().substring(0,18),r.name().trim(),r.description(),
                 trim(r.targetUrl()),r.startTime(),r.endTime(),user.id(),ct.get("impressions_quota_snapshot"),r.requestKey());
+            jdbc.update("INSERT INTO ad_targeting(campaign_id,target_audience,geo_scope,device_type) VALUES(?,'','ALL','ALL') ON DUPLICATE KEY UPDATE campaign_id=campaign_id",id);
         } else {
             var c=owned(user,id,true); business.requireEditable(c); requireVersion(c,r.editVersion());
             if(number(c.get("contract_id"))!=r.contractId()) fail("Không thể đổi hợp đồng của chiến dịch.");
@@ -259,8 +260,17 @@ public class CampaignWorkflowService {
         check(rows,"creative","Tệp quảng cáo",asset,"Cần tệp quảng cáo đã tải lên và còn khả dụng.","creative");
         check(rows,"dimensions","Kích thước",!cr.isEmpty()&&number(cr.get("width_px"))==number(ct.get("width_px"))&&number(cr.get("height_px"))==number(ct.get("height_px")),"Kích thước creative phải khớp vị trí hợp đồng.","creative");
         check(rows,"creativeState","Phiên bản creative",!cr.isEmpty()&&"DRAFT".equals(cr.get("status")),"Cần phiên bản creative nháp mới.","creative");
+        if(!cr.isEmpty() && !Objects.equals(c.get("target_url"),cr.get("target_url")) && c.get("target_url")!=null) {
+            jdbc.update("UPDATE ad_creatives SET target_url=? WHERE creative_id=?",c.get("target_url"),cr.get("creative_id"));
+            cr=latest(id);
+        }
         check(rows,"creativeUrl","URL creative",!cr.isEmpty()&&Objects.equals(c.get("target_url"),cr.get("target_url")),"URL của campaign và creative phải khớp; hãy lưu lại creative.","creative");
-        var target=targeting(id);boolean valid=!target.isEmpty();
+        var target=targeting(id);
+        if(target.isEmpty()) {
+            jdbc.update("INSERT INTO ad_targeting(campaign_id,target_audience,geo_scope,device_type) VALUES(?,'','ALL','ALL') ON DUPLICATE KEY UPDATE campaign_id=campaign_id",id);
+            target=targeting(id);
+        }
+        boolean valid=!target.isEmpty();
         if(valid)try{validIds("categories","category_id",ids(target.get("categoryIds")));validIds("tags","tag_id",ids(target.get("tagIds")));normalizeGeo((String)target.get("geo_scope"));}catch(RuntimeException ex){valid=false;}
         check(rows,"targeting","Đối tượng",valid,"Hãy lưu đối tượng với chuyên mục/thẻ đang hoạt động và mã quốc gia hợp lệ.","creative");
         return rows;
