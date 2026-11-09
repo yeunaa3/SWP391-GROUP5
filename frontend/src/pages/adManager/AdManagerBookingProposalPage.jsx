@@ -457,6 +457,7 @@ export default function AdManagerBookingProposalPage() {
                                 </div>
 
                                 <SlotBookingCalendar
+                                    availabilityEndpoint={`/api/advertising/booking-review-availability?excludeContractId=${contractId}`}
                                     showSuccessMessage={false}
                                     focusDate={proposalForm.startDate || calendarFocusDate || showDate(booking.startAt)}
                                     onMonthChange={setCalendarFocusDate}

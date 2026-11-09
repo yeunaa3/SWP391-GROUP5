@@ -22,6 +22,7 @@ function showDateTime(value) {
 
 const statusLabels = {
     ACCEPTED: "Đã chấp nhận",
+    REVISION_REQUESTED: "Yêu cầu chỉnh sửa",
     PENDING_PAYMENT: "Chờ thanh toán",
     PAYMENT_FAILED: "Thanh toán thất bại",
     ACTIVE: "Đang hiệu lực",

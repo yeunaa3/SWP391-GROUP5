@@ -80,6 +80,13 @@ public class AdvertisingDataController {
         return service.availability();
     }
 
+    /** Lịch riêng cho ADM-05, bao gồm booking đang được xét và proposal còn hiệu lực. */
+    @GetMapping("/booking-review-availability")
+    @PreAuthorize("hasRole('AD_MANAGER')")
+    public List<Map<String, Object>> bookingReviewAvailability(@RequestParam long excludeContractId) {
+        return service.bookingReviewAvailability(excludeContractId);
+    }
+
     /**
      * [BF-08][UC-31] Ghi nhận lượt hiển thị hợp lệ (Impression) khi banner xuất hiện trên màn hình.
      * Hỗ trợ chống trùng lặp / gian lận bằng session ID.

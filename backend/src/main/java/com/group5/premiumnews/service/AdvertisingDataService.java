@@ -55,6 +55,39 @@ public class AdvertisingDataService {
             """);
     }
 
+    /** Lịch Ad Manager cần cả booking chờ xét duyệt và proposal đang chờ Business phản hồi. */
+    public List<Map<String, Object>> bookingReviewAvailability(long excludeContractId) {
+        return jdbc.queryForList("""
+            SELECT ct.slot_id AS slotId, ct.start_at AS startAt, ct.end_at AS endAt
+            FROM contracts ct
+            WHERE ct.contract_id<>?
+              AND ct.status='PENDING_REVIEW'
+              AND ct.end_at>CURRENT_TIMESTAMP(6)
+            UNION ALL
+            SELECT cp.proposed_slot_id AS slotId,
+                   cp.proposed_start_at AS startAt,
+                   cp.proposed_end_at AS endAt
+            FROM contracts ct
+            JOIN contract_proposals cp ON cp.contract_id=ct.contract_id
+            WHERE ct.contract_id<>?
+              AND ct.status='PROPOSED'
+              AND cp.status='SENT'
+              AND cp.expires_at>CURRENT_TIMESTAMP(6)
+              AND cp.proposed_end_at>CURRENT_TIMESTAMP(6)
+            UNION ALL
+            SELECT ct.slot_id AS slotId, ct.start_at AS startAt, ct.end_at AS endAt
+            FROM contracts ct
+            WHERE ct.contract_id<>?
+              AND ct.end_at>CURRENT_TIMESTAMP(6)
+              AND (
+                  (ct.status='ACTIVE' AND ct.payment_status='PAID')
+                  OR (ct.status IN ('ACCEPTED','PENDING_PAYMENT')
+                      AND ct.reservation_expires_at>CURRENT_TIMESTAMP(6))
+              )
+            ORDER BY startAt
+            """, excludeContractId, excludeContractId, excludeContractId);
+    }
+
     /**
      * [BF-08][UC-32][BUS-18][ADM-09] Lấy chuỗi dữ liệu hiệu suất theo ngày (Impressions, Clicks, Invalid Clicks).
      * Phục vụ vẽ biểu đồ xu hướng (Trend Chart) trên dashboard doanh nghiệp và quản lý quảng cáo.

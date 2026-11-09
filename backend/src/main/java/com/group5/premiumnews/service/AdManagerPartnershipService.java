@@ -1214,28 +1214,53 @@ public class AdManagerPartnershipService {
             LocalDateTime startAt,
             LocalDateTime endAt) {
         return jdbc.query("""
-                SELECT contract_code, start_at, end_at, status
-                FROM contracts
-                WHERE slot_id=?
-                  AND contract_id<>?
-                  AND start_at<?
-                  AND end_at>?
+                SELECT ct.contract_code,
+                       CASE WHEN ct.status='PROPOSED' THEN cp.proposed_start_at ELSE ct.start_at END AS conflict_start_at,
+                       CASE WHEN ct.status='PROPOSED' THEN cp.proposed_end_at ELSE ct.end_at END AS conflict_end_at,
+                       ct.status
+                FROM contracts ct
+                LEFT JOIN contract_proposals cp ON cp.proposal_id=(
+                    SELECT latest.proposal_id
+                    FROM contract_proposals latest
+                    WHERE latest.contract_id=ct.contract_id AND latest.status='SENT'
+                    ORDER BY latest.revision_no DESC
+                    LIMIT 1
+                )
+                WHERE ct.contract_id<>?
                   AND (
-                  status = 'PENDING_REVIEW'
-                  OR (status = 'ACTIVE' AND payment_status = 'PAID')
-                  OR (
-                  status IN ('ACCEPTED', 'PENDING_PAYMENT')
-                  AND reservation_expires_at > CURRENT_TIMESTAMP(6)
+                      (ct.status='PROPOSED'
+                       AND cp.proposal_id IS NOT NULL
+                       AND cp.expires_at>CURRENT_TIMESTAMP(6)
+                       AND cp.proposed_slot_id=?
+                       AND cp.proposed_start_at<?
+                       AND cp.proposed_end_at>?)
+                      OR (ct.status='PENDING_REVIEW'
+                          AND ct.slot_id=?
+                          AND ct.start_at<?
+                          AND ct.end_at>?)
+                      OR (ct.status='ACTIVE'
+                          AND ct.payment_status='PAID'
+                          AND ct.slot_id=?
+                          AND ct.start_at<?
+                          AND ct.end_at>?)
+                      OR (ct.status IN ('ACCEPTED','PENDING_PAYMENT')
+                          AND ct.reservation_expires_at>CURRENT_TIMESTAMP(6)
+                          AND ct.slot_id=?
+                          AND ct.start_at<?
+                          AND ct.end_at>?)
                   )
-                  )
-                ORDER BY start_at
+                ORDER BY conflict_start_at
                 """,
                 (rs, row) -> new AdManagerDtos.BookingConflict(
                         rs.getString("contract_code"),
-                        contractDateTime(rs.getTimestamp("start_at")),
-                        contractDateTime(rs.getTimestamp("end_at")),
+                        contractDateTime(rs.getTimestamp("conflict_start_at")),
+                        contractDateTime(rs.getTimestamp("conflict_end_at")),
                         rs.getString("status")),
-                slotId, contractId, endAt, startAt);
+                contractId,
+                slotId, endAt, startAt,
+                slotId, endAt, startAt,
+                slotId, endAt, startAt,
+                slotId, endAt, startAt);
     }
 
     private void auditContract(
