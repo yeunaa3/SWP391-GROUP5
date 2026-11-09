@@ -450,3 +450,174 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+ * 2.5 Business Workflow Roadmap (Quy trình hợp tác 4 bước chuẩn hóa)
+ * ============================================================================ */
+.business-roadmap-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.business-roadmap-header {
+  margin-bottom: 18px;
+}
+
+.business-roadmap-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 4px 0;
+}
+
+.business-roadmap-header p {
+  color: #64748b;
+  font-size: 13.5px;
+  margin: 0;
+}
+
+.business-roadmap-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.roadmap-step-card {
+  position: relative;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 18px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.roadmap-step-card.is-complete {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.roadmap-step-card.is-active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+}
+
+.roadmap-step-card.is-pending {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.roadmap-step-card.is-disabled {
+  opacity: 0.72;
+}
+
+.roadmap-step-number {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.roadmap-step-card.is-complete .roadmap-step-number {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.roadmap-step-card.is-active .roadmap-step-number {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.roadmap-step-card.is-pending .roadmap-step-number {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.roadmap-step-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: #e2e8f0;
+  color: #475569;
+  width: fit-content;
+}
+
+.roadmap-step-card.is-complete .roadmap-step-badge {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.roadmap-step-card.is-active .roadmap-step-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.roadmap-step-card.is-pending .roadmap-step-badge {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.roadmap-step-content h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px;
+}
+
+.roadmap-step-content p {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  flex-grow: 1;
+}
+
+.roadmap-step-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s ease;
+}
+
+.roadmap-step-card.is-active .roadmap-step-link {
+  color: #2563eb;
+}
+
+.roadmap-step-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 1024px) {
+  .business-roadmap-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .business-roadmap-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
