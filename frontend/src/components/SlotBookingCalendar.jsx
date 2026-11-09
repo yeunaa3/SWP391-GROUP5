@@ -5,7 +5,7 @@ import { isoDay, addDays, dayCount, occupiedDay, validateRange, freeRanges } fro
 const WEEKDAYS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
 /** BUS-07: kiểm tra cả ngày nhập tay và ngày chọn; lỗi tải khóa xác nhận lịch. */
-export default function SlotBookingCalendar({ slotId, packageId, slots = [], packages = [], startDate = "", endDate = "", focusDate = "", onSelectRange, onMonthChange, disabled = false, showSuccessMessage = true,}) {
+export default function SlotBookingCalendar({ slotId, packageId, slots = [], packages = [], startDate = "", endDate = "", focusDate = "", onSelectRange, onMonthChange, disabled = false, showSuccessMessage = true, availabilityEndpoint = "/api/advertising/availability",}) {
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -37,7 +37,7 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
     setState("loading");
     setError("");
 
-    apiRequest("/api/advertising/availability", { signal: controller.signal })
+    apiRequest(availabilityEndpoint, { signal: controller.signal })
       .then((rows) => {
         setWindows(rows);
         setState("ready");
@@ -51,7 +51,7 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
       });
 
     return () => controller.abort();
-  }, [retryCount]);
+  }, [availabilityEndpoint, retryCount]);
 
   // Tìm kiếm slot và package
   const slot = useMemo(() => slots.find(s => String(s.id) === String(slotId)), [slots, slotId]);
@@ -135,11 +135,11 @@ export default function SlotBookingCalendar({ slotId, packageId, slots = [], pac
       <p>Gói {pack?.name} · tối đa {duration} ngày. Ngày kết thúc được bao gồm.</p>
 
       <div className="calendar-month">
-        <button type="button" className="secondary-button" disabled={disabled} onClick={() => changeMonth(-1)}>
+        <button type="button" className="secondary-button" onClick={() => changeMonth(-1)}>
           ← Tháng trước
         </button>
         <strong>{month.toLocaleDateString("vi-VN", { month: "long", year: "numeric" })}</strong>
-        <button type="button" className="secondary-button" disabled={disabled} onClick={() => changeMonth(1)}>
+        <button type="button" className="secondary-button" onClick={() => changeMonth(1)}>
           Tháng sau →
         </button>
       </div>

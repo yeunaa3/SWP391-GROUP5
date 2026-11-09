@@ -29,6 +29,7 @@ const statusLabels = {
   PAID: "Đã thanh toán",
   UNPAID: "Chưa thanh toán",
   PROPOSED: "Đã có đề xuất",
+  REVISION_REQUESTED: "Yêu cầu chỉnh sửa",
   SCHEDULED: "Đã lên lịch",
   COMPLETED: "Đã hoàn thành",
   CANCELLED: "Đã hủy",
