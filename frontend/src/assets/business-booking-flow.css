@@ -1,0 +1,278 @@
+.business-live .business-booking-tabs {
+  --booking-primary: #11322c;
+  --booking-primary-hover: #184e45;
+  --booking-primary-soft: #eaf3ef;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+  padding: 7px;
+  margin: 0 0 18px;
+  border: 1px solid #dce7e1;
+  border-radius: 13px;
+  background: #f4f8f6;
+}
+
+.business-live .business-booking-tabs a {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #52645c;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: color .17s ease, background .17s ease, box-shadow .17s ease, transform .17s ease;
+}
+
+.business-live .business-booking-tabs a:hover {
+  transform: translateY(-1px);
+  background: #fff;
+  color: #184e45;
+}
+
+.business-live .business-booking-tabs a.is-active {
+  border-color: #11322c;
+  background: #11322c;
+  color: #fff;
+  box-shadow: 0 3px 10px rgb(17 50 44 / 17%);
+}
+
+.business-live .business-booking-panel {
+  --booking-primary: #11322c;
+  --booking-primary-hover: #184e45;
+  --booking-primary-soft: #eaf3ef;
+  padding: 25px;
+  border: 1px solid var(--ws-border, #e3e9e5);
+  border-radius: 16px;
+  background: var(--ws-surface, #fff);
+  box-shadow: 0 5px 20px rgb(17 50 44 / 5%);
+}
+
+.business-flow-kicker {
+  margin: 0 0 8px;
+  color: #184e45;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.business-live .business-booking-panel > h2,
+.business-live .business-booking-proposal-panel > h2 {
+  margin-top: 0;
+  color: var(--booking-primary);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -.025em;
+}
+
+.business-booking-summary {
+  border: 1px solid #dce9e2;
+  background: #f5f9f6;
+}
+
+.business-booking-summary > div > span {
+  color: #65776e;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.business-booking-summary > div > strong {
+  color: #11322c;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.business-live .business-booking-panel .business-details {
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-block: 17px 22px;
+}
+
+.business-live .business-booking-panel .business-details > div {
+  display: grid;
+  grid-template-columns: minmax(145px, .7fr) minmax(0, 1.6fr);
+  gap: 14px;
+  align-items: start;
+  padding: 11px 0;
+  border-bottom: 1px solid #edf1ee;
+}
+
+.business-live .business-booking-panel .business-details > div:last-child { border-bottom: 0; }
+.business-live .business-booking-panel .business-details dt { color: #6d7d75; font-size: 12px; }
+.business-live .business-booking-panel .business-details dd { color: var(--ws-ink, #18332b); font-size: 13px; font-weight: 600; }
+
+.business-live .business-booking-panel .business-badge,
+.business-live .business-booking-proposal-panel .business-badge {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  border: 1px solid #d8e4dd;
+  border-radius: 999px;
+  background: #f1f5f2;
+  color: #53665d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.business-live .business-booking-panel .business-badge.badge-active,
+.business-live .business-booking-panel .business-badge.badge-paid,
+.business-live .business-booking-panel .business-badge.badge-approved {
+  border-color: #cfe5d9;
+  background: #eaf5ee;
+  color: #216144;
+}
+
+.business-live .business-booking-panel .business-badge.badge-pending_review,
+.business-live .business-booking-panel .business-badge.badge-proposed,
+.business-live .business-booking-panel .business-badge.badge-pending_payment,
+.business-live .business-booking-panel .business-badge.badge-pending,
+.business-live .business-booking-panel .business-badge.badge-revision_requested {
+  border-color: #f1dfb9;
+  background: #fff7e7;
+  color: #8b641b;
+}
+
+.business-live .business-booking-panel .business-badge.badge-cancelled,
+.business-live .business-booking-panel .business-badge.badge-expired,
+.business-live .business-booking-panel .business-badge.badge-payment_failed,
+.business-live .business-booking-panel .business-badge.badge-failed {
+  border-color: #efcfd4;
+  background: #fff0f1;
+  color: #9a3444;
+}
+
+.business-live .business-booking-panel .business-contract-terms,
+.business-live .business-booking-proposal-panel .business-accepted-proposal-panel {
+  border-color: #dce9e2;
+  border-radius: 12px;
+  background: #fbfdfb;
+}
+
+.business-live .business-booking-panel .business-contract-terms h3,
+.business-live .business-accepted-proposal-panel h3 {
+  color: #11322c;
+}
+
+.business-live .business-booking-panel .business-linked-campaigns {
+  display: grid;
+  gap: 9px;
+  padding: 0;
+  margin: 12px 0 18px;
+  list-style: none;
+}
+
+.business-linked-campaigns li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e0e9e3;
+  border-radius: 9px;
+  background: #fbfdfb;
+}
+
+.business-live .business-booking-panel a {
+  color: #184e45;
+}
+
+.business-live .business-booking-panel .button-link,
+.business-live .business-booking-proposal-panel .button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  border: 1px solid #11322c;
+  border-radius: 8px;
+  background: #11322c;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .17s ease, transform .17s ease, box-shadow .17s ease;
+}
+
+.business-live .business-booking-panel .button-link:hover,
+.business-live .business-booking-proposal-panel .button-link:hover {
+  transform: translateY(-1px);
+  border-color: #184e45;
+  background: #184e45;
+  color: #fff;
+  box-shadow: 0 5px 14px rgb(17 50 44 / 15%);
+}
+
+.business-live .business-booking-panel .form-actions > button:not(.secondary-button):not(.outline-button),
+.business-live .business-booking-proposal-panel .form-actions > button:not(.secondary-button):not(.outline-button),
+.business-live .business-booking-panel form button[type="submit"],
+.business-live .business-booking-proposal-panel form button[type="submit"] {
+  border: 1px solid #11322c;
+  border-radius: 8px;
+  background: #11322c;
+  color: #fff;
+  transition: background .17s ease, transform .17s ease, box-shadow .17s ease;
+}
+
+.business-live .business-booking-panel .form-actions > button:not(.secondary-button):not(.outline-button):hover,
+.business-live .business-booking-proposal-panel .form-actions > button:not(.secondary-button):not(.outline-button):hover,
+.business-live .business-booking-panel form button[type="submit"]:hover,
+.business-live .business-booking-proposal-panel form button[type="submit"]:hover {
+  transform: translateY(-1px);
+  border-color: #184e45;
+  background: #184e45;
+}
+
+.business-live .business-booking-panel .business-field :is(input, select, textarea):focus,
+.business-live .business-booking-proposal-panel .business-field :is(input, select, textarea):focus {
+  border-color: #184e45;
+  box-shadow: 0 0 0 3px rgb(24 78 69 / 12%);
+}
+
+.business-live .business-payment-result-message.is-success {
+  border: 1px solid #cfe5d9;
+  border-left: 4px solid #216144;
+  background: #eff8f2;
+  color: #245d40;
+}
+
+.business-live .business-payment-result-message.is-pending {
+  border: 1px solid #eadfca;
+  border-left: 4px solid #b08a4d;
+  background: #faf7f0;
+  color: #786342;
+}
+
+.business-payment-reference-note { color: var(--ws-muted, #73817d); font-size: 12px; }
+
+[data-theme="dark"] .business-live .business-booking-tabs { border-color: #32483c; background: #1b2a23; }
+[data-theme="dark"] .business-live .business-booking-tabs a { color: #c1d0c7; }
+[data-theme="dark"] .business-live .business-booking-tabs a.is-active { background: #184e45; color: #fff; }
+[data-theme="dark"] .business-live .business-booking-summary { border-color: #32483c; background: #1b2a23; }
+[data-theme="dark"] .business-booking-summary > div > span,
+[data-theme="dark"] .business-live .business-booking-panel .business-details dt { color: #aabbb1; }
+[data-theme="dark"] .business-booking-summary > div > strong,
+[data-theme="dark"] .business-live .business-booking-panel .business-details dd,
+[data-theme="dark"] .business-flow-kicker { color: #b5d5c5; }
+[data-theme="dark"] .business-live .business-booking-panel .business-details > div { border-color: #30443a; }
+[data-theme="dark"] .business-live .business-booking-panel .business-contract-terms,
+[data-theme="dark"] .business-live .business-booking-proposal-panel .business-accepted-proposal-panel,
+[data-theme="dark"] .business-linked-campaigns li { border-color: #30443a; background: #1b2a23; }
+[data-theme="dark"] .business-live .business-booking-panel .business-contract-terms h3,
+[data-theme="dark"] .business-live .business-accepted-proposal-panel h3 { color: #b5d5c5; }
+
+@media (max-width: 700px) {
+  .business-live .business-booking-panel { padding: 20px 16px; }
+  .business-live .business-booking-panel .business-details > div { grid-template-columns: minmax(112px, .75fr) minmax(0, 1.25fr); gap: 10px; }
+}
+
+@media (max-width: 560px) {
+  .business-live .business-booking-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .business-live .business-booking-tabs a { min-height: 44px; padding: 8px; font-size: 12px; }
+  .business-live .business-booking-panel .business-details > div { grid-template-columns: 1fr; gap: 5px; }
+  .business-linked-campaigns li { align-items: flex-start; flex-direction: column; }
+}

@@ -34,8 +34,27 @@ const statusLabels = {
   CANCELLED: "Đã hủy",
   EXPIRED: "Hết hạn",
   PENDING: "Đang chờ thanh toán",
+  ACCEPTED: "Đã chấp nhận",
+  PENDING_PAYMENT: "Chờ thanh toán",
+  PAYMENT_FAILED: "Thanh toán thất bại",
   FAILED: "Thất bại",
 };
+
+const contractListStatuses = [
+  "DRAFT",
+  "PENDING_REVIEW",
+  "PROPOSED",
+  "REVISION_REQUESTED",
+  "ACCEPTED",
+  "PENDING_PAYMENT",
+  "PAYMENT_FAILED",
+  "ACTIVE",
+  "CANCELLED",
+  "EXPIRED",
+  "COMPLETED",
+];
+
+const contractPaymentStatuses = ["PENDING", "PAID", "FAILED", "UNPAID"];
 
 const status = (value) => statusLabels[value] || value || "Chưa có";
 const currency = (value) => Number(value || 0).toLocaleString("vi-VN") + " ₫";
@@ -143,6 +162,9 @@ export default function BusinessWorkspacePage({ screen }) {
   const [data, setData] = useState(empty);
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [contractSearch, setContractSearch] = useState("");
+  const [contractStatusFilter, setContractStatusFilter] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
 
   // Các trạng thái thao tác: đang gửi, lỗi, thông báo thành công
   const [busy, setBusy] = useState(false);
@@ -237,6 +259,28 @@ export default function BusinessWorkspacePage({ screen }) {
   const linkedCampaigns = data.campaigns.filter(
     (item) => String(item.contract_id) === String(contract?.contract_id),
   );
+  const contractRows = (data.contracts || []).filter((item) => {
+    const search = contractSearch.trim().toLocaleLowerCase("vi");
+    const matchesSearch = !search || [
+      item.contract_code,
+      item.contract_name,
+      item.package_name_snapshot,
+      item.slot_name_snapshot,
+    ].some((value) => String(value || "").toLocaleLowerCase("vi").includes(search));
+    const matchesContractStatus = !contractStatusFilter || item.status === contractStatusFilter;
+    const matchesPaymentStatus = !paymentStatusFilter || item.payment_status === paymentStatusFilter;
+    return matchesSearch && matchesContractStatus && matchesPaymentStatus;
+  });
+  const contractsAwaitingReview = (data.contracts || []).filter((item) =>
+    ["PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED"].includes(item.status),
+  ).length;
+  const contractsAwaitingPayment = (data.contracts || []).filter((item) =>
+    ["PENDING_PAYMENT", "PAYMENT_FAILED"].includes(item.status)
+      && item.payment_status !== "PAID",
+  ).length;
+  const activePaidContractCount = (data.contracts || []).filter((item) =>
+    item.status === "ACTIVE" && item.payment_status === "PAID",
+  ).length;
   const canCancelContract = Boolean(contract && (
     ["PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED", "ACCEPTED", "PENDING_PAYMENT", "PAYMENT_FAILED"].includes(contract.status)
     || (contract.status === "ACTIVE" && contract.payment_status === "PAID")
@@ -1307,70 +1351,132 @@ export default function BusinessWorkspacePage({ screen }) {
           {/* UC-25/BUS-11: danh sách hợp đồng và yêu cầu đã gửi, hiển thị khi khách đã có hợp đồng. */}
 
           {screen.id === "BUS-11" && (
-            <section className="dashboard-section">
-              <div className="section-heading">
-                <h2>Hợp đồng và yêu cầu đã gửi</h2>
-                <Link className="button-link" to="/business/bookings/new">
-                  Yêu cầu đặt quảng cáo
+            <section className="dashboard-section business-contract-list" aria-labelledby="business-contract-list-title">
+              <header className="business-contract-list-heading">
+                <div>
+                  <p className="business-contract-kicker">THE PULSE BUSINESS · BUS-11</p>
+                  <h2 id="business-contract-list-title">Hợp đồng và yêu cầu đặt quảng cáo</h2>
+                  <p className="business-contract-list-description">
+                    Theo dõi lịch chạy, giá trị, trạng thái hợp đồng và thanh toán của từng booking.
+                  </p>
+                </div>
+                <Link className="business-contract-primary" to="/business/bookings/new">
+                  Tạo yêu cầu mới <span aria-hidden="true">→</span>
                 </Link>
+              </header>
+
+              <div className="business-contract-stats" aria-label="Tổng quan hợp đồng">
+                <article><span>Tổng booking</span><strong>{data.contracts.length}</strong></article>
+                <article><span>Đang xét duyệt</span><strong>{contractsAwaitingReview}</strong></article>
+                <article><span>Chờ thanh toán</span><strong>{contractsAwaitingPayment}</strong></article>
+                <article><span>Đang hiệu lực</span><strong>{activePaidContractCount}</strong></article>
               </div>
 
-              <div className="business-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Mã / tên</th>
-                      <th>Vị trí</th>
-                      <th>Khoảng chạy</th>
-                      <th>Giá trị</th>
-                      <th>Trạng thái</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.contracts.map((item) => (
-                      <tr key={item.contract_id}>
-                        <td>
-                          <strong>{item.contract_code}</strong>
-                          <br />
-                          {item.contract_name}
-                        </td>
-                        <td>{item.slot_name_snapshot}</td>
-                        <td>
-                          {time(item.start_at)}
-                          <br />
-                          {time(item.end_at)} (kết thúc)
-                        </td>
-                        <td>{currency(item.total_value)}</td>
-                        <td>
-                          <Badge value={item.status} />
-                          <br />
-                          {status(item.payment_status)}
-                        </td>
-                        <td>
-                          <Link to={`/business/contracts/${item.contract_id}`}>
-                            Chi tiết →
-                          </Link>
-                          {(item.status === "PENDING_PAYMENT" || (item.payment_status !== "PAID" && item.status === "ACTIVE")) && (
-                            <Link
-                              className="button-link"
-                              to={`/business/contracts/${item.contract_id}/checkout`}
-                              style={{ marginLeft: 8, padding: "4px 10px", fontSize: "12px", display: "inline-block" }}
-                            >
-                              Thanh toán →
-                            </Link>
-                          )}
-                        </td>
+              <div className="business-contract-filters" role="search" aria-label="Lọc hợp đồng">
+                <label className="business-contract-search">
+                  <span>Tìm hợp đồng</span>
+                  <input
+                    type="search"
+                    value={contractSearch}
+                    onChange={(event) => setContractSearch(event.target.value)}
+                    placeholder="Mã, tên hợp đồng, gói hoặc vị trí…"
+                  />
+                </label>
+                <label>
+                  <span>Trạng thái hợp đồng</span>
+                  <select value={contractStatusFilter} onChange={(event) => setContractStatusFilter(event.target.value)}>
+                    <option value="">Tất cả trạng thái</option>
+                    {contractListStatuses.map((value) => <option key={value} value={value}>{status(value)}</option>)}
+                  </select>
+                </label>
+                <label>
+                  <span>Trạng thái thanh toán</span>
+                  <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)}>
+                    <option value="">Tất cả thanh toán</option>
+                    {contractPaymentStatuses.map((value) => <option key={value} value={value}>{status(value)}</option>)}
+                  </select>
+                </label>
+                {(contractSearch || contractStatusFilter || paymentStatusFilter) && (
+                  <button
+                    className="business-contract-clear"
+                    type="button"
+                    onClick={() => {
+                      setContractSearch("");
+                      setContractStatusFilter("");
+                      setPaymentStatusFilter("");
+                    }}
+                  >
+                    Xóa bộ lọc
+                  </button>
+                )}
+              </div>
+
+              <div className="business-contract-results-heading">
+                <h3>Danh sách hợp đồng</h3>
+                <span>{contractRows.length} / {data.contracts.length} booking</span>
+              </div>
+
+              {contractRows.length > 0 ? (
+                <div className="business-contract-table-wrap">
+                  <table className="business-contract-table">
+                    <thead>
+                      <tr>
+                        <th>Hợp đồng</th>
+                        <th>Gói và vị trí</th>
+                        <th>Khoảng chạy</th>
+                        <th>Giá trị</th>
+                        <th>Trạng thái hợp đồng</th>
+                        <th>Thanh toán</th>
+                        <th><span className="visually-hidden">Thao tác</span></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {!data.contracts.length && (
-                <p>
-                  Chưa có yêu cầu/hợp đồng. Hãy gửi yêu cầu đặt quảng cáo.
-                </p>
+                    </thead>
+                    <tbody>
+                      {contractRows.map((item) => (
+                        <tr key={item.contract_id}>
+                          <td data-label="Hợp đồng">
+                            <strong className="business-contract-code">{item.contract_code || "—"}</strong>
+                            <span className="business-contract-name">{item.contract_name || "Booking quảng cáo"}</span>
+                          </td>
+                          <td data-label="Gói và vị trí">
+                            <strong>{item.package_name_snapshot || "—"}</strong>
+                            <span className="business-contract-name">{item.slot_name_snapshot || "Chưa chọn vị trí"}</span>
+                          </td>
+                          <td data-label="Khoảng chạy">
+                            <span>{time(item.start_at)}</span>
+                            <span className="business-contract-name">đến {time(item.end_at)}</span>
+                          </td>
+                          <td data-label="Giá trị"><strong>{currency(item.total_value)}</strong></td>
+                          <td data-label="Trạng thái hợp đồng"><Badge value={item.status} /></td>
+                          <td data-label="Thanh toán"><Badge value={item.payment_status} /></td>
+                          <td data-label="Thao tác" className="business-contract-actions">
+                            <Link className="business-contract-detail" to={`/business/contracts/${item.contract_id}`}>
+                              Chi tiết
+                            </Link>
+                            {(["PENDING_PAYMENT", "PAYMENT_FAILED"].includes(item.status)
+                              && item.payment_status !== "PAID") && (
+                              <Link className="business-contract-pay" to={`/business/contracts/${item.contract_id}/checkout`}>
+                                Thanh toán →
+                              </Link>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="business-contract-empty" role="status">
+                  <span className="business-contract-empty-icon" aria-hidden="true">▤</span>
+                  <h3>{data.contracts.length ? "Không tìm thấy booking phù hợp" : "Bạn chưa có booking nào"}</h3>
+                  <p>{data.contracts.length
+                    ? "Thử đổi từ khóa hoặc trạng thái để xem lại danh sách."
+                    : "Gửi yêu cầu đặt quảng cáo để bắt đầu quy trình xét duyệt và ký hợp đồng."}</p>
+                  {!data.contracts.length && (
+                    <Link className="business-contract-primary" to="/business/bookings/new">
+                      Yêu cầu đặt quảng cáo <span aria-hidden="true">→</span>
+                    </Link>
+                  )}
+                </div>
               )}
             </section>
           )}
@@ -1399,6 +1505,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 </header>
 
                 {screen.id === "BUS-09" && <>
+                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-09</p>
                   <h2>Thanh toán quảng cáo</h2>
                   <dl className="business-details">
                     <div><dt>Đơn hàng</dt><dd>{contract.contract_name || contract.package_name_snapshot || "Booking quảng cáo"}</dd></div>
@@ -1412,6 +1519,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 </>}
 
                 {screen.id === "BUS-10" && <>
+                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-10</p>
                   <h2>Kết quả thanh toán</h2>
                   <dl className="business-details">
                     <div><dt>Trạng thái thanh toán</dt><dd><Badge value={contract.payment_status} /></dd></div>
@@ -1419,12 +1527,15 @@ export default function BusinessWorkspacePage({ screen }) {
                     <div><dt>Số tiền</dt><dd>{currency(contract.total_value)}</dd></div>
                     <div><dt>Trạng thái hợp đồng</dt><dd><Badge value={contract.status} /></dd></div>
                   </dl>
-                  {contract.payment_status === "PAID" ? <p role="status" className="info-note">Thanh toán thành công. Hợp đồng đã được kích hoạt nếu đáp ứng điều kiện nghiệp vụ.</p> : <p role="status" className="info-note">Chưa ghi nhận thanh toán thành công. Bạn có thể thử lại ở <Link to={`/business/contracts/${contract.contract_id}/checkout`}>BUS-09</Link>.</p>}
-                  <p>Mã giao dịch và thời điểm xử lý chưa được API workspace hiện tại cung cấp.</p>
+                  {contract.payment_status === "PAID"
+                    ? <p role="status" className="info-note business-payment-result-message is-success">Thanh toán thành công. Hợp đồng đã được kích hoạt nếu đáp ứng điều kiện nghiệp vụ.</p>
+                    : <p role="status" className="info-note business-payment-result-message is-pending">Chưa ghi nhận thanh toán thành công. Bạn có thể thử lại ở <Link to={`/business/contracts/${contract.contract_id}/checkout`}>BUS-09</Link>.</p>}
+                  <p className="business-payment-reference-note">Mã giao dịch và thời điểm xử lý chưa được API workspace hiện tại cung cấp.</p>
                   {contract.payment_status === "PAID" && <Link className="button-link" to={`/business/contracts/${contract.contract_id}`}>Mở hợp đồng →</Link>}
                 </>}
 
                 {screen.id === "BUS-12" && <>
+                  <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-12</p>
                   <h2>Chi tiết hợp đồng</h2>
                   <dl className="business-details">
                     <div><dt>Tên hợp đồng</dt><dd>{contract.contract_name || "—"}</dd></div>
@@ -1436,7 +1547,7 @@ export default function BusinessWorkspacePage({ screen }) {
                   </dl>
                   {contract.latest_proposal_terms && <section className="business-contract-terms"><h3>Điều khoản thương mại</h3><p style={{whiteSpace:"pre-wrap"}}>{contract.latest_proposal_terms}</p></section>}
                   <h3>Chiến dịch liên kết</h3>
-                  {linkedCampaigns.length ? <ul>{linkedCampaigns.map(item => <li key={item.campaign_id}><Link to={`/business/campaigns/${item.campaign_id}`}>{item.campaign_name}</Link> · {status(item.status)}</li>)}</ul> : <p>Chưa có chiến dịch liên kết.</p>}
+                  {linkedCampaigns.length ? <ul className="business-linked-campaigns">{linkedCampaigns.map(item => <li key={item.campaign_id}><Link to={`/business/campaigns/${item.campaign_id}`}>{item.campaign_name}</Link><Badge value={item.status} /></li>)}</ul> : <p>Chưa có chiến dịch liên kết.</p>}
                   {contract.status === "ACTIVE" && contract.payment_status === "PAID" && <Link className="button-link" to={`/business/campaigns/edit?contractId=${contract.contract_id}`}>Tạo chiến dịch →</Link>}
                   <p><Link to="/business/contracts">← Danh sách hợp đồng</Link></p>
                 </>}
@@ -1445,7 +1556,8 @@ export default function BusinessWorkspacePage({ screen }) {
           )}
 
           {screen.id === "BUS-08" && (
-            <section className="dashboard-section">
+            <section className="dashboard-section business-booking-panel business-booking-proposal-panel">
+              <p className="business-flow-kicker">THE PULSE BUSINESS · BUS-08</p>
               <h2>Thông tin hợp đồng</h2>
 
               {contract ? (
@@ -1474,7 +1586,7 @@ export default function BusinessWorkspacePage({ screen }) {
 
                   {!editingBooking && <QuoteSummary quote={contract.quote_snapshot} />}
                   {contract.latest_proposal_status === "ACCEPTED" && (
-                    <section className="dashboard-section">
+                    <section className="dashboard-section business-accepted-proposal-panel">
                       <h3>Điều khoản đã chấp thuận</h3>
 
                       <dl className="business-details">

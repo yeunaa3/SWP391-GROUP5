@@ -17,6 +17,8 @@ import "./assets/auth-editorial.css";
 import "./assets/ad-manager-review.css";
 import "./assets/modern-search.css";
 import "./assets/admin-editor-visual.css";
+import "./assets/business-contract-list.css";
+import "./assets/business-booking-flow.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
