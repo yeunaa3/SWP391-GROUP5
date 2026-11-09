@@ -1,4 +1,3 @@
-import CampaignQueueDemoPage from "../pages/adManager/CampaignQueueDemoPage.jsx";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import PublicLayout from "../layouts/PublicLayout.jsx";
@@ -32,7 +31,6 @@ import ProfilePage from "../pages/account/ProfilePage.jsx";
 import ArticlePage from "../pages/public/ArticlePage.jsx";
 import HomePage from "../pages/public/HomePage.jsx";
 import SearchPage from "../pages/public/SearchPage.jsx";
-import AdvertisingDemoPage from "../pages/public/AdvertisingDemoPage.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx";
 import { screens } from "./screenCatalog.js";
 import { BrowseNewsPage } from "../pages/public/SearchPage.jsx";
@@ -127,10 +125,8 @@ export default function AppRoutes() {
   const workspaceAreas = ["account", "premium", "business", "adManager", "admin"];
   return (
     <Routes>
-      {import.meta.env.DEV && <Route path="/demo/adm-07" element={<CampaignQueueDemoPage />} />}
       <Route element={<PublicLayout />}>
         <Route path="/news" element={<BrowseNewsPage />} />
-        <Route path="/advertising-demo" element={<AdvertisingDemoPage />} />
         {screens.filter((screen) => publicAreas.has(screen.area)).map((screen) => <Route key={screen.id} path={screen.path} element={screenElement(screen)} />)}
       </Route>
       {screens.filter((screen) => screen.area === "auth").map((screen) => <Route key={screen.id} path={screen.path} element={screenElement(screen)} />)}

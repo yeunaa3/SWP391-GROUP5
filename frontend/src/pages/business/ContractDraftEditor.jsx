@@ -3,26 +3,56 @@ import SlotBookingCalendar from "../../components/SlotBookingCalendar.jsx";
 import { addDays, dayCount } from "../../utils/bookingCalendar.js";
 
 /** Chỉnh trên bản sao; chỉ gửi API khi người dùng xác nhận, hủy sẽ bỏ toàn bộ thay đổi. */
-export default function ContractDraftEditor({ contract, catalog, busy, onSave, onCancel, submitImmediately = false }) {
+export default function ContractDraftEditor({
+  contract,
+  catalog,
+  busy,
+  onSave,
+  onCancel,
+  submitImmediately = false,
+}) {
   const [form, setForm] = useState(() => ({
-    name: contract.contract_name || "", slotId: String(contract.slot_id),
-    packageId: String(contract.b2b_package_id), startDate: String(contract.start_at).slice(0, 10),
+    name: contract.contract_name || "",
+    slotId: String(contract.slot_id),
+    packageId: String(contract.b2b_package_id),
+    startDate: String(contract.start_at).slice(0, 10),
     endDate: addDays(String(contract.end_at).slice(0, 10), -1),
   }));
-  const [calendarFocusDate, setCalendarFocusDate] = useState(() => String(contract.start_at).slice(0, 10));
+  const [calendarFocusDate, setCalendarFocusDate] = useState(() =>
+    String(contract.start_at).slice(0, 10)
+  );
   const [calendar, setCalendar] = useState({ valid: false, error: "" });
   const [confirmation, setConfirmation] = useState(null);
-  const slot = catalog?.slots?.find(item => String(item.id) === form.slotId);
-  const pack = catalog?.offers?.find(item => String(item.id) === form.packageId);
-  const days = form.startDate && form.endDate ? dayCount(form.startDate, form.endDate) : 0;
-  const price = slot && pack && days > 0
-    ? Math.round((Number(pack.price) + Number(slot.base_price ?? slot.basePrice ?? 0)) * 100) / 100
-    : 0;
-  const valid = Boolean(form.name.trim() && slot && pack && days > 0 && calendar.valid && !calendar.error && Number.isFinite(price));
+
+  const slot = catalog?.slots?.find((item) => String(item.id) === form.slotId);
+  const pack = catalog?.offers?.find(
+    (item) => String(item.id) === form.packageId
+  );
+  const days =
+    form.startDate && form.endDate
+      ? dayCount(form.startDate, form.endDate)
+      : 0;
+  const price =
+    slot && pack && days > 0
+      ? Math.round(
+          (Number(pack.price) +
+            Number(slot.base_price ?? slot.basePrice ?? 0)) *
+            100
+        ) / 100
+      : 0;
+  const valid = Boolean(
+    form.name.trim() &&
+      slot &&
+      pack &&
+      days > 0 &&
+      calendar.valid &&
+      !calendar.error &&
+      Number.isFinite(price)
+  );
   const locked = busy || Boolean(confirmation);
-  // Đổi vị trí/gói/ngày phải kiểm tra lại lịch trước khi được lưu.
+
   function change(key, value) {
-    setForm(previous => ({
+    setForm((previous) => ({
       ...previous,
       [key]: value,
       ...(submitImmediately && (key === "slotId" || key === "packageId")
@@ -32,34 +62,184 @@ export default function ContractDraftEditor({ contract, catalog, busy, onSave, o
     if (key === "startDate" && value) setCalendarFocusDate(value);
     if (key !== "name") setCalendar({ valid: false, error: "" });
   }
-  // Bản nháp cần xác nhận; booking được yêu cầu sửa sẽ gửi trực tiếp.
+
   function requestSave(event) {
     event.preventDefault();
     if (valid && !locked) {
-      const payload = { ...form, name: form.name.trim(), slotId: Number(form.slotId), packageId: Number(form.packageId), expectedRevisionNo: Number(contract.revision_no), quotedAmount: price };
+      const payload = {
+        ...form,
+        name: form.name.trim(),
+        slotId: Number(form.slotId),
+        packageId: Number(form.packageId),
+        expectedRevisionNo: Number(contract.revision_no),
+        quotedAmount: price,
+      };
       if (submitImmediately) onSave(payload);
       else setConfirmation(payload);
     }
   }
-  return <form onSubmit={requestSave}>
-    <fieldset disabled={locked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <div className="business-form-grid">
-        <label className="business-field"><span>Tên yêu cầu</span><input required maxLength={200} value={form.name} onChange={e => change("name", e.target.value)} /></label>
-        <label className="business-field"><span>Vị trí quảng cáo</span><select required value={form.slotId} onChange={e => change("slotId", e.target.value)}><option value="">Chọn vị trí</option>{catalog?.slots?.map(item => <option key={item.id} value={item.id}>{item.name} · {item.width} × {item.height} px · {Number(item.basePrice ?? item.base_price ?? 0).toLocaleString("vi-VN")} ₫</option>)}</select></label>
-        <label className="business-field"><span>Gói quảng cáo</span><select required value={form.packageId} onChange={e => change("packageId", e.target.value)}><option value="">Chọn gói</option>{catalog?.offers?.map(item => <option key={item.id} value={item.id}>{item.name} · {Number(item.price).toLocaleString("vi-VN")} ₫ · {item.durationDays} ngày</option>)}</select></label>
-        <label className="business-field"><span>Ngày bắt đầu</span><input required type="date" value={form.startDate} onChange={e => change("startDate", e.target.value)} /></label>
-        <label className="business-field"><span>Ngày kết thúc (bao gồm)</span>{submitImmediately ? <input type="text" readOnly aria-readonly="true" value={form.endDate ? new Date(`${form.endDate}T12:00:00`).toLocaleDateString("vi-VN") : ""} placeholder="Ngày kết thúc được chọn trên lịch" /> : <input required type="date" value={form.endDate} onChange={e => change("endDate", e.target.value)} />}</label>
-      </div>
-      <SlotBookingCalendar slotId={form.slotId} packageId={form.packageId} slots={catalog?.slots || []} packages={catalog?.offers || []} startDate={form.startDate} endDate={form.endDate} focusDate={form.startDate || calendarFocusDate} onMonthChange={setCalendarFocusDate} showSuccessMessage={!submitImmediately} onSelectRange={({ startDate, endDate, isValid, errorMessage }) => {
-        setForm(previous => previous.startDate === startDate && previous.endDate === endDate ? previous : { ...previous, startDate, endDate });
-        if (startDate) setCalendarFocusDate(startDate);
-        setCalendar({ valid: isValid, error: errorMessage });
-      }} />
-      <p className="info-note">Giá dự kiến: {price.toLocaleString("vi-VN")} ₫ · {Math.max(0, days)} ngày. {submitImmediately ? "Giá sẽ được server kiểm tra lại khi gửi booking." : "Giá được kiểm tra lại khi lưu bản nháp; bản nháp chưa giữ chỗ."}</p>
-    </fieldset>
-    {confirmation ? <section className="info-note" role="dialog" aria-modal="false" aria-label="Xác nhận lưu bản nháp">
-      <p>Lưu các thay đổi cho bản nháp “{confirmation.name}”? Chọn Không để trở về thông tin bản nháp đã lưu trước đó.</p>
-      <div className="form-actions"><button type="button" disabled={busy} onClick={() => onSave(confirmation)}>Có, lưu thay đổi</button><button type="button" className="outline-button" disabled={busy} onClick={onCancel}>Không, giữ bản nháp cũ</button></div>
-    </section> : <div className="form-actions"><button disabled={busy || !valid}>{submitImmediately ? "Gửi lại booking" : "Lưu bản nháp"}</button><button type="button" className="outline-button" disabled={busy} onClick={onCancel}>Hủy chỉnh sửa</button></div>}
-  </form>;
+
+  return (
+    <form onSubmit={requestSave}>
+      <fieldset
+        disabled={locked}
+        style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+      >
+        <div className="business-form-grid">
+          <label className="business-field">
+            <span>Tên yêu cầu</span>
+            <input
+              required
+              maxLength={200}
+              value={form.name}
+              onChange={(e) => change("name", e.target.value)}
+            />
+          </label>
+          <label className="business-field">
+            <span>Vị trí quảng cáo</span>
+            <select
+              required
+              value={form.slotId}
+              onChange={(e) => change("slotId", e.target.value)}
+            >
+              <option value="">Chọn vị trí</option>
+              {catalog?.slots?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.width} × {item.height} px ·{" "}
+                  {Number(item.basePrice ?? item.base_price ?? 0).toLocaleString(
+                    "vi-VN"
+                  )}{" "}
+                  ₫
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="business-field">
+            <span>Gói quảng cáo</span>
+            <select
+              required
+              value={form.packageId}
+              onChange={(e) => change("packageId", e.target.value)}
+            >
+              <option value="">Chọn gói</option>
+              {catalog?.offers?.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {Number(item.price).toLocaleString("vi-VN")} ₫ ·{" "}
+                  {item.durationDays} ngày
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="business-field">
+            <span>Ngày bắt đầu</span>
+            <input
+              required
+              type="date"
+              value={form.startDate}
+              onChange={(e) => change("startDate", e.target.value)}
+            />
+          </label>
+          <label className="business-field">
+            <span>Ngày kết thúc (bao gồm)</span>
+            {submitImmediately ? (
+              <input
+                type="text"
+                readOnly
+                aria-readonly="true"
+                value={
+                  form.endDate
+                    ? new Date(`${form.endDate}T12:00:00`).toLocaleDateString(
+                        "vi-VN"
+                      )
+                    : ""
+                }
+                placeholder="Ngày kết thúc được chọn trên lịch"
+              />
+            ) : (
+              <input
+                required
+                type="date"
+                value={form.endDate}
+                onChange={(e) => change("endDate", e.target.value)}
+              />
+            )}
+          </label>
+        </div>
+
+        <SlotBookingCalendar
+          slotId={form.slotId}
+          packageId={form.packageId}
+          slots={catalog?.slots || []}
+          packages={catalog?.offers || []}
+          startDate={form.startDate}
+          endDate={form.endDate}
+          focusDate={form.startDate || calendarFocusDate}
+          onMonthChange={setCalendarFocusDate}
+          showSuccessMessage={!submitImmediately}
+          onSelectRange={({ startDate, endDate, isValid, errorMessage }) => {
+            setForm((previous) =>
+              previous.startDate === startDate && previous.endDate === endDate
+                ? previous
+                : { ...previous, startDate, endDate }
+            );
+            if (startDate) setCalendarFocusDate(startDate);
+            setCalendar({ valid: isValid, error: errorMessage });
+          }}
+        />
+
+        <p className="info-note">
+          Giá dự kiến: {price.toLocaleString("vi-VN")} ₫ · {Math.max(0, days)}{" "}
+          ngày.{" "}
+          {submitImmediately
+            ? "Giá sẽ được server kiểm tra lại khi gửi booking."
+            : "Giá được kiểm tra lại khi lưu bản nháp; bản nháp chưa giữ chỗ."}
+        </p>
+      </fieldset>
+
+      {confirmation ? (
+        <section
+          className="info-note"
+          role="dialog"
+          aria-modal="false"
+          aria-label="Xác nhận lưu bản nháp"
+        >
+          <p>
+            Lưu các thay đổi cho bản nháp “{confirmation.name}”? Chọn Không để
+            trở về thông tin bản nháp đã lưu trước đó.
+          </p>
+          <div className="form-actions">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onSave(confirmation)}
+            >
+              Có, lưu thay đổi
+            </button>
+            <button
+              type="button"
+              className="outline-button"
+              disabled={busy}
+              onClick={onCancel}
+            >
+              Không, giữ bản nháp cũ
+            </button>
+          </div>
+        </section>
+      ) : (
+        <div className="form-actions">
+          <button disabled={busy || !valid}>
+            {submitImmediately ? "Gửi lại booking" : "Lưu bản nháp"}
+          </button>
+          <button
+            type="button"
+            className="outline-button"
+            disabled={busy}
+            onClick={onCancel}
+          >
+            Hủy chỉnh sửa
+          </button>
+        </div>
+      )}
+    </form>
+  );
 }
