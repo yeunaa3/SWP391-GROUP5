@@ -1528,11 +1528,18 @@ export default function BusinessWorkspacePage({ screen }) {
                     <div><dt>Số tiền</dt><dd>{currency(contract.total_value)}</dd></div>
                     <div><dt>Trạng thái hợp đồng</dt><dd><Badge value={contract.status} /></dd></div>
                   </dl>
-                  {contract.payment_status === "PAID"
-                    ? <p role="status" className="info-note business-payment-result-message is-success">Thanh toán thành công. Hợp đồng đã được kích hoạt nếu đáp ứng điều kiện nghiệp vụ.</p>
-                    : <p role="status" className="info-note business-payment-result-message is-pending">Chưa ghi nhận thanh toán thành công. Bạn có thể thử lại ở <Link to={`/business/contracts/${contract.contract_id}/checkout`}>Cổng thanh toán</Link>.</p>}
+                  {contract.status === "ACTIVE" && contract.payment_status === "PAID"
+                    ? <p role="status" className="info-note business-payment-result-message is-success">✓ Hợp đồng đã thanh toán thành công và đang có hiệu lực.</p>
+                    : contract.payment_status === "PAID"
+                      ? <p role="status" className="info-note business-payment-result-message is-pending">Thanh toán đã thành công. Hợp đồng đang chờ cập nhật trạng thái hiệu lực.</p>
+                      : <p role="status" className="info-note business-payment-result-message is-pending">Chưa ghi nhận thanh toán thành công. Bạn có thể thử lại ở <Link to={`/business/contracts/${contract.contract_id}/checkout`}>BUS-09</Link>.</p>}
                   <p className="business-payment-reference-note">Mã giao dịch và thời điểm xử lý chưa được API workspace hiện tại cung cấp.</p>
-                  {contract.payment_status === "PAID" && <Link className="button-link" to={`/business/contracts/${contract.contract_id}`}>Mở hợp đồng →</Link>}
+                  {contract.status === "ACTIVE" && contract.payment_status === "PAID" && (
+                    <div className="form-actions">
+                      <Link className="button-link" to={`/business/campaigns/edit?contractId=${contract.contract_id}`}>Tạo chiến dịch với hợp đồng này →</Link>
+                      <Link className="secondary-button" to={`/business/contracts/${contract.contract_id}`}>Xem chi tiết hợp đồng</Link>
+                    </div>
+                  )}
                 </>}
 
                 {screen.id === "BUS-12" && <>
@@ -1972,163 +1979,18 @@ export default function BusinessWorkspacePage({ screen }) {
                       Yêu cầu đã gửi, đang chờ quản lý xét duyệt và chuẩn bị đề
                       xuất hợp đồng. Chưa giữ chỗ hoặc thanh toán.
                     </p>
-                  ) : screen.id === "BUS-10" ? (
-                    contract.payment_status === "PAID" ? (
-                      <div className="payment-result-box" style={{ background: "#ecfdf5", border: "1px solid #10b981", borderRadius: "10px", padding: "24px", marginBottom: "20px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: "40px", height: "40px", borderRadius: "50%", background: "#10b981", color: "#fff", fontSize: "20px", fontWeight: "bold" }}>✓</span>
-                          <div>
-                            <h3 style={{ margin: 0, color: "#065f46", fontSize: "18px" }}>Xác nhận thanh toán hợp đồng thành công!</h3>
-                            <p style={{ margin: "4px 0 0", color: "#047857", fontSize: "14px" }}>Hợp đồng quảng cáo đã kích hoạt và sẵn sàng để tạo chiến dịch.</p>
-                          </div>
-                        </div>
-                        <dl className="business-details" style={{ margin: "16px 0", background: "#ffffff", padding: "16px", borderRadius: "8px", border: "1px solid #d1fae5" }}>
-                          <div>
-                            <dt>Mã giao dịch / Order Code</dt>
-                            <dd><strong>{query.get("orderCode") || `PAYOS-CTR-${contract.contract_id}`}</strong></dd>
-                          </div>
-                          <div>
-                            <dt>Mã hợp đồng</dt>
-                            <dd><strong>{contract.contract_code}</strong></dd>
-                          </div>
-                          <div>
-                            <dt>Số tiền đã thanh toán</dt>
-                            <dd><strong style={{ color: "#059669" }}>{currency(contract.total_value)}</strong></dd>
-                          </div>
-                          <div>
-                            <dt>Thời gian xử lý</dt>
-                            <dd>{time(contract.signed_at || contract.updated_at)}</dd>
-                          </div>
-                          <div>
-                            <dt>Trạng thái hợp đồng</dt>
-                            <dd><span className="badge is-active">Đang hiệu lực (ACTIVE)</span></dd>
-                          </div>
-                        </dl>
-                        <div className="form-actions" style={{ marginTop: "20px" }}>
-                          <Link className="button-link" to={`/business/campaigns/edit?contractId=${contract.contract_id}`}>
-                            Tạo chiến dịch với hợp đồng này →
-                          </Link>
-                          <Link className="secondary-button" to={`/business/contracts/${contract.contract_id}`}>
-                            Xem chi tiết hợp đồng
-                          </Link>
-                          <Link className="outline-button" to="/business/contracts">
-                            Danh sách hợp đồng
-                          </Link>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="payment-result-pending" style={{ marginBottom: "20px" }}>
-                        <div style={{ background: "#fffbeb", border: "1px solid #f59e0b", borderRadius: "10px", padding: "20px", marginBottom: "16px" }}>
-                          <h3 style={{ margin: "0 0 8px", color: "#b45309", fontSize: "16px" }}>Đang chờ nhận tín hiệu thanh toán</h3>
-                          <p style={{ margin: 0, color: "#92400e", fontSize: "14px" }}>
-                            Hệ thống đang tự động kiểm tra giao dịch từ PayOS và Ngân hàng. Nếu bạn đã hoàn tất chuyển khoản, bấm "Kiểm tra lại giao dịch ngay" hoặc quét mã dưới đây để thanh toán.
-                          </p>
-                          <div style={{ marginTop: "12px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                            <button
-                              type="button"
-                              className="secondary-button"
-                              disabled={busy}
-                              onClick={async () => {
-                                try {
-                                  setBusy(true);
-                                  const orderCode = query.get("orderCode");
-                                  const res = await checkPaymentStatus("CONTRACT", contract.contract_id, orderCode ? Number(orderCode) : undefined);
-                                  if (res?.paid) {
-                                    setMessage("⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực.");
-                                    await refresh();
-                                  } else {
-                                    setMessage("Chưa nhận được tín hiệu thanh toán mới. Vui lòng kiểm tra lại app ngân hàng hoặc cổng PayOS.");
-                                  }
-                                } catch (e) {
-                                  setError(e.message || "Lỗi khi kiểm tra giao dịch.");
-                                } finally {
-                                  setBusy(false);
-                                }
-                              }}
-                            >
-                              🔄 Kiểm tra lại giao dịch ngay
-                            </button>
-                            <Link className="outline-button" to={`/business/contracts/${contract.contract_id}/checkout`}>
-                              Mở cổng thanh toán Checkout
-                            </Link>
-                          </div>
-                        </div>
-                        <AutoPaymentTimerCard
-                          type="CONTRACT"
-                          referenceId={contract.contract_id}
-                          amount={contract.total_value}
-                          itemName={`Hợp đồng ${contract.contract_code}`}
-                          onSuccess={async () => {
-                            setMessage(
-                              "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp."
-                            );
-                            await refresh();
-                          }}
-                        />
-                      </div>
-                    )
-                  ) : contract.status === "ACTIVE" &&
-                    contract.payment_status === "PAID" ? (
-                    <div style={{ background: "#ecfdf5", border: "1px solid #10b981", borderRadius: "10px", padding: "20px", marginBottom: "20px" }}>
-                      <p
-                        className="info-note"
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          padding: 0,
-                          margin: "0 0 12px 0",
-                          color: "#065f46",
-                          fontWeight: "600"
-                        }}
-                      >
-                        ✓ Hợp đồng đã thanh toán thành công và đang có hiệu lực.
-                      </p>
-                      <div className="form-actions">
-                        <Link
-                          className="button-link"
-                          to={`/business/campaigns/edit?contractId=${contract.contract_id}`}
-                        >
-                          Tạo chiến dịch với hợp đồng này →
-                        </Link>
-                        {screen.id !== "BUS-12" && (
-                          <Link className="secondary-button" to={`/business/contracts/${contract.contract_id}`}>
-                            Xem chi tiết hợp đồng
-                          </Link>
-                        )}
-                      </div>
-                    </div>
+                  ) : contract.status === "PENDING_PAYMENT" || contract.status === "PAYMENT_FAILED" ? (
+                    <p role="status" className="info-note">
+                      Điều khoản đã được chấp thuận. Hãy chuyển sang <Link to={`/business/contracts/${contract.contract_id}/checkout`}>BUS-09 để thanh toán hoặc thử lại →</Link>.
+                    </p>
+                  ) : contract.payment_status === "PAID" ? (
+                    <p role="status" className="info-note">
+                      Hợp đồng đã được thanh toán. Xem kết quả và các bước tiếp theo tại <Link to={`/business/contracts/payment-result?contractId=${contract.contract_id}`}>BUS-10 →</Link>.
+                    </p>
                   ) : (
-                    <div className="checkout-payment-wrapper">
-                      {screen.id === "BUS-12" && (
-                        <div style={{ marginBottom: "16px" }}>
-                          <Link
-                            className="button-link"
-                            to={`/business/contracts/${contract.contract_id}/checkout`}
-                            style={{ display: "inline-block" }}
-                          >
-                            Mở trang thanh toán riêng →
-                          </Link>
-                        </div>
-                      )}
-                      {contract.status === "PENDING_PAYMENT" || screen.id === "BUS-09" ? (
-                        <AutoPaymentTimerCard
-                          type="CONTRACT"
-                          referenceId={contract.contract_id}
-                          amount={contract.total_value}
-                          itemName={`Hợp đồng ${contract.contract_code}`}
-                          onSuccess={async () => {
-                            setMessage(
-                              "⚡ Thanh toán hợp đồng thành công! Hợp đồng đã kích hoạt có hiệu lực và biên lai điện tử đã gửi tới email doanh nghiệp."
-                            );
-                            await refresh();
-                          }}
-                        />
-                      ) : (
-                        <p role="status" className="info-note">
-                          Hợp đồng chưa ở trạng thái thanh toán. Kiểm tra trạng thái tại Chi tiết hợp đồng.
-                        </p>
-                      )}
-                    </div>
+                    <p role="status" className="info-note">
+                      Trạng thái booking: {status(contract.status)}. Thông tin thanh toán và kết quả được hiển thị ở các tab tương ứng.
+                    </p>
                   )}
                 </>
               ) : (
