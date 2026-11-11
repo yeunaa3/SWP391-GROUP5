@@ -69,7 +69,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/ads/**",
                         "/favicon.ico", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
                         "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",
-                        "/ad-manager", "/ad-manager/**", "/admin", "/admin/**", "/advertising-demo").permitAll()
+                        "/ad-manager", "/ad-manager/**", "/admin", "/admin/**").permitAll()
                 .anyRequest().authenticated())
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())

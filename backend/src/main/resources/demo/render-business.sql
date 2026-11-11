@@ -67,7 +67,7 @@ AND NOT EXISTS(SELECT 1 FROM ad_campaigns x WHERE x.contract_id=c.contract_id AN
 -- Packaged SVG survives redeploy; uploaded files on the Free filesystem do not.
 INSERT INTO ad_creatives(campaign_id,version_no,creative_type,title,media_url,target_url,
     mime_type,file_size,width_px,height_px,submitted_at,approved_at,status)
-SELECT a.campaign_id,1,'IMAGE','[TEST] The Pluse sample banner','/ads/novalearn.svg','/advertising-demo',
+SELECT a.campaign_id,1,'IMAGE','[TEST] The Pluse sample banner','/ads/thepluse.svg','/premium/packages',
     'image/svg+xml',2048,s.width_px,s.height_px,
     IF(a.status='DRAFT',NULL,CURRENT_TIMESTAMP),
     IF(a.status IN ('ACTIVE','PAUSED','SCHEDULED'),CURRENT_TIMESTAMP,NULL),
