@@ -101,7 +101,7 @@
 
 .business-contract-filters {
   display: grid;
-  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(170px, 1fr)) auto;
+  grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(170px, 1fr)) auto auto;
   align-items: end;
   gap: 12px;
   padding: 16px;
@@ -157,6 +157,24 @@
 .business-contract-filters .business-contract-clear:hover {
   border-color: var(--contract-primary-hover);
   background: var(--contract-primary-soft);
+}
+
+.business-contract-filters .business-contract-apply {
+  min-height: 42px;
+  padding: 9px 15px;
+  border: 1px solid var(--contract-primary);
+  border-radius: 8px;
+  background: var(--contract-primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.business-contract-filters .business-contract-apply:hover {
+  border-color: var(--contract-primary-hover);
+  background: var(--contract-primary-hover);
 }
 
 .business-contract-results-heading {
@@ -305,6 +323,37 @@
 .business-contract-empty .business-contract-primary { margin-top: 5px; }
 .business-contract-list .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
+.business-contract-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.business-contract-pagination > span {
+  color: var(--contract-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.business-contract-pagination .secondary-button {
+  min-height: 38px;
+  padding: 8px 13px;
+  border: 1px solid var(--contract-border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--contract-ink);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.business-contract-pagination .secondary-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
 [data-theme="dark"] .business-live .business-contract-list { background: #17251f; }
 [data-theme="dark"] .business-contract-stats article,
 [data-theme="dark"] .business-contract-filters,
@@ -313,7 +362,9 @@
 [data-theme="dark"] .business-contract-filters input,
 [data-theme="dark"] .business-contract-filters select,
 [data-theme="dark"] .business-contract-filters .business-contract-clear,
+[data-theme="dark"] .business-contract-pagination .secondary-button,
 [data-theme="dark"] .business-contract-table-wrap { background: #17251f; color: #e2ebe5; }
+[data-theme="dark"] .business-contract-pagination > span { color: #aabbb1; }
 [data-theme="dark"] .business-contract-table th { background: #20332b; color: #c2d1c9; }
 [data-theme="dark"] .business-contract-table td { border-color: #2d4037; color: #e2ebe5; }
 [data-theme="dark"] .business-contract-table tbody tr:hover { background: #1d2d26; }
@@ -335,4 +386,6 @@
   .business-contract-filters .business-contract-search { grid-column: auto; }
   .business-contract-stats article { min-height: 76px; padding: 13px; }
   .business-contract-results-heading { align-items: flex-start; flex-direction: column; }
+  .business-contract-pagination { flex-direction: column; }
+  .business-contract-pagination .secondary-button { width: 100%; }
 }

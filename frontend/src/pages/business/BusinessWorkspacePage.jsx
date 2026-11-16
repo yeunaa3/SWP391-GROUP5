@@ -56,6 +56,7 @@ const contractListStatuses = [
 ];
 
 const contractPaymentStatuses = ["PENDING", "PAID", "FAILED", "UNPAID"];
+const CONTRACT_PAGE_SIZE = 20;
 
 const status = (value) => statusLabels[value] || value || "Chưa có";
 const currency = (value) => Number(value || 0).toLocaleString("vi-VN") + " ₫";
@@ -166,6 +167,12 @@ export default function BusinessWorkspacePage({ screen }) {
   const [contractSearch, setContractSearch] = useState("");
   const [contractStatusFilter, setContractStatusFilter] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] = useState("");
+  const [appliedContractFilters, setAppliedContractFilters] = useState({
+    search: "",
+    status: "",
+    paymentStatus: "",
+  });
+  const [contractPage, setContractPage] = useState(0);
 
   // Các trạng thái thao tác: đang gửi, lỗi, thông báo thành công
   const [busy, setBusy] = useState(false);
@@ -261,17 +268,25 @@ export default function BusinessWorkspacePage({ screen }) {
     (item) => String(item.contract_id) === String(contract?.contract_id),
   );
   const contractRows = (data.contracts || []).filter((item) => {
-    const search = contractSearch.trim().toLocaleLowerCase("vi");
+    const search = appliedContractFilters.search.toLocaleLowerCase("vi");
     const matchesSearch = !search || [
       item.contract_code,
       item.contract_name,
       item.package_name_snapshot,
       item.slot_name_snapshot,
     ].some((value) => String(value || "").toLocaleLowerCase("vi").includes(search));
-    const matchesContractStatus = !contractStatusFilter || item.status === contractStatusFilter;
-    const matchesPaymentStatus = !paymentStatusFilter || item.payment_status === paymentStatusFilter;
+    const matchesContractStatus = !appliedContractFilters.status || item.status === appliedContractFilters.status;
+    const matchesPaymentStatus = !appliedContractFilters.paymentStatus || item.payment_status === appliedContractFilters.paymentStatus;
     return matchesSearch && matchesContractStatus && matchesPaymentStatus;
   });
+  const contractTotalPages = Math.ceil(contractRows.length / CONTRACT_PAGE_SIZE);
+  const currentContractPage = Math.min(contractPage, Math.max(contractTotalPages - 1, 0));
+  const paginatedContractRows = contractRows.slice(
+    currentContractPage * CONTRACT_PAGE_SIZE,
+    (currentContractPage + 1) * CONTRACT_PAGE_SIZE,
+  );
+  const firstContractRow = contractRows.length ? currentContractPage * CONTRACT_PAGE_SIZE + 1 : 0;
+  const lastContractRow = Math.min((currentContractPage + 1) * CONTRACT_PAGE_SIZE, contractRows.length);
   const contractsAwaitingReview = (data.contracts || []).filter((item) =>
     ["PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED"].includes(item.status),
   ).length;
@@ -282,6 +297,29 @@ export default function BusinessWorkspacePage({ screen }) {
   const activePaidContractCount = (data.contracts || []).filter((item) =>
     item.status === "ACTIVE" && item.payment_status === "PAID",
   ).length;
+
+  function applyContractFilters(event) {
+    event.preventDefault();
+    setAppliedContractFilters({
+      search: contractSearch.trim(),
+      status: contractStatusFilter,
+      paymentStatus: paymentStatusFilter,
+    });
+    setContractPage(0);
+  }
+
+  function clearContractFilters() {
+    setContractSearch("");
+    setContractStatusFilter("");
+    setPaymentStatusFilter("");
+    setAppliedContractFilters({ search: "", status: "", paymentStatus: "" });
+    setContractPage(0);
+  }
+
+  function changeContractPage(page) {
+    setContractPage(Math.min(Math.max(page, 0), Math.max(contractTotalPages - 1, 0)));
+  }
+
   const canCancelContract = Boolean(contract && (
     ["PENDING_REVIEW", "PROPOSED", "REVISION_REQUESTED", "ACCEPTED", "PENDING_PAYMENT", "PAYMENT_FAILED"].includes(contract.status)
     || (contract.status === "ACTIVE" && contract.payment_status === "PAID")
@@ -1373,7 +1411,7 @@ export default function BusinessWorkspacePage({ screen }) {
                 <article><span>Đang hiệu lực</span><strong>{activePaidContractCount}</strong></article>
               </div>
 
-              <div className="business-contract-filters" role="search" aria-label="Lọc hợp đồng">
+              <form className="business-contract-filters" role="search" aria-label="Lọc hợp đồng" onSubmit={applyContractFilters}>
                 <label className="business-contract-search">
                   <span>Tìm hợp đồng</span>
                   <input
@@ -1397,20 +1435,18 @@ export default function BusinessWorkspacePage({ screen }) {
                     {contractPaymentStatuses.map((value) => <option key={value} value={value}>{status(value)}</option>)}
                   </select>
                 </label>
-                {(contractSearch || contractStatusFilter || paymentStatusFilter) && (
+                <button className="business-contract-apply" type="submit">Áp dụng</button>
+                {(contractSearch || contractStatusFilter || paymentStatusFilter
+                  || appliedContractFilters.search || appliedContractFilters.status || appliedContractFilters.paymentStatus) && (
                   <button
                     className="business-contract-clear"
                     type="button"
-                    onClick={() => {
-                      setContractSearch("");
-                      setContractStatusFilter("");
-                      setPaymentStatusFilter("");
-                    }}
+                    onClick={clearContractFilters}
                   >
                     Xóa bộ lọc
                   </button>
                 )}
-              </div>
+              </form>
 
               <div className="business-contract-results-heading">
                 <h3>Danh sách hợp đồng</h3>
@@ -1432,7 +1468,7 @@ export default function BusinessWorkspacePage({ screen }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {contractRows.map((item) => (
+                      {paginatedContractRows.map((item) => (
                         <tr key={item.contract_id}>
                           <td data-label="Hợp đồng">
                             <strong className="business-contract-code">{item.contract_code || "—"}</strong>
@@ -1479,6 +1515,29 @@ export default function BusinessWorkspacePage({ screen }) {
                   )}
                 </div>
               )}
+
+              <nav className="business-contract-pagination" aria-label="Phân trang hợp đồng">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={currentContractPage === 0}
+                  onClick={() => changeContractPage(currentContractPage - 1)}
+                >
+                  Trang trước
+                </button>
+                <span>
+                  Trang {contractTotalPages === 0 ? 0 : currentContractPage + 1} / {contractTotalPages}
+                  {contractRows.length > 0 && ` · Hiển thị ${firstContractRow}–${lastContractRow} / ${contractRows.length} booking`}
+                </span>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={currentContractPage + 1 >= contractTotalPages}
+                  onClick={() => changeContractPage(currentContractPage + 1)}
+                >
+                  Trang sau
+                </button>
+              </nav>
             </section>
           )}
 
