@@ -495,7 +495,7 @@ export default function AdManagerBookingProposalPage() {
                                         />
                                     </label>
                                     <label className="business-field">
-                                        <span>Yêu cầu thay đổi Điều khoản thương mại</span>
+                                        <span>Điều khoản thương mại</span>
                                         <textarea
                                             required
                                             maxLength={10000}
