@@ -1,7 +1,7 @@
 package com.group5.premiumnews.controller;
 
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
-import com.group5.premiumnews.service.ManualPremiumService;
+import com.group5.premiumnews.service.BF1_PremiumService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * ============================================================================
- * [BF-01] MANUAL PREMIUM CONTROLLER
- * Phụ trách: Cường (API Đăng ký gói, Kiểm tra quyền đọc báo, Lịch sử giao dịch & Duyệt gói)
+ * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM & GIAO DỊCH THANH TOÁN (REST API CONTROLLER)
+ * Phụ trách: Cường
  * 
  * REST API Endpoints:
  * - GET  /api/premium/access                 : [UC-12] Kiểm tra trạng thái gói cước đang sở hữu
@@ -30,14 +30,14 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api")
-public class ManualPremiumController {
+public class BF1_PremiumController {
 
     public record Submit(@NotNull @Positive Long packageId) {}
     public record Review(boolean approve, boolean paymentConfirmed, @Size(max = 500) String note) {}
 
-    private final ManualPremiumService service;
+    private final BF1_PremiumService service;
 
-    public ManualPremiumController(ManualPremiumService service) {
+    public BF1_PremiumController(BF1_PremiumService service) {
         this.service = service;
     }
 

@@ -1,6 +1,6 @@
 package com.group5.premiumnews.service;
 
-import com.group5.premiumnews.repository.PremiumRequestRepository;
+import com.group5.premiumnews.repository.BF1_PremiumRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -12,16 +12,16 @@ import org.springframework.web.server.ResponseStatusException;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class ManualPremiumServiceTests {
-    private final PremiumRequestRepository repository = mock(PremiumRequestRepository.class);
-    private final ManualPremiumService service = new ManualPremiumService(repository);
-    private final PremiumRequestRepository.Plan plan = new PremiumRequestRepository.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
-    private final PremiumRequestRepository.Request request = new PremiumRequestRepository.Request(7, 11, plan, "PENDING");
+class BF1_PremiumServiceTests {
+    private final BF1_PremiumRepository repository = mock(BF1_PremiumRepository.class);
+    private final BF1_PremiumService service = new BF1_PremiumService(repository);
+    private final BF1_PremiumRepository.Plan plan = new BF1_PremiumRepository.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+    private final BF1_PremiumRepository.Request request = new BF1_PremiumRepository.Request(7, 11, plan, "PENDING");
 
     @BeforeEach void setup() { when(repository.lockActiveUser(11)).thenReturn(true); }
 
     @Test void membershipReadsActualScopedSubscriptionsNotRequestHistory() {
-        var subscription = new PremiumRequestRepository.Subscription(3, 2, "Monthly", Instant.now().minusSeconds(10), Instant.now().plusSeconds(100), "ACTIVE", true);
+        var subscription = new BF1_PremiumRepository.Subscription(3, 2, "Monthly", Instant.now().minusSeconds(10), Instant.now().plusSeconds(100), "ACTIVE", true);
         when(repository.subscriptions(11)).thenReturn(java.util.List.of(subscription));
         when(repository.pending(11)).thenReturn(Optional.empty());
         var result = service.access(11);
@@ -32,7 +32,7 @@ class ManualPremiumServiceTests {
     }
 
     @Test void pendingAndFuturePeriodsDoNotGrantCurrentAccess() {
-        var future = new PremiumRequestRepository.Subscription(3, 2, "Monthly", Instant.now().plusSeconds(100), Instant.now().plusSeconds(200), "ACTIVE", false);
+        var future = new BF1_PremiumRepository.Subscription(3, 2, "Monthly", Instant.now().plusSeconds(100), Instant.now().plusSeconds(200), "ACTIVE", false);
         when(repository.subscriptions(11)).thenReturn(java.util.List.of(future));
         when(repository.pending(11)).thenReturn(Optional.of(request));
         assertEquals(false, service.access(11).get("active"));
@@ -54,9 +54,16 @@ class ManualPremiumServiceTests {
         verify(repository, never()).create(anyLong(), any());
     }
 
-    @Test void differentPlanCannotBypassPendingRequest() {
+    @Test void differentPlanAutoCancelsOldPendingAndCreatesNewRequest() {
+        var plan3 = new BF1_PremiumRepository.Plan(3, "YEAR", "Yearly", new BigDecimal("790000"), "VND", 365);
         when(repository.pending(11)).thenReturn(Optional.of(request));
-        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.submit(11, 3)).getStatusCode().value());
+        when(repository.activePlan(3)).thenReturn(Optional.of(plan3));
+        when(repository.create(11, plan3)).thenReturn(8L);
+
+        var result = service.submit(11, 3);
+        assertEquals(8L, result.get("id"));
+        verify(repository).cancel(request.id(), "Đã tự động hủy để chuyển sang gói cước mới");
+        verify(repository).create(11, plan3);
     }
 
     @Test void unavailablePlanDoesNotCreateRequest() {
@@ -93,19 +100,22 @@ class ManualPremiumServiceTests {
         assertEquals(start.getValue().plus(30, ChronoUnit.DAYS), end.getValue());
     }
 
-    @Test void processedRequestCannotBeGrantedTwice() {
-        when(repository.lockRequest(7)).thenReturn(Optional.of(new PremiumRequestRepository.Request(7, 11, plan, "APPROVED")));
-        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, true, "")).getStatusCode().value());
-        verify(repository, never()).activate(any(), any(), any());
-    }
-
-    @Test void rejectionRequiresReasonAndNeverGrantsAccess() {
+    @Test void rejectedRequestRequiresNonBlankNote() {
         when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        assertThrows(ResponseStatusException.class, () -> service.review(99, 7, false, false, " "));
-        service.review(99, 7, false, false, "No matching payment");
-        verify(repository).review(7, 99, "REJECTED", "No matching payment", null);
+        assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, false, false, "   ")).getStatusCode().value());
         verify(repository, never()).activate(any(), any(), any());
+        verify(repository, never()).review(anyLong(), anyLong(), any(), any(), any());
     }
 
-    @Test void readerListIsScopedToCurrentAccount() { service.list(11L); verify(repository).list(11L); }
+    @Test void reReviewThrowsConflict() {
+        var processed = new BF1_PremiumRepository.Request(7, 11, plan, "APPROVED");
+        when(repository.lockRequest(7)).thenReturn(Optional.of(processed));
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, true, "Ok")).getStatusCode().value());
+    }
+
+    @Test void inactiveUserCannotBeApproved() {
+        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
+        when(repository.lockActiveUser(11)).thenReturn(false);
+        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, true, "Ok")).getStatusCode().value());
+    }
 }

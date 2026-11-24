@@ -11,23 +11,45 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
+/**
+ * ============================================================================
+ * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM & GIAO DỊCH THANH TOÁN (REPOSITORY TƯƠNG TÁC DB)
+ * Phụ trách: Cường
+ *
+ * Chức năng tương tác cơ sở dữ liệu:
+ * 1. subscriptions: Lấy lịch sử và kiểm tra thuê bao còn hạn (start_at <= NOW < end_at)
+ * 2. lockActiveUser: Khóa bi quan user FOR UPDATE kiểm tra tài khoản còn ACTIVE
+ * 3. pending: Kiểm tra đơn PENDING chống spam submit (kết hợp cột ảo conditional unique index)
+ * 4. lockRequest: Khóa bi quan dòng premium_requests FOR UPDATE khi Admin duyệt
+ * 5. activate: Ghi nhận gói mới vào subscriptions, sinh biên lai vào transactions, cấp role SUBSCRIBER
+ * ============================================================================
+ */
 @Repository
-public class PremiumRequestRepository {
+public class BF1_PremiumRepository {
     public record Subscription(long id, long packageId, String packageName, Instant startAt, Instant endAt, String status, boolean current) {}
     public record Plan(long id, String code, String name, BigDecimal amount, String currency, int days) {}
     public record Request(long id, long userId, Plan plan, String status) {}
+
     private final JdbcTemplate jdbc;
 
-    public PremiumRequestRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public BF1_PremiumRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
 
     public List<Subscription> subscriptions(long userId) {
         return jdbc.query("""
-                SELECT subscription_id,package_id,package_name_snapshot,start_at,end_at,status,
+                SELECT subscription_id, package_id, package_name_snapshot, start_at, end_at, status,
                     (status='ACTIVE' AND start_at<=CURRENT_TIMESTAMP(6) AND end_at>CURRENT_TIMESTAMP(6)) AS current_access
                 FROM subscriptions WHERE user_id=? ORDER BY end_at DESC LIMIT 100
-                """, (rs, n) -> new Subscription(rs.getLong("subscription_id"), rs.getLong("package_id"),
-                rs.getString("package_name_snapshot"), rs.getTimestamp("start_at").toInstant(),
-                rs.getTimestamp("end_at").toInstant(), rs.getString("status"), rs.getBoolean("current_access")), userId);
+                """, (rs, n) -> new Subscription(
+                        rs.getLong("subscription_id"),
+                        rs.getLong("package_id"),
+                        rs.getString("package_name_snapshot"),
+                        rs.getTimestamp("start_at").toInstant(),
+                        rs.getTimestamp("end_at").toInstant(),
+                        rs.getString("status"),
+                        rs.getBoolean("current_access")
+                ), userId);
     }
 
     public boolean lockActiveUser(long id) {
@@ -36,8 +58,14 @@ public class PremiumRequestRepository {
 
     public Optional<Plan> activePlan(long id) {
         return jdbc.query("SELECT * FROM subscription_packages WHERE package_id=? AND status='ACTIVE'",
-                (rs, n) -> new Plan(rs.getLong("package_id"), rs.getString("code"), rs.getString("name"),
-                        rs.getBigDecimal("price"), rs.getString("currency"), rs.getInt("duration_days")), id).stream().findFirst();
+                (rs, n) -> new Plan(
+                        rs.getLong("package_id"),
+                        rs.getString("code"),
+                        rs.getString("name"),
+                        rs.getBigDecimal("price"),
+                        rs.getString("currency"),
+                        rs.getInt("duration_days")
+                ), id).stream().findFirst();
     }
 
     public Optional<Request> pending(long userId) {
@@ -49,40 +77,58 @@ public class PremiumRequestRepository {
     }
 
     private List<Request> requests(String sql, long id) {
-        return jdbc.query(sql, (rs, n) -> new Request(rs.getLong("request_id"), rs.getLong("user_id"),
-                new Plan(rs.getLong("package_id"), rs.getString("package_code"), rs.getString("package_name"),
-                        rs.getBigDecimal("amount"), rs.getString("currency"), rs.getInt("duration_days")), rs.getString("status")), id);
+        return jdbc.query(sql, (rs, n) -> new Request(
+                rs.getLong("request_id"),
+                rs.getLong("user_id"),
+                new Plan(
+                        rs.getLong("package_id"),
+                        rs.getString("package_code"),
+                        rs.getString("package_name"),
+                        rs.getBigDecimal("amount"),
+                        rs.getString("currency"),
+                        rs.getInt("duration_days")
+                ),
+                rs.getString("status")
+        ), id);
     }
 
     public long create(long userId, Plan plan) {
         long requestId = insert("""
-                INSERT INTO premium_requests(user_id,package_id,package_code,package_name,amount,currency,duration_days)
+                INSERT INTO premium_requests(user_id, package_id, package_code, package_name, amount, currency, duration_days)
                 VALUES (?,?,?,?,?,?,?)
                 """, userId, plan.id(), plan.code(), plan.name(), plan.amount(), plan.currency(), plan.days());
+
         jdbc.update("""
-            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
-            VALUES (?,?,?,'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6))
-            """, userId,"Đã nhận yêu cầu đăng ký Premium","Yêu cầu cho gói " + plan.name() + " đang chờ admin kiểm tra thanh toán. Chưa được cấp quyền; không chuyển tiền lại nếu đã thanh toán.",String.valueOf(requestId));
+            INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
+            VALUES (?, ?, ?, 'PREMIUM', 'PREMIUM_REQUEST', ?, 'SENT', CURRENT_TIMESTAMP(6))
+            """, userId, "Đã nhận yêu cầu đăng ký Premium",
+                "Yêu cầu cho gói " + plan.name() + " đang chờ admin kiểm tra thanh toán. Chưa được cấp quyền; không chuyển tiền lại nếu đã thanh toán.",
+                String.valueOf(requestId));
+
         jdbc.update("""
-            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
-            SELECT DISTINCT u.user_id,?,?, 'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6)
+            INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
+            SELECT DISTINCT u.user_id, ?, ?, 'PREMIUM', 'PREMIUM_REQUEST', ?, 'SENT', CURRENT_TIMESTAMP(6)
             FROM users u JOIN user_roles ur ON ur.user_id=u.user_id JOIN roles r ON r.role_id=ur.role_id
             WHERE r.role_name='ADMINISTRATOR' AND r.status='ACTIVE' AND u.status='ACTIVE'
-            """, "Có yêu cầu Premium cần kiểm tra","Yêu cầu #"+requestId+" · "+plan.name()+". Hãy xác minh tiền đã nhận trước khi duyệt.",String.valueOf(requestId));
+            """, "Có yêu cầu Premium cần kiểm tra",
+                "Yêu cầu #" + requestId + " · " + plan.name() + ". Hãy xác minh tiền đã nhận trước khi duyệt.",
+                String.valueOf(requestId));
+
         return requestId;
     }
 
     public List<Map<String, Object>> list(Long userId) {
         String sql = """
-                SELECT r.request_id AS id,r.user_id AS userId,u.username,u.email,
-                       r.package_name AS packageName,r.amount,r.currency,r.duration_days AS durationDays,
-                       r.status,r.submitted_at AS submittedAt,r.review_note AS reviewNote,
-                       r.reviewed_at AS reviewedAt,r.reviewed_by AS reviewedBy,
-                       s.start_at AS startAt,s.end_at AS endAt
+                SELECT r.request_id AS id, r.user_id AS userId, u.username, u.email,
+                       r.package_name AS packageName, r.amount, r.currency, r.duration_days AS durationDays,
+                       r.status, r.submitted_at AS submittedAt, r.review_note AS reviewNote,
+                       r.reviewed_at AS reviewedAt, r.reviewed_by AS reviewedBy,
+                       s.start_at AS startAt, s.end_at AS endAt
                 FROM premium_requests r JOIN users u ON u.user_id=r.user_id
                 LEFT JOIN subscriptions s ON s.subscription_id=r.subscription_id
                 """;
-        return userId == null ? jdbc.queryForList(sql + " ORDER BY (r.status='PENDING') DESC,r.submitted_at DESC LIMIT 200")
+        return userId == null
+                ? jdbc.queryForList(sql + " ORDER BY (r.status='PENDING') DESC, r.submitted_at DESC LIMIT 200")
                 : jdbc.queryForList(sql + " WHERE r.user_id=? ORDER BY r.submitted_at DESC LIMIT 100", userId);
     }
 
@@ -94,19 +140,22 @@ public class PremiumRequestRepository {
     public long activate(Request request, Instant start, Instant end) {
         Plan p = request.plan();
         long subscription = insert("""
-                INSERT INTO subscriptions(user_id,package_id,package_code_snapshot,package_name_snapshot,
-                    price_snapshot,currency,duration_days_snapshot,start_at,end_at,status)
+                INSERT INTO subscriptions(user_id, package_id, package_code_snapshot, package_name_snapshot,
+                    price_snapshot, currency, duration_days_snapshot, start_at, end_at, status)
                 VALUES (?,?,?,?,?,?,?,?,?,'ACTIVE')
                 """, request.userId(), p.id(), p.code(), p.name(), p.amount(), p.currency(), p.days(), Timestamp.from(start), Timestamp.from(end));
+
         String transactionType = start.isAfter(Instant.now()) ? "PREMIUM_RENEWAL" : "PREMIUM_PURCHASE";
         jdbc.update("""
-                INSERT INTO transactions(txn_ref,transaction_type,user_id,subscription_id,amount,currency,payment_gateway,status,paid_at)
+                INSERT INTO transactions(txn_ref, transaction_type, user_id, subscription_id, amount, currency, payment_gateway, status, paid_at)
                 VALUES (?,?,?,?,?,?,'MANUAL','SUCCESS',CURRENT_TIMESTAMP(6))
                 """, "MANUAL-PREMIUM-" + request.id(), transactionType, request.userId(), subscription, p.amount(), p.currency());
+
         jdbc.update("""
-                INSERT IGNORE INTO user_roles(user_id,role_id)
-                SELECT ?,role_id FROM roles WHERE role_name='SUBSCRIBER' AND status='ACTIVE'
+                INSERT IGNORE INTO user_roles(user_id, role_id)
+                SELECT ?, role_id FROM roles WHERE role_name='SUBSCRIBER' AND status='ACTIVE'
                 """, request.userId());
+
         return subscription;
     }
 
@@ -120,15 +169,19 @@ public class PremiumRequestRepository {
 
     public void review(long id, long adminId, String status, String note, Long subscription) {
         jdbc.update("""
-                UPDATE premium_requests SET status=?,reviewed_by=?,reviewed_at=CURRENT_TIMESTAMP(6),review_note=?,subscription_id=?
+                UPDATE premium_requests SET status=?, reviewed_by=?, reviewed_at=CURRENT_TIMESTAMP(6), review_note=?, subscription_id=?
                 WHERE request_id=? AND status='PENDING'
                 """, status, adminId, note, subscription, id);
+
         jdbc.update("""
-            INSERT INTO notifications(user_id,title,content,notification_type,related_entity_type,related_entity_id,delivery_status,sent_at)
-            SELECT user_id,?,?,'PREMIUM','PREMIUM_REQUEST',?,'SENT',CURRENT_TIMESTAMP(6)
+            INSERT INTO notifications(user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
+            SELECT user_id, ?, ?, 'PREMIUM', 'PREMIUM_REQUEST', ?, 'SENT', CURRENT_TIMESTAMP(6)
             FROM premium_requests WHERE request_id=?
-            """, "APPROVED".equals(status)?"Gói Premium đã được duyệt":"Yêu cầu Premium chưa được duyệt",
-            "APPROVED".equals(status)?"Admin đã xác minh yêu cầu. Mở gói của tôi để xem thời gian có hiệu lực và các quyền lợi.":"Admin đã từ chối yêu cầu. Mở lịch sử đăng ký để xem lý do trước khi gửi lại.",String.valueOf(id),id);
+            """, "APPROVED".equals(status) ? "Gói Premium đã được duyệt" : "Yêu cầu Premium chưa được duyệt",
+                "APPROVED".equals(status)
+                        ? "Admin đã xác minh yêu cầu. Mở gói của tôi để xem thời gian có hiệu lực và các quyền lợi."
+                        : "Admin đã từ chối yêu cầu. Mở lịch sử đăng ký để xem lý do trước khi gửi lại.",
+                String.valueOf(id), id);
     }
 
     public List<Map<String, Object>> transactions(long userId) {

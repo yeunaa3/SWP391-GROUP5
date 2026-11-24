@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 /** Render-only HTML entry points. API and asset paths never fall back to HTML. */
 @Controller
-@Profile("render")
+@Profile({"render", "local"})
 public class SpaController {
     @GetMapping({"/", "/news", "/search", "/login", "/register", "/forgot-password", "/reset-password",
             "/articles/**", "/premium/**", "/account/**", "/business", "/business/**",

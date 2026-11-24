@@ -1,6 +1,5 @@
 package com.group5.premiumnews.service;
 
-import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -14,21 +13,22 @@ import java.util.Map;
 
 /**
  * ============================================================================
- * [BF-08] AD CAMPAIGN DELIVERY & ANALYTICS SERVICE
- * Phụ trách: Cường (Ad Manager & Real-Time Ad Serving Engine)
+ * [BF-08] LUỒNG 8: PHÂN PHỐI QUẢNG CÁO & CHỐNG GIAN LẬN CLICK TẶC (SERVICE XỬ LÝ)
+ * Phụ trách: Cường
  * 
  * Các Use Case liên quan:
- * - [UC-31] Hiển thị banner quảng cáo, ghi nhận lượt xem (Impression) và lượt bấm (Click)
- * - [UC-32] Báo cáo hiệu suất chiến dịch cho Doanh nghiệp (BUS-18) và Quản trị viên (ADM-09)
- * - [UC-39] Tạm dừng (PAUSE) hoặc Tiếp tục (RESUME) phân phối chiến dịch quảng cáo
+ * - [UC-31] Matching Engine phân phối banner quảng cáo thời gian thực theo context (vị trí, thiết bị, quốc gia, chuyên mục)
+ * - [UC-31] Ghi nhận Impression khi đạt chuẩn IAB (50% diện tích nhìn thấy trong >= 1s)
+ * - [UC-31] Ghi nhận Click & Cơ chế chống click tặc Anti-fraud (cửa sổ 2s SHA-256 fingerprint, RAPID_CLICK_DUPLICATE)
+ * - [UC-32] Tra cứu slot đã đặt chỗ (availability)
  * ============================================================================
  */
 @Service
-public class AdvertisingDataService {
+public class BF8_AdServingService {
 
     private final JdbcTemplate jdbc;
 
-    public AdvertisingDataService(JdbcTemplate jdbc) {
+    public BF8_AdServingService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -86,57 +86,6 @@ public class AdvertisingDataService {
               )
             ORDER BY startAt
             """, excludeContractId, excludeContractId, excludeContractId);
-    }
-
-    /**
-     * [BF-08][UC-32][BUS-18][ADM-09] Lấy chuỗi dữ liệu hiệu suất theo ngày (Impressions, Clicks, Invalid Clicks).
-     * Phục vụ vẽ biểu đồ xu hướng (Trend Chart) trên dashboard doanh nghiệp và quản lý quảng cáo.
-     *
-     * @param principal Người dùng đang đăng nhập (Doanh nghiệp chỉ xem được của mình, Ad Manager xem tất cả)
-     * @return Danh sách số liệu thống kê theo ngày và chiến dịch
-     */
-    @PreAuthorize("hasAnyRole('BUSINESS','AD_MANAGER','ADMINISTRATOR')")
-    public List<Map<String, Object>> performance(AuthenticatedUserPrincipal principal) {
-        boolean staff = principal.authorities().stream().anyMatch(a ->
-                a.getAuthority().equals("ROLE_AD_MANAGER") || a.getAuthority().equals("ROLE_ADMINISTRATOR"));
-
-        // 1. Ưu tiên đọc dữ liệu chuỗi thời gian đã tổng hợp từ ad_metrics
-        List<Map<String, Object>> fromMetrics = jdbc.queryForList("""
-            SELECT 
-                c.campaign_id AS campaignId,
-                c.campaign_name AS campaignName,
-                m.metric_date AS metricDate,
-                m.impressions_count AS impressions,
-                m.clicks_count AS clicks,
-                m.invalid_clicks_count AS invalidClicks
-            FROM ad_metrics m
-            JOIN ad_creatives cr ON cr.creative_id = m.creative_id
-            JOIN ad_campaigns c ON c.campaign_id = cr.campaign_id
-            JOIN contracts ct ON ct.contract_id = c.contract_id
-            WHERE (? OR ct.company_id = (SELECT company_id FROM users WHERE user_id = ?))
-            ORDER BY m.metric_date, c.campaign_id
-            """, staff, principal.id());
-
-        if (!fromMetrics.isEmpty()) {
-            return fromMetrics;
-        }
-
-        // 2. Dự phòng: Tổng hợp trực tiếp từ raw events trong ad_events nếu chưa kết chuyển sang ad_metrics
-        return jdbc.queryForList("""
-            SELECT 
-                c.campaign_id AS campaignId,
-                c.campaign_name AS campaignName,
-                DATE(e.occurred_at) AS metricDate,
-                SUM(e.event_type = 'IMPRESSION' AND e.is_valid = TRUE) AS impressions,
-                SUM(e.event_type = 'CLICK' AND e.is_valid = TRUE) AS clicks,
-                SUM(e.event_type = 'CLICK' AND e.is_valid = FALSE) AS invalidClicks
-            FROM ad_events e 
-            JOIN ad_campaigns c ON c.campaign_id = e.campaign_id 
-            JOIN contracts ct ON ct.contract_id = c.contract_id
-            WHERE (? OR ct.company_id = (SELECT company_id FROM users WHERE user_id = ?))
-            GROUP BY c.campaign_id, c.campaign_name, DATE(e.occurred_at)
-            ORDER BY metricDate, c.campaign_id
-            """, staff, principal.id());
     }
 
     /**
@@ -243,54 +192,8 @@ public class AdvertisingDataService {
     }
 
     /**
-     * [BF-08][ADM-09] Lấy danh sách toàn bộ chiến dịch quảng cáo kèm số liệu tổng hợp (Impressions, Clicks, CTR).
-     * Phục vụ màn hình giám sát thời gian thực của Ad Manager (Active Campaign Monitor).
-     *
-     * @param principal Người dùng đang thao tác
-     * @return Danh sách chi tiết các chiến dịch, kích thước slot, thời gian chạy, tổng lượt xem và click
-     */
-    @PreAuthorize("hasAnyRole('BUSINESS','AD_MANAGER','ADMINISTRATOR')")
-    public List<Map<String, Object>> campaigns(AuthenticatedUserPrincipal principal) {
-        boolean staff = principal.authorities().stream().anyMatch(a ->
-            a.getAuthority().equals("ROLE_AD_MANAGER") || a.getAuthority().equals("ROLE_ADMINISTRATOR"));
-
-        return jdbc.queryForList("""
-            SELECT 
-                c.campaign_id AS id,
-                c.campaign_name AS name,
-                c.status,
-                c.description,
-                ct.contract_code AS contractCode,
-                cp.company_name AS companyName,
-                s.slot_name AS slotName,
-                s.position_code AS positionCode,
-                s.width_px AS widthPx,
-                s.height_px AS heightPx,
-                c.scheduled_start_time AS startTime,
-                c.scheduled_end_time AS endTime,
-                (SELECT v.media_url FROM ad_creatives v WHERE v.campaign_id = c.campaign_id ORDER BY v.version_no DESC LIMIT 1) AS mediaUrl,
-                (SELECT v.target_url FROM ad_creatives v WHERE v.campaign_id = c.campaign_id ORDER BY v.version_no DESC LIMIT 1) AS targetUrl,
-                ct.total_value AS amount,
-                COALESCE(SUM(m.impressions_count), 0) AS impressions,
-                COALESCE(SUM(m.clicks_count), 0) AS clicks,
-                COALESCE(SUM(m.invalid_clicks_count), 0) AS invalidClicks
-            FROM ad_campaigns c
-            JOIN contracts ct ON ct.contract_id = c.contract_id
-            JOIN companies cp ON cp.company_id = ct.company_id
-            JOIN ad_slots s ON s.slot_id = ct.slot_id
-            LEFT JOIN ad_creatives cr ON cr.campaign_id = c.campaign_id
-            LEFT JOIN ad_metrics m ON m.creative_id = cr.creative_id
-            WHERE (? OR ct.company_id = (SELECT company_id FROM users WHERE user_id = ?))
-            GROUP BY 
-                c.campaign_id, c.campaign_name, c.status, c.description, ct.contract_code, cp.company_name,
-                s.slot_name, s.position_code, s.width_px, s.height_px, c.scheduled_start_time, c.scheduled_end_time, ct.total_value
-            ORDER BY c.campaign_id
-            """, staff, principal.id());
-    }
-
-    /**
      * [BF-08][UC-31] Ghi nhận raw event (IMPRESSION hoặc CLICK) với cơ chế chống gian lận (Anti-fraud Debounce).
-     * Băm session trong cửa sổ 30 giây để chống đếm lặp, đồng thời kiểm tra quota và cập nhật bảng ad_metrics.
+     * Băm session trong cửa sổ 2 giây để chống đếm lặp gian lận click tặc, đồng thời kiểm tra quota và cập nhật bảng ad_metrics.
      *
      * @param creativeId ID banner quảng cáo
      * @param type Loại sự kiện ("IMPRESSION" hoặc "CLICK")
@@ -427,7 +330,7 @@ public class AdvertisingDataService {
     }
 
     /**
-     * Băm session bằng SHA-256 để chống đếm lặp trong cửa sổ 30 giây; không lưu session/IP thô vào DB.
+     * Băm session bằng SHA-256 để chống đếm lặp trong cửa sổ 2 giây; không lưu session/IP thô vào DB.
      */
     private String hash(String value) {
         try {
@@ -437,44 +340,5 @@ public class AdvertisingDataService {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    /**
-     * ========================================================================
-     * [BF-08][UC-39] TÍNH NĂNG TRỌNG TÂM: TẠM DỪNG / TIẾP TỤC CHIẾN DỊCH QUẢNG CÁO
-     * Phục vụ: Ad Manager thao tác trên màn hình ADM-09 Active Campaign Monitor
-     * 
-     * Quy tắc chuyển đổi trạng thái (Workflow Transition Policy):
-     * - ACTIVE -> PAUSED: Tạm dừng hiển thị banner (đáp ứng yêu cầu pháp lý, kỹ thuật hoặc theo yêu cầu đối tác)
-     * - PAUSED -> ACTIVE: Khôi phục phân phối banner bình thường vào ad server rotation
-     * ========================================================================
-     *
-     * @param campaignId ID chiến dịch cần chuyển đổi trạng thái
-     * @return Map chứa campaignId và trạng thái mới (status: "ACTIVE" hoặc "PAUSED")
-     */
-    @PreAuthorize("hasAnyRole('AD_MANAGER','ADMINISTRATOR')")
-    public Map<String, Object> toggleCampaignStatus(Long campaignId) {
-        List<String> statuses = jdbc.queryForList(
-            "SELECT status FROM ad_campaigns WHERE campaign_id = ?",
-            String.class,
-            campaignId
-        );
-        if (statuses.isEmpty()) {
-            throw new IllegalArgumentException("Không tìm thấy chiến dịch có mã: " + campaignId);
-        }
-
-        String currentStatus = statuses.get(0);
-        String nextStatus;
-
-        if ("ACTIVE".equalsIgnoreCase(currentStatus)) {
-            nextStatus = "PAUSED";
-        } else if ("PAUSED".equalsIgnoreCase(currentStatus)) {
-            nextStatus = "ACTIVE";
-        } else {
-            throw new IllegalStateException("Không thể đảo trạng thái chiến dịch đang ở trạng thái: " + currentStatus);
-        }
-
-        jdbc.update("UPDATE ad_campaigns SET status = ? WHERE campaign_id = ?", nextStatus, campaignId);
-        return Map.of("campaignId", campaignId, "status", nextStatus);
     }
 }

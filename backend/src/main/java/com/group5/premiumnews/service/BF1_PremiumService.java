@@ -1,6 +1,6 @@
 package com.group5.premiumnews.service;
 
-import com.group5.premiumnews.repository.PremiumRequestRepository;
+import com.group5.premiumnews.repository.BF1_PremiumRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -12,22 +12,23 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * ============================================================================
- * [BF-01] MANUAL PREMIUM SUBSCRIPTION & PAYMENT VERIFICATION SERVICE
- * Phụ trách: Cường (Quy trình thuê bao Premium, thanh toán chuyển khoản & phê duyệt)
+ * [BF-01] LUỒNG 1: QUY TRÌNH THUÊ BAO PREMIUM & DUYỆT GÓI (SERVICE XỬ LÝ NGHIỆP VỤ)
+ * Phụ trách: Cường
  * 
- * Các Use Case liên quan:
- * - [UC-11] Người đọc gửi yêu cầu đăng ký gói cước Premium qua chuyển khoản ngân hàng / QR code
- * - [UC-12] Kiểm tra trạng thái thuê bao còn hạn (Active Subscription) & phân quyền đọc không quảng cáo
- * - [UC-13] Tra cứu lịch sử thanh toán, xem chi tiết biên lai giao dịch của người dùng
- * - [UC-14] Quản trị viên đối soát giao dịch ngân hàng và phê duyệt kích hoạt gói
+ * Các Use Case xử lý:
+ * - [UC-11] Đăng ký gói cước mới (chuyển khoản ngân hàng / QR VietQR), chống spam submit
+ * - [UC-12] Kiểm tra quyền hạn đọc báo không quảng cáo (Access Check)
+ * - [UC-13] Lịch sử biên lai thanh toán & chi tiết hóa đơn
+ * - [UC-14] Admin đối soát sao kê và duyệt/từ chối kích hoạt (cộng dồn hạn nối tiếp)
+ * - [Swimlane Cancel] Hủy đơn chờ thanh toán khi muốn đổi gói
  * ============================================================================
  */
 @Service
-public class ManualPremiumService {
+public class BF1_PremiumService {
 
-    private final PremiumRequestRepository repository;
+    private final BF1_PremiumRepository repository;
 
-    public ManualPremiumService(PremiumRequestRepository repository) {
+    public BF1_PremiumService(BF1_PremiumRepository repository) {
         this.repository = repository;
     }
 
@@ -98,7 +99,7 @@ public class ManualPremiumService {
     public Map<String, Object> access(long userId) {
         var subscriptions = repository.subscriptions(userId);
         var pending = repository.pending(userId);
-        boolean isActive = subscriptions.stream().anyMatch(PremiumRequestRepository.Subscription::current);
+        boolean isActive = subscriptions.stream().anyMatch(BF1_PremiumRepository.Subscription::current);
 
         return Map.of(
                 "active", isActive,

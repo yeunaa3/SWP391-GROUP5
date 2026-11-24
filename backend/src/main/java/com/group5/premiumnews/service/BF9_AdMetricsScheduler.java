@@ -11,24 +11,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * ============================================================================
- * [BF-08][JOB-04 & JOB-06] ADVERTISING TELEMETRY RECONCILIATION & REPORT FINALIZER
+ * [BF-09][JOB-04 & JOB-06] LUỒNG 9: ĐỐI SOÁT TELEMETRY & TỰ ĐỘNG ĐÓNG CHIẾN DỊCH
  * Phụ trách: Cường (Ad Metrics Aggregator, Anti-fraud Reconciler & Campaign Finalizer)
  *
  * Nhiệm vụ chính:
  * 1. [JOB-04] Định kỳ đối soát số liệu lượt xem, click hợp lệ và click không hợp lệ từ
- *    bảng nhật ký thô ad_events sang bảng tổng hợp ad_metrics.
+ *    bảng nhật ký thô ad_events sang bảng tổng hợp ad_metrics (INSERT ... ON DUPLICATE KEY UPDATE).
  * 2. [JOB-06] Tự động chốt chiến dịch sang COMPLETED khi đạt hạn mức quota hiển thị
- *    hoặc quá ngày kết thúc, lập báo cáo bất biến và gửi thông báo cho đối tác.
+ *    hoặc quá ngày kết thúc, khóa bi quan FOR UPDATE, lập báo cáo bất biến và gửi thông báo cho đối tác.
  * ============================================================================
  */
 @Component
-public class AdvertisingMetricsScheduler {
+public class BF9_AdMetricsScheduler {
 
-    private static final Logger log = LoggerFactory.getLogger(AdvertisingMetricsScheduler.class);
+    private static final Logger log = LoggerFactory.getLogger(BF9_AdMetricsScheduler.class);
 
     private final JdbcTemplate jdbc;
 
-    public AdvertisingMetricsScheduler(JdbcTemplate jdbc) {
+    public BF9_AdMetricsScheduler(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -45,12 +45,12 @@ public class AdvertisingMetricsScheduler {
             reconcileMetrics();
             finalizeCompletedCampaigns();
         } catch (Exception ex) {
-            log.error("[JOB-04/06 AdMetricsScheduler] Lỗi trong chu kỳ tổng hợp số liệu quảng cáo: {}", ex.getMessage(), ex);
+            log.error("[JOB-04/06 BF9_AdMetricsScheduler] Lỗi trong chu kỳ tổng hợp số liệu quảng cáo: {}", ex.getMessage(), ex);
         }
     }
 
     /**
-     * [BF-08][JOB-04] Đối soát và tổng hợp số liệu từ ad_events vào ad_metrics
+     * [BF-09][JOB-04] Đối soát và tổng hợp số liệu từ ad_events vào ad_metrics
      * Đảm bảo tính nhất quán dữ liệu giữa bảng telemetry thời gian thực và bảng báo cáo.
      */
     @Transactional
@@ -86,7 +86,7 @@ public class AdvertisingMetricsScheduler {
     }
 
     /**
-     * [BF-08][JOB-06] Tự động chốt các chiến dịch đã đạt quota hoặc hết hạn phân phối
+     * [BF-09][JOB-06] Tự động chốt các chiến dịch đã đạt quota hoặc hết hạn phân phối
      * Chuyển trạng thái sang COMPLETED và ghi nhật ký kiểm toán báo cáo cuối cùng.
      */
     @Transactional
@@ -150,10 +150,8 @@ public class AdvertisingMetricsScheduler {
                 jdbc.update("""
                     INSERT INTO notifications (user_id, title, content, notification_type, related_entity_type, related_entity_id, delivery_status, sent_at)
                     VALUES (?, 'Chiến dịch quảng cáo đã hoàn thành', ?, 'CAMPAIGN', 'CAMPAIGN', ?, 'SENT', CURRENT_TIMESTAMP(6))
-                    """, userId, "Chiến dịch '" + name + "' đã hoàn tất phân phối. Hãy mở trang Báo cáo để xem và tải kết quả.", String.valueOf(campId));
+                    """, userId, summaryNote, String.valueOf(campId));
             }
-
-            log.info("[JOB-06] Hoàn tất và chốt báo cáo cho campaign_id={}: {}", campId, summaryNote);
         }
     }
 }

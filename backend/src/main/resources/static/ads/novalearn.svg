@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300">
+  <defs>
+    <linearGradient id="bg-thepluse" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#881337"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="btn-thepluse" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="300" rx="16" fill="url(#bg-thepluse)"/>
+  <circle cx="1060" cy="150" r="140" fill="#ffffff" opacity="0.04"/>
+  <circle cx="950" cy="60" r="80" fill="#f43f5e" opacity="0.12"/>
+  <rect x="50" y="42" width="280" height="30" rx="15" fill="#f43f5e" opacity="0.25"/>
+  <text x="65" y="63" fill="#fecdd3" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" letter-spacing="1.5">THE PLUSE · BÁO CHÍ CHẤT LƯỢNG CAO</text>
+  <text x="50" y="126" fill="#ffffff" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="38">Đọc báo tập trung. Không quảng cáo.</text>
+  <text x="50" y="172" fill="#cbd5e1" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="20">Cập nhật tin tức thời sự, kinh doanh, công nghệ 24/7 cùng trải nghiệm đọc báo bản quyền đỉnh cao.</text>
+  <g filter="url(#shadow)">
+    <rect x="50" y="206" width="220" height="52" rx="26" fill="url(#btn-thepluse)"/>
+    <text x="82" y="239" fill="#0f172a" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="18">Trải nghiệm ngay →</text>
+  </g>
+  <text x="850" y="180" fill="#ffffff" opacity="0.12" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="110" font-weight="900" letter-spacing="-2">PLUSE</text>
+</svg>

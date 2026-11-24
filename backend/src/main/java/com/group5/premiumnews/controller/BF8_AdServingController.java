@@ -1,11 +1,9 @@
 package com.group5.premiumnews.controller;
 
-import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
-import com.group5.premiumnews.service.AdvertisingDataService;
+import com.group5.premiumnews.service.BF8_AdServingService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -14,26 +12,24 @@ import java.util.Map;
 
 /**
  * ============================================================================
- * [BF-08] ADVERTISING DATA & EVENT TRACKING CONTROLLER
- * Phụ trách: Cường (Ad Serving, Event Logging & Campaign Operations)
+ * [BF-08] LUỒNG 8: PHÂN PHỐI QUẢNG CÁO & GHI NHẬN SỰ KIỆN (REST API CONTROLLER)
+ * Phụ trách: Cường (Ad Serving, Event Logging & Anti-Fraud)
  * 
  * REST API Endpoints:
  * - GET  /api/advertising/banners               : [UC-31] Lấy banner quảng cáo hợp lệ (hỗ trợ targeting)
- * - POST /api/advertising/events/impression     : [UC-31] Ghi nhận lượt hiển thị Impression (chống gian lận)
- * - GET  /api/advertising/click/{creativeId}    : [UC-31] Ghi nhận Click & HTTP 302 Redirect
- * - GET  /api/advertising/campaign-data         : [ADM-09] Giám sát danh sách chiến dịch
- * - GET  /api/advertising/performance           : [ADM-09][BUS-18] Lấy chuỗi chỉ số báo cáo
+ * - POST /api/advertising/events/impression     : [UC-31] Ghi nhận lượt hiển thị Impression (chuẩn IAB 50%/1s)
+ * - GET  /api/advertising/click/{creativeId}    : [UC-31] Ghi nhận Click, chống gian lận & HTTP 302 Redirect
  * - GET  /api/advertising/availability          : [UC-32] Tra cứu các slot đã được đặt chỗ
- * - POST /api/advertising/campaigns/{id}/toggle-status : [UC-39] Tạm dừng / Mở lại chiến dịch
+ * - GET  /api/advertising/booking-review-availability : [ADM-05] Tra cứu slot cho duyệt hợp đồng
  * ============================================================================
  */
 @RestController
 @RequestMapping("/api/advertising")
-public class AdvertisingDataController {
+public class BF8_AdServingController {
 
-    private final AdvertisingDataService service;
+    private final BF8_AdServingService service;
 
-    public AdvertisingDataController(AdvertisingDataService service) {
+    public BF8_AdServingController(BF8_AdServingService service) {
         this.service = service;
     }
 
@@ -54,22 +50,6 @@ public class AdvertisingDataController {
         String device = (agent.contains("ipad") || agent.contains("tablet")) ? "TABLET"
                 : (agent.contains("mobile") || agent.contains("android")) ? "MOBILE" : "DESKTOP";
         return service.banners(position, device, request.getLocale().getCountry(), articleId);
-    }
-
-    /**
-     * [BF-08][ADM-09] Cung cấp danh sách chiến dịch kèm tổng lượt xem/click/CTR cho Ad Manager.
-     */
-    @GetMapping("/campaign-data")
-    public List<Map<String, Object>> campaigns(@AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
-        return service.campaigns(principal);
-    }
-
-    /**
-     * [BF-08][BUS-18][ADM-09] Cung cấp chuỗi số liệu hiệu suất theo ngày để vẽ biểu đồ SVG Trend.
-     */
-    @GetMapping("/performance")
-    public List<Map<String, Object>> performance(@AuthenticationPrincipal AuthenticatedUserPrincipal principal) {
-        return service.performance(principal);
     }
 
     /**
@@ -113,15 +93,5 @@ public class AdvertisingDataController {
     public void click(@PathVariable Long creativeId, HttpServletResponse response, HttpServletRequest request) throws IOException {
         String targetUrl = service.recordEvent(creativeId, "CLICK", request.getSession(true).getId());
         response.sendRedirect(targetUrl);
-    }
-
-    /**
-     * [BF-08][UC-39] TÍNH NĂNG ĐINH CỦA CƯỜNG (Iteration 2): TẠM DỪNG / TIẾP TỤC CHIẾN DỊCH
-     * Cho phép Ad Manager chuyển đổi trạng thái ACTIVE <=> PAUSED ngay lập tức trên màn hình ADM-09.
-     */
-    @PostMapping("/campaigns/{id}/toggle-status")
-    @PreAuthorize("hasAnyRole('AD_MANAGER','ADMINISTRATOR')")
-    public Map<String, Object> toggleStatus(@PathVariable Long id) {
-        return service.toggleCampaignStatus(id);
     }
 }
