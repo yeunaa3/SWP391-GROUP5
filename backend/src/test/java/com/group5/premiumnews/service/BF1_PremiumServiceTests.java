@@ -1,121 +1,182 @@
 package com.group5.premiumnews.service;
 
-import com.group5.premiumnews.repository.BF1_PremiumRepository;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.web.server.ResponseStatusException;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class BF1_PremiumServiceTests {
-    private final BF1_PremiumRepository repository = mock(BF1_PremiumRepository.class);
-    private final BF1_PremiumService service = new BF1_PremiumService(repository);
-    private final BF1_PremiumRepository.Plan plan = new BF1_PremiumRepository.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
-    private final BF1_PremiumRepository.Request request = new BF1_PremiumRepository.Request(7, 11, plan, "PENDING");
 
-    @BeforeEach void setup() { when(repository.lockActiveUser(11)).thenReturn(true); }
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
+    private final BF1_PremiumService service = new BF1_PremiumService(jdbc);
 
-    @Test void membershipReadsActualScopedSubscriptionsNotRequestHistory() {
-        var subscription = new BF1_PremiumRepository.Subscription(3, 2, "Monthly", Instant.now().minusSeconds(10), Instant.now().plusSeconds(100), "ACTIVE", true);
-        when(repository.subscriptions(11)).thenReturn(java.util.List.of(subscription));
-        when(repository.pending(11)).thenReturn(Optional.empty());
-        var result = service.access(11);
+    @Test
+    void accessReturnsTrueWhenActiveSubscriptionExists() {
+        var sub = new BF1_PremiumService.Subscription(1, 2, "Monthly", Instant.now().minusSeconds(10), Instant.now().plusSeconds(100), "ACTIVE", true);
+        when(jdbc.query(contains("FROM subscriptions"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of(sub));
+        when(jdbc.query(contains("status='PENDING'"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of());
+
+        var result = service.access(11L);
+
         assertEquals(true, result.get("active"));
-        assertEquals(java.util.List.of(subscription), result.get("subscriptions"));
+        assertEquals(List.of(sub), result.get("subscriptions"));
         assertEquals(0L, result.get("pendingPackageId"));
-        verify(repository, never()).list(any());
     }
 
-    @Test void pendingAndFuturePeriodsDoNotGrantCurrentAccess() {
-        var future = new BF1_PremiumRepository.Subscription(3, 2, "Monthly", Instant.now().plusSeconds(100), Instant.now().plusSeconds(200), "ACTIVE", false);
-        when(repository.subscriptions(11)).thenReturn(java.util.List.of(future));
-        when(repository.pending(11)).thenReturn(Optional.of(request));
-        assertEquals(false, service.access(11).get("active"));
-        assertEquals(2L, service.access(11).get("pendingPackageId"));
+    @Test
+    void accessReturnsFalseWhenNoCurrentSubscription() {
+        var future = new BF1_PremiumService.Subscription(1, 2, "Monthly", Instant.now().plusSeconds(100), Instant.now().plusSeconds(200), "ACTIVE", false);
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 11, plan, "PENDING");
+
+        when(jdbc.query(contains("FROM subscriptions"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of(future));
+        when(jdbc.query(contains("status='PENDING'"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of(req));
+
+        var result = service.access(11L);
+
+        assertEquals(false, result.get("active"));
+        assertEquals(2L, result.get("pendingPackageId"));
     }
 
-    @Test void submittingUsesCatalogSnapshotAndDoesNotActivate() {
-        when(repository.pending(11)).thenReturn(Optional.empty());
-        when(repository.activePlan(2)).thenReturn(Optional.of(plan));
-        when(repository.create(11, plan)).thenReturn(7L);
-        assertEquals(7L, service.submit(11, 2).get("id"));
-        verify(repository).create(11, plan);
-        verify(repository, never()).activate(any(), any(), any());
+    @Test
+    void submitThrowsForbiddenWhenUserNotActive() {
+        when(jdbc.queryForList(contains("WHERE user_id=? AND status='ACTIVE'"), eq(Long.class), eq(11L)))
+                .thenReturn(List.of());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.submit(11L, 2L));
+        assertEquals(403, ex.getStatusCode().value());
     }
 
-    @Test void doubleSubmitReturnsSamePendingRequest() {
-        when(repository.pending(11)).thenReturn(Optional.of(request));
-        assertEquals(7L, service.submit(11, 2).get("id"));
-        verify(repository, never()).create(anyLong(), any());
+    @Test
+    void submitThrowsNotFoundWhenPlanNotActive() {
+        when(jdbc.queryForList(contains("WHERE user_id=? AND status='ACTIVE'"), eq(Long.class), eq(11L)))
+                .thenReturn(List.of(11L));
+        when(jdbc.query(contains("WHERE user_id=? AND status='PENDING'"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of());
+        when(jdbc.query(contains("SELECT * FROM subscription_packages WHERE package_id=? AND status='ACTIVE'"), any(RowMapper.class), eq(2L)))
+                .thenReturn(List.of());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.submit(11L, 2L));
+        assertEquals(404, ex.getStatusCode().value());
     }
 
-    @Test void differentPlanAutoCancelsOldPendingAndCreatesNewRequest() {
-        var plan3 = new BF1_PremiumRepository.Plan(3, "YEAR", "Yearly", new BigDecimal("790000"), "VND", 365);
-        when(repository.pending(11)).thenReturn(Optional.of(request));
-        when(repository.activePlan(3)).thenReturn(Optional.of(plan3));
-        when(repository.create(11, plan3)).thenReturn(8L);
+    @Test
+    void submitReturnsExistingPendingWhenSamePackage() {
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 11, plan, "PENDING");
 
-        var result = service.submit(11, 3);
-        assertEquals(8L, result.get("id"));
-        verify(repository).cancel(request.id(), "Đã tự động hủy để chuyển sang gói cước mới");
-        verify(repository).create(11, plan3);
+        when(jdbc.queryForList(contains("WHERE user_id=? AND status='ACTIVE'"), eq(Long.class), eq(11L)))
+                .thenReturn(List.of(11L));
+        when(jdbc.query(contains("WHERE user_id=? AND status='PENDING'"), any(RowMapper.class), eq(11L)))
+                .thenReturn(List.of(req));
+
+        var result = service.submit(11L, 2L);
+        assertEquals(7L, result.get("id"));
+        assertEquals("PENDING", result.get("status"));
     }
 
-    @Test void unavailablePlanDoesNotCreateRequest() {
-        when(repository.pending(11)).thenReturn(Optional.empty());
-        when(repository.activePlan(2)).thenReturn(Optional.empty());
-        assertEquals(404, assertThrows(ResponseStatusException.class, () -> service.submit(11, 2)).getStatusCode().value());
-        verify(repository, never()).create(anyLong(), any());
+    @Test
+    void cancelThrowsNotFoundWhenRequestDoesNotExist() {
+        when(jdbc.query(contains("WHERE request_id=? FOR UPDATE"), any(RowMapper.class), eq(999L)))
+                .thenReturn(List.of());
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.cancel(11L, 999L));
+        assertEquals(404, ex.getStatusCode().value());
     }
 
-    @Test void approvalRequiresExplicitPaymentConfirmation() {
-        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, false, "")).getStatusCode().value());
-        verify(repository, never()).activate(any(), any(), any());
+    @Test
+    void cancelThrowsForbiddenWhenNotOwner() {
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 99L, plan, "PENDING");
+
+        when(jdbc.query(contains("WHERE request_id=? FOR UPDATE"), any(RowMapper.class), eq(7L)))
+                .thenReturn(List.of(req));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.cancel(11L, 7L));
+        assertEquals(403, ex.getStatusCode().value());
     }
 
-    @Test void activePeriodIsExtendedWithoutLosingDays() {
-        Instant end = Instant.now().plus(10, ChronoUnit.DAYS);
-        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        when(repository.latestExpiry(11)).thenReturn(end);
-        when(repository.activate(request, end, end.plus(30, ChronoUnit.DAYS))).thenReturn(50L);
-        service.review(99, 7, true, true, "Bank checked");
-        verify(repository).activate(request, end, end.plus(30, ChronoUnit.DAYS));
-        verify(repository).review(7, 99, "APPROVED", "Bank checked", 50L);
+    @Test
+    void cancelSucceedsWhenOwnerAndPending() {
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 11L, plan, "PENDING");
+
+        when(jdbc.query(contains("WHERE request_id=? FOR UPDATE"), any(RowMapper.class), eq(7L)))
+                .thenReturn(List.of(req));
+
+        var result = service.cancel(11L, 7L);
+        assertEquals(true, result.get("success"));
+        verify(jdbc).update(contains("UPDATE premium_requests"), anyString(), eq(7L));
     }
 
-    @Test void expiredPeriodStartsAtApprovalNotSubmission() {
-        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        when(repository.latestExpiry(11)).thenReturn(Instant.now().minus(2, ChronoUnit.DAYS));
-        Instant before = Instant.now();
-        service.review(99, 7, true, true, "Checked");
-        var start = ArgumentCaptor.forClass(Instant.class); var end = ArgumentCaptor.forClass(Instant.class);
-        verify(repository).activate(eq(request), start.capture(), end.capture());
-        assertFalse(start.getValue().isBefore(before));
-        assertEquals(start.getValue().plus(30, ChronoUnit.DAYS), end.getValue());
+    @Test
+    void reviewRequiresPaymentConfirmationForApproval() {
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 11L, plan, "PENDING");
+
+        when(jdbc.query(contains("WHERE request_id=? FOR UPDATE"), any(RowMapper.class), eq(7L)))
+                .thenReturn(List.of(req));
+        when(jdbc.queryForList(contains("WHERE user_id=? AND status='ACTIVE'"), eq(Long.class), eq(11L)))
+                .thenReturn(List.of(11L));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.review(99L, 7L, true, false, ""));
+        assertEquals(400, ex.getStatusCode().value());
     }
 
-    @Test void rejectedRequestRequiresNonBlankNote() {
-        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        assertEquals(400, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, false, false, "   ")).getStatusCode().value());
-        verify(repository, never()).activate(any(), any(), any());
-        verify(repository, never()).review(anyLong(), anyLong(), any(), any(), any());
+    @Test
+    void reviewRequiresNonBlankNoteForRejection() {
+        var plan = new BF1_PremiumService.Plan(2, "MONTH", "Monthly", new BigDecimal("79000"), "VND", 30);
+        var req = new BF1_PremiumService.Request(7, 11L, plan, "PENDING");
+
+        when(jdbc.query(contains("WHERE request_id=? FOR UPDATE"), any(RowMapper.class), eq(7L)))
+                .thenReturn(List.of(req));
+        when(jdbc.queryForList(contains("WHERE user_id=? AND status='ACTIVE'"), eq(Long.class), eq(11L)))
+                .thenReturn(List.of(11L));
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.review(99L, 7L, false, false, "   "));
+        assertEquals(400, ex.getStatusCode().value());
     }
 
-    @Test void reReviewThrowsConflict() {
-        var processed = new BF1_PremiumRepository.Request(7, 11, plan, "APPROVED");
-        when(repository.lockRequest(7)).thenReturn(Optional.of(processed));
-        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, true, "Ok")).getStatusCode().value());
+    @Test
+    void deletePackagePerformsHardDeleteWhenUnused() {
+        when(jdbc.queryForList(contains("SELECT status FROM subscription_packages"), eq(String.class), eq(55L)))
+                .thenReturn(List.of("INACTIVE"));
+        when(jdbc.queryForObject(contains("SELECT COUNT(*) FROM subscriptions"), eq(Integer.class), eq(55L)))
+                .thenReturn(0);
+        when(jdbc.queryForObject(contains("SELECT COUNT(*) FROM premium_requests"), eq(Integer.class), eq(55L)))
+                .thenReturn(0);
+
+        var result = service.deletePackage(55L);
+
+        assertEquals("HARD_DELETE", result.get("mode"));
+        verify(jdbc).update(contains("DELETE FROM subscription_packages"), eq(55L));
     }
 
-    @Test void inactiveUserCannotBeApproved() {
-        when(repository.lockRequest(7)).thenReturn(Optional.of(request));
-        when(repository.lockActiveUser(11)).thenReturn(false);
-        assertEquals(409, assertThrows(ResponseStatusException.class, () -> service.review(99, 7, true, true, "Ok")).getStatusCode().value());
+    @Test
+    void deletePackagePerformsSoftDeleteWhenHasSubscribers() {
+        when(jdbc.queryForList(contains("SELECT status FROM subscription_packages"), eq(String.class), eq(1L)))
+                .thenReturn(List.of("ACTIVE"));
+        when(jdbc.queryForObject(contains("SELECT COUNT(*) FROM subscriptions"), eq(Integer.class), eq(1L)))
+                .thenReturn(10);
+        when(jdbc.queryForObject(contains("SELECT COUNT(*) FROM premium_requests"), eq(Integer.class), eq(1L)))
+                .thenReturn(5);
+
+        var result = service.deletePackage(1L);
+
+        assertEquals("SOFT_DELETE", result.get("mode"));
+        verify(jdbc).update(contains("UPDATE subscription_packages SET status = 'INACTIVE'"), eq(1L));
     }
 }

@@ -1,6 +1,5 @@
 package com.group5.premiumnews.controller;
 
-import com.group5.premiumnews.repository.BF1_PremiumRepository;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import com.group5.premiumnews.service.BF1_PremiumService;
 import jakarta.validation.Valid;
@@ -77,7 +76,7 @@ public class BF1_PremiumController {
      */
     @PostMapping("/admin/packages")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public Map<String, Object> create(@RequestBody BF1_PremiumRepository.PackagePayload payload) {
+    public Map<String, Object> create(@RequestBody BF1_PremiumService.PackagePayload payload) {
         return service.createPackage(payload);
     }
 
@@ -86,7 +85,7 @@ public class BF1_PremiumController {
      */
     @PutMapping("/admin/packages/{id}")
     @PreAuthorize("hasRole('ADMINISTRATOR')")
-    public Map<String, Object> update(@PathVariable long id, @RequestBody BF1_PremiumRepository.PackagePayload payload) {
+    public Map<String, Object> update(@PathVariable long id, @RequestBody BF1_PremiumService.PackagePayload payload) {
         return service.updatePackage(id, payload);
     }
 
