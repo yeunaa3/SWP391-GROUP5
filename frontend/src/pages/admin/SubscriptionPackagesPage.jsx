@@ -184,23 +184,27 @@ export default function SubscriptionPackagesPage() {
   }
 
   async function handleDelete(pkg) {
-    if (
-      !window.confirm(
-        t(
-          `Bạn có chắc chắn muốn ngưng kích hoạt gói "${pkg.name}" (${pkg.code})?`,
+    const isCurrentlyActive = pkg.status === "ACTIVE";
+    const confirmMessage = isCurrentlyActive
+      ? t(
+          `Bạn có chắc chắn muốn tạm ẩn gói "${pkg.name}" (${pkg.code}) khỏi quầy bán?`,
           `Are you sure you want to deactivate package "${pkg.name}" (${pkg.code})?`
         )
-      )
-    ) {
+      : t(
+          `Gói "${pkg.name}" (${pkg.code}) đang ở trạng thái Tạm ẩn.\nBạn có chắc chắn muốn XÓA VĨNH VIỄN gói này khỏi hệ thống không?\n(Lưu ý: Nếu gói chưa có ai mua, hệ thống sẽ xóa hẳn khỏi cơ sở dữ liệu. Nếu gói đã có lịch sử thuê bao, hệ thống sẽ bảo tồn để không vi phạm ràng buộc).`,
+          `Are you sure you want to permanently delete package "${pkg.name}" (${pkg.code})?`
+        );
+
+    if (!window.confirm(confirmMessage)) {
       return;
     }
     try {
-      await deletePackage(pkg.id);
+      const res = await deletePackage(pkg.id);
       setPkgSuccess(
-        t(
-          `Đã ngưng kích hoạt gói ${pkg.name}.`,
-          `Package ${pkg.name} has been deactivated.`
-        )
+        res?.message ||
+          (isCurrentlyActive
+            ? t(`Đã tạm ẩn gói ${pkg.name}.`, `Package ${pkg.name} has been deactivated.`)
+            : t(`Đã xử lý xóa gói ${pkg.name}.`, `Package ${pkg.name} has been processed.`))
       );
       await loadPackages();
     } catch (err) {
@@ -570,8 +574,9 @@ export default function SubscriptionPackagesPage() {
                                 fontWeight: "600",
                                 cursor: "pointer",
                               }}
+                              title={isActive ? t("Tạm ẩn gói cước", "Deactivate package") : t("Xóa vĩnh viễn khỏi Database nếu chưa có ai mua", "Permanently delete if unused")}
                             >
-                              {t("Xóa", "Delete")}
+                              {isActive ? t("Tạm ẩn", "Deactivate") : t("Xóa hẳn", "Delete")}
                             </button>
                           </div>
                         </td>

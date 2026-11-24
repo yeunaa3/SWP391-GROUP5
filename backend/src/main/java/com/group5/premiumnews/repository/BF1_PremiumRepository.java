@@ -13,15 +13,13 @@ import org.springframework.stereotype.Repository;
 
 /**
  * ============================================================================
- * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM & GIAO DỊCH THANH TOÁN (REPOSITORY TƯƠNG TÁC DB)
+ * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM, QUẢN LÝ GÓI CƯỚC & GIAO DỊCH (REPOSITORY TƯƠNG TÁC DB)
  * Phụ trách: Cường
  *
  * Chức năng tương tác cơ sở dữ liệu:
- * 1. subscriptions: Lấy lịch sử và kiểm tra thuê bao còn hạn (start_at <= NOW < end_at)
- * 2. lockActiveUser: Khóa bi quan user FOR UPDATE kiểm tra tài khoản còn ACTIVE
- * 3. pending: Kiểm tra đơn PENDING chống spam submit (kết hợp cột ảo conditional unique index)
- * 4. lockRequest: Khóa bi quan dòng premium_requests FOR UPDATE khi Admin duyệt
- * 5. activate: Ghi nhận gói mới vào subscriptions, sinh biên lai vào transactions, cấp role SUBSCRIBER
+ * 1. CRUD Gói cước (subscription_packages): listAdminPackages, listPublicPackages, create, update, toggle, delete (Smart Delete)
+ * 2. Đăng ký & Thuê bao (subscriptions): subscriptions, lockActiveUser, activePlan, pending, lockRequest
+ * 3. Kích hoạt & Thanh toán: create request, activate subscription, cancel, review, transactions, transactionDetail
  * ============================================================================
  */
 @Repository
@@ -29,12 +27,124 @@ public class BF1_PremiumRepository {
     public record Subscription(long id, long packageId, String packageName, Instant startAt, Instant endAt, String status, boolean current) {}
     public record Plan(long id, String code, String name, BigDecimal amount, String currency, int days) {}
     public record Request(long id, long userId, Plan plan, String status) {}
+    public record PackagePayload(
+            String code,
+            String name,
+            String description,
+            BigDecimal price,
+            String currency,
+            int durationDays,
+            int displayOrder,
+            String status
+    ) {}
 
     private final JdbcTemplate jdbc;
 
     public BF1_PremiumRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
+
+    // =========================================================================
+    // 1. QUẢN LÝ DANH MỤC GÓI CƯỚC (SUBSCRIPTION_PACKAGES)
+    // =========================================================================
+
+    public List<Map<String, Object>> listAdminPackages() {
+        return jdbc.queryForList("""
+                SELECT package_id AS id, code, name, description, benefits, price, currency,
+                       duration_days AS durationDays, display_order AS displayOrder, status,
+                       created_at AS createdAt, updated_at AS updatedAt
+                FROM subscription_packages
+                ORDER BY display_order ASC, package_id ASC
+                """);
+    }
+
+    public List<Map<String, Object>> listPublicPackages() {
+        return jdbc.queryForList("""
+                SELECT package_id AS id, code, name, description, benefits, price, currency,
+                       duration_days AS durationDays, display_order AS displayOrder, status
+                FROM subscription_packages
+                WHERE status = 'ACTIVE'
+                ORDER BY display_order ASC, package_id ASC
+                """);
+    }
+
+    public Integer countPackageCode(String code) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM subscription_packages WHERE code = ?", Integer.class, code);
+    }
+
+    public void createPackage(PackagePayload payload, String status, String currency) {
+        jdbc.update("""
+                INSERT INTO subscription_packages(code, name, description, price, currency, duration_days, display_order, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                payload.code().trim().toUpperCase(),
+                payload.name().trim(),
+                payload.description() != null ? payload.description().trim() : "",
+                payload.price(),
+                currency,
+                payload.durationDays(),
+                payload.displayOrder(),
+                status
+        );
+    }
+
+    public int updatePackage(long id, PackagePayload payload) {
+        return jdbc.update("""
+                UPDATE subscription_packages
+                SET name = ?, description = ?, price = ?, duration_days = ?, display_order = ?, status = ?, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE package_id = ?
+                """,
+                payload.name().trim(),
+                payload.description() != null ? payload.description().trim() : "",
+                payload.price(),
+                payload.durationDays(),
+                payload.displayOrder(),
+                payload.status() != null ? payload.status() : "ACTIVE",
+                id
+        );
+    }
+
+    public String getPackageStatus(long id) {
+        List<String> list = jdbc.queryForList("SELECT status FROM subscription_packages WHERE package_id = ?", String.class, id);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    public void updatePackageStatus(long id, String status) {
+        jdbc.update("UPDATE subscription_packages SET status = ?, updated_at = CURRENT_TIMESTAMP(6) WHERE package_id = ?", status, id);
+    }
+
+    /**
+     * [BF-01][Smart Delete] Xóa thông minh gói cước:
+     * - Nếu chưa có ai mua (gói test): XÓA HẲN khỏi database (DELETE).
+     * - Nếu đã có người mua trong lịch sử: Chuyển sang INACTIVE (Soft Delete) để bảo toàn khóa ngoại ON DELETE RESTRICT.
+     */
+    public Map<String, Object> deletePackage(long id) {
+        String currentStatus = getPackageStatus(id);
+        if (currentStatus == null) {
+            return null;
+        }
+
+        Integer subCount = jdbc.queryForObject("SELECT COUNT(*) FROM subscriptions WHERE package_id = ?", Integer.class, id);
+        Integer reqCount = jdbc.queryForObject("SELECT COUNT(*) FROM premium_requests WHERE package_id = ?", Integer.class, id);
+        boolean hasHistory = (subCount != null && subCount > 0) || (reqCount != null && reqCount > 0);
+
+        if (!hasHistory) {
+            // Gói test chưa từng có phát sinh giao dịch -> Xóa cứng vĩnh viễn khỏi Database
+            jdbc.update("DELETE FROM subscription_packages WHERE package_id = ?", id);
+            return Map.of("message", "Đã xóa vĩnh viễn gói cước khỏi hệ thống", "mode", "HARD_DELETE", "id", id);
+        } else {
+            // Gói đã có giao dịch -> Xóa mềm sang INACTIVE
+            updatePackageStatus(id, "INACTIVE");
+            if ("INACTIVE".equalsIgnoreCase(currentStatus)) {
+                return Map.of("message", "Gói này đã ở trạng thái Tạm ẩn (bảo tồn do đã có dữ liệu hợp đồng lịch sử)", "mode", "ALREADY_INACTIVE", "id", id);
+            }
+            return Map.of("message", "Đã chuyển gói sang trạng thái Tạm ẩn (bảo toàn lịch sử giao dịch)", "mode", "SOFT_DELETE", "id", id);
+        }
+    }
+
+    // =========================================================================
+    // 2. THUÊ BAO NGƯỜI DÙNG & DUYỆT ĐƠN (BF-01 CORE FLOW)
+    // =========================================================================
 
     public List<Subscription> subscriptions(long userId) {
         return jdbc.query("""

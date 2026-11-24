@@ -45,6 +45,17 @@ Trong VS Code hoặc IntelliJ IDEA:
 * **Hỏi: "Em khóa giao dịch thế nào để tránh 2 Admin cùng duyệt 1 đơn?"**
   * **Mở:** `BF1_PremiumRepository.java` $\rightarrow$ hàm `lockRequest()`:
     `SELECT * FROM premium_requests WHERE request_id=? FOR UPDATE`. Khóa bi quan hàng (row-level pessimistic lock).
+* **Hỏi: "Admin quản lý danh mục gói cước (Thêm, Sửa, Bật/Tắt, Xóa) ở đâu?"**
+  * **Mở:** `BF1_PremiumController.java` & `BF1_PremiumService.java` $\rightarrow$ các hàm:
+    * `listAdminPackages()` (GET `/api/admin/packages`): Lấy toàn bộ gói
+    * `createPackage()` (POST `/api/admin/packages`): Tạo gói mới
+    * `updatePackage()` (PUT `/api/admin/packages/{id}`): Sửa giá, thời hạn, tên
+    * `togglePackageStatus()` (PATCH `/api/admin/packages/{id}/toggle`): Bật/Tắt `ACTIVE` $\Leftrightarrow$ `INACTIVE`
+    * `deletePackage()` (DELETE `/api/admin/packages/{id}`): **Xóa thông minh (Smart Delete)**
+* **Hỏi: "Cơ chế Xóa thông minh (Smart Delete) của gói cước hoạt động ra sao?"**
+  * **Mở:** `BF1_PremiumRepository.java` $\rightarrow$ hàm `deletePackage()`:
+    * **Nếu gói test chưa có ai mua:** Chạy lệnh `DELETE FROM subscription_packages WHERE package_id = ?` (Xóa hẳn vĩnh viễn khỏi DB).
+    * **Nếu gói đã có người mua trong lịch sử:** Chạy lệnh `UPDATE subscription_packages SET status = 'INACTIVE'` (Soft Delete) để bảo toàn khóa ngoại `ON DELETE RESTRICT` với bảng `subscriptions` và bảo toàn chứng từ kế toán.
 
 ---
 

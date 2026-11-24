@@ -1,6 +1,7 @@
 package com.group5.premiumnews.service;
 
 import com.group5.premiumnews.repository.BF1_PremiumRepository;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -12,10 +13,11 @@ import org.springframework.web.server.ResponseStatusException;
 
 /**
  * ============================================================================
- * [BF-01] LUỒNG 1: QUY TRÌNH THUÊ BAO PREMIUM & DUYỆT GÓI (SERVICE XỬ LÝ NGHIỆP VỤ)
+ * [BF-01] LUỒNG 1: QUY TRÌNH THUÊ BAO PREMIUM, QUẢN LÝ GÓI & DUYỆT ĐƠN (SERVICE XỬ LÝ)
  * Phụ trách: Cường
  * 
  * Các Use Case xử lý:
+ * - [UC-35][CFG-05] Quản trị viên quản lý danh mục gói cước (Thêm, Sửa, Bật/Tắt, Xóa thông minh Smart Delete)
  * - [UC-11] Đăng ký gói cước mới (chuyển khoản ngân hàng / QR VietQR), chống spam submit
  * - [UC-12] Kiểm tra quyền hạn đọc báo không quảng cáo (Access Check)
  * - [UC-13] Lịch sử biên lai thanh toán & chi tiết hóa đơn
@@ -32,13 +34,98 @@ public class BF1_PremiumService {
         this.repository = repository;
     }
 
+    // =========================================================================
+    // 1. QUẢN LÝ DANH MỤC GÓI CƯỚC PREMIUM (UC-35)
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listAdminPackages() {
+        return repository.listAdminPackages();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listPublicPackages() {
+        return repository.listPublicPackages();
+    }
+
+    @Transactional
+    public Map<String, Object> createPackage(BF1_PremiumRepository.PackagePayload payload) {
+        if (payload.code() == null || payload.code().isBlank() || payload.name() == null || payload.name().isBlank()) {
+            throw error(HttpStatus.BAD_REQUEST, "Mã gói và tên gói không được để trống.");
+        }
+        if (payload.price() == null || payload.price().compareTo(BigDecimal.ZERO) < 0) {
+            throw error(HttpStatus.BAD_REQUEST, "Giá gói cước không hợp lệ.");
+        }
+        if (payload.durationDays() <= 0) {
+            throw error(HttpStatus.BAD_REQUEST, "Thời hạn gói cước phải lớn hơn 0 ngày.");
+        }
+
+        Integer count = repository.countPackageCode(payload.code().trim());
+        if (count != null && count > 0) {
+            throw error(HttpStatus.CONFLICT, "Mã gói cước '" + payload.code().trim().toUpperCase() + "' đã tồn tại.");
+        }
+
+        String currency = (payload.currency() != null && !payload.currency().isBlank()) ? payload.currency().trim().toUpperCase() : "VND";
+        String status = (payload.status() != null && !payload.status().isBlank()) ? payload.status().trim().toUpperCase() : "ACTIVE";
+
+        repository.createPackage(payload, status, currency);
+        return Map.of("message", "Tạo gói cước mới thành công", "code", payload.code().trim().toUpperCase());
+    }
+
+    @Transactional
+    public Map<String, Object> updatePackage(long id, BF1_PremiumRepository.PackagePayload payload) {
+        if (payload.name() == null || payload.name().isBlank()) {
+            throw error(HttpStatus.BAD_REQUEST, "Tên gói cước không được để trống.");
+        }
+        if (payload.price() == null || payload.price().compareTo(BigDecimal.ZERO) < 0) {
+            throw error(HttpStatus.BAD_REQUEST, "Giá gói cước không hợp lệ.");
+        }
+        if (payload.durationDays() <= 0) {
+            throw error(HttpStatus.BAD_REQUEST, "Thời hạn gói cước phải lớn hơn 0 ngày.");
+        }
+
+        int updated = repository.updatePackage(id, payload);
+        if (updated == 0) {
+            throw error(HttpStatus.NOT_FOUND, "Không tìm thấy gói cước với ID " + id);
+        }
+
+        return Map.of("message", "Cập nhật thông tin gói cước thành công", "id", id);
+    }
+
+    @Transactional
+    public Map<String, Object> togglePackageStatus(long id) {
+        String currentStatus = repository.getPackageStatus(id);
+        if (currentStatus == null) {
+            throw error(HttpStatus.NOT_FOUND, "Không tìm thấy gói cước với ID " + id);
+        }
+
+        String nextStatus = "ACTIVE".equalsIgnoreCase(currentStatus) ? "INACTIVE" : "ACTIVE";
+        repository.updatePackageStatus(id, nextStatus);
+
+        return Map.of("message", "Đã đổi trạng thái gói sang " + nextStatus, "status", nextStatus);
+    }
+
+    /**
+     * [BF-01][Smart Delete] Xóa thông minh gói cước:
+     * - Nếu gói test chưa có ai mua: Xóa hẳn khỏi Database (DELETE).
+     * - Nếu gói đã có lịch sử thuê bao: Chuyển sang Tạm ẩn (INACTIVE) để bảo toàn khóa ngoại ON DELETE RESTRICT.
+     */
+    @Transactional
+    public Map<String, Object> deletePackage(long id) {
+        Map<String, Object> result = repository.deletePackage(id);
+        if (result == null) {
+            throw error(HttpStatus.NOT_FOUND, "Không tìm thấy gói cước với ID " + id);
+        }
+        return result;
+    }
+
+    // =========================================================================
+    // 2. NGHIỆP VỤ ĐĂNG KÝ, THANH TOÁN & DUYỆT GÓI (BF-01 CORE)
+    // =========================================================================
+
     /**
      * [BF-01][UC-11][PRE-04] Người đọc gửi yêu cầu mua gói Premium mới.
      * Khóa dòng tài khoản để tránh gửi trùng lặp, kiểm tra nếu đã có yêu cầu PENDING thì không tạo thêm.
-     *
-     * @param userId ID người đọc
-     * @param packageId ID gói cước Premium được chọn
-     * @return Map chứa id yêu cầu và trạng thái PENDING
      */
     @Transactional
     public Map<String, Object> submit(long userId, long packageId) {
@@ -90,10 +177,6 @@ public class BF1_PremiumService {
 
     /**
      * [BF-01][UC-12][Subscription Check] Kiểm tra trạng thái bản quyền Premium của người đọc.
-     * Xác định xem người dùng có thuê bao ACTIVE còn hiệu lực hay không để cấp quyền Đọc sạch không quảng cáo.
-     *
-     * @param userId ID người đọc
-     * @return Map chứa cờ active (true/false), danh sách subscriptions, và gói đang chờ duyệt (nếu có)
      */
     @Transactional(readOnly = true)
     public Map<String, Object> access(long userId) {
@@ -110,16 +193,6 @@ public class BF1_PremiumService {
 
     /**
      * [BF-01][UC-14][PRE-04] Quản trị viên đối soát sao kê ngân hàng và phê duyệt kích hoạt gói.
-     * Nếu duyệt (approve = true):
-     * 1. Bắt buộc admin phải đánh dấu paymentConfirmed = true.
-     * 2. Tự động tính ngày bắt đầu và kết thúc (nối tiếp hạn cũ nếu đang có gói còn hạn).
-     * 3. Kích hoạt vai trò SUBSCRIBER và lưu nhật ký kiểm toán.
-     *
-     * @param adminId ID quản trị viên duyệt
-     * @param id ID yêu cầu mua gói
-     * @param approve true nếu chấp thuận kích hoạt, false nếu từ chối
-     * @param paymentConfirmed Xác nhận đã nhận được tiền trong tài khoản ngân hàng
-     * @param note Lý do từ chối hoặc ghi chú nghiệp vụ
      */
     @Transactional
     public void review(long adminId, long id, boolean approve, boolean paymentConfirmed, String note) {

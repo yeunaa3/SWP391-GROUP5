@@ -1,5 +1,6 @@
 package com.group5.premiumnews.controller;
 
+import com.group5.premiumnews.repository.BF1_PremiumRepository;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import com.group5.premiumnews.service.BF1_PremiumService;
 import jakarta.validation.Valid;
@@ -14,18 +15,27 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * ============================================================================
- * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM & GIAO DỊCH THANH TOÁN (REST API CONTROLLER)
+ * [BF-01] LUỒNG 1: THUÊ BAO PREMIUM, QUẢN LÝ GÓI & GIAO DỊCH (REST API CONTROLLER)
  * Phụ trách: Cường
  * 
  * REST API Endpoints:
- * - GET  /api/premium/access                 : [UC-12] Kiểm tra trạng thái gói cước đang sở hữu
- * - POST /api/premium/requests               : [UC-11] Gửi yêu cầu mua gói mới (chờ chuyển khoản)
- * - POST /api/premium/requests/{id}/cancel   : [Swimlane Cancel] Hủy yêu cầu chờ thanh toán
- * - GET  /api/premium/requests               : [UC-11] Xem danh sách yêu cầu cá nhân
- * - GET  /api/premium/transactions           : [UC-13] Lịch sử thanh toán của người dùng
- * - GET  /api/premium/transactions/{id}      : [UC-13] Chi tiết biên lai giao dịch
- * - GET  /api/admin/premium-requests         : [UC-14] Hàng đợi yêu cầu chờ Admin duyệt
- * - POST /api/admin/premium-requests/{id}/review : [UC-14] Admin phê duyệt / từ chối kích hoạt
+ * - DANH MỤC GÓI CƯỚC (PACKAGES):
+ *   + GET  /api/public/packages                  : [UC-11][PRE-01] Danh sách gói đang mở bán cho độc giả
+ *   + GET  /api/admin/packages                   : [UC-35][CFG-05] Danh sách toàn bộ gói cước cho Quản trị viên
+ *   + POST /api/admin/packages                   : [UC-35][CFG-05] Tạo gói cước mới
+ *   + PUT  /api/admin/packages/{id}              : [UC-35][CFG-05] Cập nhật gói cước
+ *   + PATCH /api/admin/packages/{id}/toggle      : [UC-35][CFG-05] Bật / Tắt gói cước (ACTIVE <-> INACTIVE)
+ *   + DELETE /api/admin/packages/{id}            : [UC-35][CFG-05] Xóa thông minh (Xóa hẳn nếu chưa có ai mua / Tạm ẩn nếu đã có lịch sử)
+ * 
+ * - ĐĂNG KÝ & DUYỆT THUÊ BAO (SUBSCRIPTIONS):
+ *   + GET  /api/premium/access                   : [UC-12] Kiểm tra trạng thái gói cước đang sở hữu
+ *   + POST /api/premium/requests                 : [UC-11] Gửi yêu cầu mua gói mới (chờ chuyển khoản)
+ *   + POST /api/premium/requests/{id}/cancel     : [Swimlane Cancel] Hủy yêu cầu chờ thanh toán
+ *   + GET  /api/premium/requests                 : [UC-11] Xem danh sách yêu cầu cá nhân
+ *   + GET  /api/premium/transactions             : [UC-13] Lịch sử thanh toán của người dùng
+ *   + GET  /api/premium/transactions/{id}        : [UC-13] Chi tiết biên lai giao dịch
+ *   + GET  /api/admin/premium-requests           : [UC-14] Hàng đợi yêu cầu chờ Admin duyệt
+ *   + POST /api/admin/premium-requests/{id}/review : [UC-14] Admin phê duyệt / từ chối kích hoạt
  * ============================================================================
  */
 @RestController
@@ -40,6 +50,69 @@ public class BF1_PremiumController {
     public BF1_PremiumController(BF1_PremiumService service) {
         this.service = service;
     }
+
+    // =========================================================================
+    // 1. ENDPOINTS QUẢN LÝ GÓI CƯỚC (UC-35)
+    // =========================================================================
+
+    /**
+     * [UC-11][PRE-01] Danh sách gói cước công khai đang ACTIVE cho độc giả xem.
+     */
+    @GetMapping("/public/packages")
+    public List<Map<String, Object>> publicList() {
+        return service.listPublicPackages();
+    }
+
+    /**
+     * [UC-35][CFG-05] Lấy danh sách tất cả các gói cước cho Quản trị viên (bao gồm ACTIVE, INACTIVE).
+     */
+    @GetMapping("/admin/packages")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public List<Map<String, Object>> adminList() {
+        return service.listAdminPackages();
+    }
+
+    /**
+     * [UC-35][CFG-05] Tạo gói cước mới.
+     */
+    @PostMapping("/admin/packages")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public Map<String, Object> create(@RequestBody BF1_PremiumRepository.PackagePayload payload) {
+        return service.createPackage(payload);
+    }
+
+    /**
+     * [UC-35][CFG-05] Cập nhật thông tin gói cước.
+     */
+    @PutMapping("/admin/packages/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public Map<String, Object> update(@PathVariable long id, @RequestBody BF1_PremiumRepository.PackagePayload payload) {
+        return service.updatePackage(id, payload);
+    }
+
+    /**
+     * [UC-35][CFG-05] Bật / Tắt trạng thái gói cước (ACTIVE <-> INACTIVE).
+     */
+    @PatchMapping("/admin/packages/{id}/toggle")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public Map<String, Object> toggle(@PathVariable long id) {
+        return service.togglePackageStatus(id);
+    }
+
+    /**
+     * [UC-35][CFG-05] Xóa thông minh gói cước:
+     * - Nếu gói test chưa từng có ai mua: Xóa hẳn khỏi Database (DELETE).
+     * - Nếu gói đã có lịch sử thuê bao: Chuyển sang Tạm ẩn (INACTIVE) để bảo toàn khóa ngoại ON DELETE RESTRICT.
+     */
+    @DeleteMapping("/admin/packages/{id}")
+    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    public Map<String, Object> delete(@PathVariable long id) {
+        return service.deletePackage(id);
+    }
+
+    // =========================================================================
+    // 2. ENDPOINTS THUÊ BAO, THANH TOÁN & DUYỆT GÓI (BF-01 CORE)
+    // =========================================================================
 
     /**
      * [BF-01][UC-12][Subscription Check] Kiểm tra người dùng có gói Premium hợp lệ hay không.
