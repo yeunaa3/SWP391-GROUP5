@@ -56,6 +56,7 @@ management:
         include: health,info
 
 app:
+  base-url: ${APP_BASE_URL:${RENDER_EXTERNAL_URL:https://swp391-group5-71mj.onrender.com}}
   payment:
     bank-code: ${PAYMENT_BANK_CODE:MB}
     account-number: ${PAYMENT_ACCOUNT_NUMBER:08882626999}

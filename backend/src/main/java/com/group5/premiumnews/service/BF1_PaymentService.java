@@ -21,10 +21,22 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * ============================================================================
+ * [BF-01] LUỒNG 1: DỊCH VỤ THANH TOÁN TỰ ĐỘNG VIETQR / PAYOS
+ * Phụ trách: Cường
+ * 
+ * Các nghiệp vụ BF-01 trong file này:
+ * - [BF-01] Sinh mã VietQR Napas / Link PayOS cho yêu cầu gói Premium: createQr("PREMIUM", ...)
+ * - [BF-01] Auto-polling ngầm từ Frontend kiểm tra kích hoạt gói: checkStatus("PREMIUM", ...)
+ * - [BF-01] Nhận Webhook từ PayOS tự động kích hoạt gói: processPayOSWebhook(...)
+ * - [BF-01] Tự động duyệt gói, cộng dồn ngày, gán quyền SUBSCRIBER: confirmPremium(...)
+ * ============================================================================
+ */
 @Service
-public class PaymentService {
+public class BF1_PaymentService {
 
-    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
+    private static final Logger log = LoggerFactory.getLogger(BF1_PaymentService.class);
 
     private final JdbcTemplate jdbc;
     private final EmailService emailService;
@@ -43,7 +55,17 @@ public class PaymentService {
     @Value("${app.payment.account-name:BUI QUANG CUONG}")
     private String accountName;
 
-    public PaymentService(JdbcTemplate jdbc, EmailService emailService, PayOSService payOSService) {
+    @Value("${app.base-url:${RENDER_EXTERNAL_URL:https://swp391-group5-71mj.onrender.com}}")
+    private String baseUrl;
+
+    public String getBaseUrl() {
+        if (baseUrl == null || baseUrl.isBlank()) {
+            return "https://swp391-group5-71mj.onrender.com";
+        }
+        return baseUrl.replaceAll("/+$", "");
+    }
+
+    public BF1_PaymentService(JdbcTemplate jdbc, EmailService emailService, PayOSService payOSService) {
         this.jdbc = jdbc;
         this.emailService = emailService;
         this.payOSService = payOSService;
@@ -114,9 +136,10 @@ public class PaymentService {
     ) {}
 
     /**
-     * Sinh thông tin VietQR thanh toán tự động cho gói Premium hoặc hợp đồng quảng cáo B2B
-     * - Tự động đăng ký Payment Request trên PayOS nếu cấu hình PayOS tồn tại.
-     * - Tự động tạo mã QR Napas VietQR chuẩn có hình ảnh scannable 24/7.
+     * [BF-01][API-01] Sinh thông tin VietQR thanh toán tự động cho gói Premium (hoặc Hợp đồng quảng cáo B2B)
+     * - Với "PREMIUM": Lấy thông tin từ bảng premium_requests (request_id, amount, package_name).
+     * - Sinh mã orderCode ngẫu nhiên và lưu ánh xạ vào orderCodeMap để phục vụ Webhook và Auto-Polling.
+     * - Sinh link PayOS động theo tên miền hệ thống và ảnh VietQR chuẩn Napas 24/7 để người dùng quét trên app ngân hàng.
      */
     @Transactional
     public PaymentQrResponse createQr(String type, long referenceId, AuthenticatedUserPrincipal user) {
@@ -161,8 +184,8 @@ public class PaymentService {
                             userName,
                             userEmail,
                             "",
-                            "https://swp391-group5-71mj.onrender.com/premium/payment-result",
-                            "https://swp391-group5-71mj.onrender.com/premium/packages"
+                            getBaseUrl() + "/premium/payment-result",
+                            getBaseUrl() + "/premium/packages"
                     );
                     checkoutUrl = payOsData.checkoutUrl();
                     payOsActive = true;
@@ -235,8 +258,8 @@ public class PaymentService {
                             userName,
                             userEmail,
                             "",
-                            "https://swp391-group5-71mj.onrender.com/business/contracts/payment-result?contractId=" + referenceId,
-                            "https://swp391-group5-71mj.onrender.com/business/contracts/" + referenceId + "/checkout"
+                            getBaseUrl() + "/business/contracts/payment-result?contractId=" + referenceId,
+                            getBaseUrl() + "/business/contracts/" + referenceId + "/checkout"
                     );
                     checkoutUrl = payOsData.checkoutUrl();
                     payOsActive = true;
@@ -262,7 +285,9 @@ public class PaymentService {
     }
 
     /**
-     * Kiểm tra trạng thái thanh toán phục vụ Auto-Polling ngầm trên Frontend
+     * [BF-01][API-03] Kiểm tra trạng thái thanh toán phục vụ Auto-Polling ngầm trên Frontend (AutoPaymentTimerCard.jsx)
+     * - Frontend gọi API này định kỳ mỗi 3-5 giây để kiểm tra gói Premium đã kích hoạt chưa.
+     * - Nếu trong DB chưa cập nhật mà PayOS đã báo 'PAID', gọi ngay confirmPremium() để kích hoạt tức thì.
      */
     @Transactional
     public Map<String, Object> checkStatus(String type, long referenceId, Long orderCode) {
@@ -331,7 +356,10 @@ public class PaymentService {
     }
 
     /**
-     * Xử lý Webhook gửi từ PayOS khi thanh toán thành công
+     * [BF-01][API-Webhook] Xử lý Webhook tự động từ cổng PayOS khi người dùng chuyển khoản thành công
+     * - Xác thực chữ ký số HMAC-SHA256 để bảo đảm tính toàn vẹn và chống giả mạo webhook.
+     * - Khớp orderCode hoặc phân tích nội dung chuyển khoản (DANG KY GOI, SUB, PREMIUM).
+     * - Tự động gọi confirmPremium() để nâng cấp tài khoản cho người dùng ngay lập tức.
      */
     @Transactional
     public Map<String, Object> processPayOSWebhook(Map<String, Object> payload) {
@@ -402,7 +430,7 @@ public class PaymentService {
     }
 
     /**
-     * Xác nhận thanh toán tự động (Auto-Confirm / Webhook IPN simulation)
+     * [BF-01][API-02] Xác nhận thanh toán tự động (Auto-Confirm / Giả lập IPN simulation)
      * - Kích hoạt gói Premium hoặc Hợp đồng ngay tức thì
      * - Ghi log giao dịch SUCCESS
      * - Gửi email biên lai thật (nếu có email)
@@ -420,6 +448,9 @@ public class PaymentService {
         }
     }
 
+    /**
+     * [BF-01] Kích hoạt trực tiếp gói Premium qua requestId (dùng cho test/gọi nhanh)
+     */
     public Map<String, Object> confirmPremiumDirect(long requestId) {
         return confirmPremium(requestId, null);
     }
@@ -428,6 +459,23 @@ public class PaymentService {
         return confirmContract(contractId, null);
     }
 
+    /**
+     * ========================================================================
+     * [BF-01][CORE LOGIC] KÍCH HOẠT GÓI PREMIUM TỰ ĐỘNG & NÂNG QUYỀN HỘI VIÊN
+     * Phụ trách: Cường
+     * 
+     * Các bước xử lý trong Database:
+     * 1. Idempotent: Kiểm tra nếu yêu cầu đã APPROVED trước đó thì bỏ qua, tránh cộng dồn 2 lần.
+     * 2. Cộng dồn ngày: Kiểm tra nếu user đang có gói còn hạn (subscriptions.end_at > now),
+     *    thời hạn gói mới sẽ được NỐI TIẾP từ ngày hết hạn cũ (start_at = old.end_at).
+     * 3. INSERT INTO subscriptions: Tạo bản ghi thuê bao mới với status = 'ACTIVE'.
+     * 4. UPDATE premium_requests: Đánh dấu yêu cầu là 'APPROVED'.
+     * 5. INSERT INTO transactions: Ghi biên lai giao dịch thành công (PREMIUM_PURCHASE hoặc PREMIUM_RENEWAL).
+     * 6. INSERT IGNORE INTO user_roles: Cấp vai trò 'SUBSCRIBER' cho người dùng.
+     * 7. INSERT INTO notifications: Gửi thông báo chúc mừng kích hoạt thành công trong hệ thống.
+     * 8. Gửi Email thật: Bắn email biên lai thanh toán qua Gmail SMTP (bất đồng bộ qua CompletableFuture).
+     * ========================================================================
+     */
     private Map<String, Object> confirmPremium(long requestId, AuthenticatedUserPrincipal user) {
         var requests = jdbc.queryForList("""
                 SELECT r.request_id, r.user_id, r.package_id, r.package_code, r.package_name,

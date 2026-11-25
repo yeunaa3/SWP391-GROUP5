@@ -1,19 +1,25 @@
 package com.group5.premiumnews.controller;
 
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
-import com.group5.premiumnews.service.PaymentService;
+import com.group5.premiumnews.service.BF1_PaymentService;
 import java.util.Map;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * ============================================================================
+ * [BF-01] LUỒNG 1: CỔNG THANH TOÁN VIETQR / PAYOS TỰ ĐỘNG (KÍCH HOẠT GÓI PREMIUM)
+ * Phụ trách: Cường
+ * ============================================================================
+ */
 @RestController
 @RequestMapping("/api/payment")
-public class PaymentController {
+public class BF1_PaymentController {
 
-    private final PaymentService paymentService;
+    private final BF1_PaymentService paymentService;
 
-    public PaymentController(PaymentService paymentService) {
+    public BF1_PaymentController(BF1_PaymentService paymentService) {
         this.paymentService = paymentService;
     }
 
@@ -40,7 +46,7 @@ public class PaymentController {
      */
     @PostMapping("/create-qr")
     @PreAuthorize("isAuthenticated()")
-    public PaymentService.PaymentQrResponse createQr(
+    public BF1_PaymentService.PaymentQrResponse createQr(
             @AuthenticationPrincipal AuthenticatedUserPrincipal user,
             @RequestBody QrRequest request) {
         return paymentService.createQr(request.type(), request.resolvedReferenceId(), user);
@@ -138,8 +144,8 @@ public class PaymentController {
                         "Test Buyer",
                         "test@thepluse.vn",
                         "",
-                        "https://swp391-group5-71mj.onrender.com/",
-                        "https://swp391-group5-71mj.onrender.com/"
+                        paymentService.getBaseUrl() + "/",
+                        paymentService.getBaseUrl() + "/"
                 );
                 res.put("payOsConnection", "SUCCESS");
                 res.put("testOrderCode", testOrderCode);

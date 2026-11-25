@@ -4,7 +4,7 @@ import com.group5.premiumnews.dto.BusinessRequests;
 import com.group5.premiumnews.security.AuthenticatedUserPrincipal;
 import com.group5.premiumnews.service.BusinessWorkspaceService;
 import com.group5.premiumnews.service.CampaignWorkflowService;
-import com.group5.premiumnews.service.PaymentService;
+import com.group5.premiumnews.service.BF1_PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,10 +18,10 @@ public class BusinessWorkspaceController {
 
     private final BusinessWorkspaceService service;
     private final CampaignWorkflowService campaigns;
-    private final PaymentService payments;
+    private final BF1_PaymentService payments;
 
     public BusinessWorkspaceController(BusinessWorkspaceService service, CampaignWorkflowService campaigns,
-            PaymentService payments) {
+            BF1_PaymentService payments) {
         this.service = service;
         this.campaigns = campaigns;
         this.payments = payments;

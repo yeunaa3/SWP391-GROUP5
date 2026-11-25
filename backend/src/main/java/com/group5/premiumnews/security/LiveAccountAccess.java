@@ -23,7 +23,7 @@ public class LiveAccountAccess {
             LEFT JOIN role_permissions p ON p.role_id=r.role_id WHERE u.user_id=?
             """,id);
         if(rows.isEmpty())throw new UsernameNotFoundException("Tài khoản không còn tồn tại.");
-        var u=rows.getFirst();
+        var u=rows.get(0);
         var grants=rows.stream().map(r->(String)r.get("permission_code")).filter(Objects::nonNull).distinct()
             .map(p->new SimpleGrantedAuthority("ROLE_"+p)).toList();
         return new AuthenticatedUserPrincipal(id,(String)u.get("username"),(String)u.get("email"),
